@@ -23,4 +23,4 @@
 
 <h2 align="left"> Cara Run </h2>
 <p align="left">Terminal 1: "cd backend" lalu "dotnet run"</p>
-<p align="left">Terminal 1: "cd frontend" lalu "npm run dev"</p>
+<p align="left">Terminal 2: "cd frontend" lalu "npm run dev"</p>
