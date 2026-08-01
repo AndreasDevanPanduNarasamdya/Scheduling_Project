@@ -1,6 +1,10 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
+import ForgotPassword from "./ForgotPassword";
 import BgImage from "../../assets/background.png";
 import LogoImage from "../../assets/MeruapLogo.png";
+
 
 const BG_IMAGE_URL = BgImage;
 const LOGO_URL = LogoImage; 
@@ -10,6 +14,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  <Routes>
+      <Route path="/" element={<LoginPage />} />
+      <Route path="/ForgotPassword" element={<ForgotPassword />} />
+  </Routes>
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,12 +142,12 @@ export default function LoginPage() {
           {isLoading ? "LOGGING IN..." : "LOGIN"}
         </button>
 
-        <a
-          href="/forgot-password"
+        <Link
+          to="/ForgotPassword"
           className="text-center text-sm text-black/80 underline underline-offset-2 hover:text-white transition"
         >
           Lupa Password
-        </a>
+        </Link>
       </form>
     </div>
   );
