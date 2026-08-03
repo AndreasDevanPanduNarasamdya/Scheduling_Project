@@ -39,6 +39,7 @@ export default function LoginPage() {
         userId: data.userId,
         email: data.email,
         staff: {
+          staffId: data.staffId,
           firstName: data.firstName,
           lastName: data.lastName,
           position: data.position,

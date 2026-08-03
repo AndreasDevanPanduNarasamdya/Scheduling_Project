@@ -5,6 +5,7 @@ import Dashboard from "./view/homepage/Dashboard";
 import Form from "./view/form/Form";
 import { useAuth } from "./context/AuthContext";
 import MainLayout from './MainLayout';
+import Management from "./view/scheduling/Management";
 
 export default function App() {
   const { user } = useAuth();
@@ -24,6 +25,11 @@ export default function App() {
       <Route 
         path="/form" 
         element={user ? <MainLayout><Form /></MainLayout> : <Navigate to="/" />} 
+      />
+
+      <Route 
+        path="/management" 
+        element={user ? <MainLayout><Management /></MainLayout> : <Navigate to="/" />} 
       />
     </Routes>
   );

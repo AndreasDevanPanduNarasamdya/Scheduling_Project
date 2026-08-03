@@ -2,6 +2,7 @@ import { createContext, useContext, useState } from "react";
 import type { ReactNode } from "react";
 
 interface StaffInfo {
+  staffId: string;
   firstName?: string;
   lastName?: string;
   position?: string;

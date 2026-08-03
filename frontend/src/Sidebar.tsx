@@ -37,7 +37,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
             <SidebarItem icon={<Calendar size={22} />} text="Jadwal" isOpen={isOpen} path="/jadwal" />
             <SidebarItem icon={<Mail size={22} />} text="Inbox" isOpen={isOpen} path="/inbox" />
             <SidebarItem icon={<FileText size={22} />} text="Pengajuan" isOpen={isOpen} path="/form" />
-            <SidebarItem icon={<Accessibility size={22} />} text="Aksesibilitas" isOpen={isOpen} path="/aksesibilitas" />
+            <SidebarItem icon={<Accessibility size={22} />} text="Aksesibilitas" isOpen={isOpen} path="/management" />
             <SidebarItem icon={<Clock size={22} />} text="Riwayat" isOpen={isOpen} path="/riwayat" />
           </nav>
 
