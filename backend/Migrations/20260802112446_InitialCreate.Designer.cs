@@ -11,8 +11,8 @@ using SchedulingMeruap.Api.Data;
 namespace SchedulingMeruap.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260731133546_InitialTest")]
-    partial class InitialTest
+    [Migration("20260802112446_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

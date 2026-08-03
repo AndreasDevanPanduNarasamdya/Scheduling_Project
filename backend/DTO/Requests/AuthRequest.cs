@@ -1,6 +1,7 @@
-namespace Program_Scheduling_Meruap.DTO.Requests.AuthRequest;
+using SchedulingMeruap.Api.Models;
 
-using Program_Scheduling_Meruap.Models.Enums;
+namespace SchedulingMeruap.Api.DTO.Requests;
+
 public class AuthRequest
 {
     public required string Email { get; set; }

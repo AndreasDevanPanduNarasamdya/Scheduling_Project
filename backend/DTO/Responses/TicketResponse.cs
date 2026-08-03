@@ -1,6 +1,6 @@
-namespace Program_Scheduling_Meruap.DTO.Response.FormResponse;
+namespace SchedulingMeruap.Api.DTO.Responses;
 
-using Program_Scheduling_Meruap.Models.Enums;
+using SchedulingMeruap.Api.Models;
 
 public class TicketResponse
 {

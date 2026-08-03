@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using SchedulingMeruap.Api.Data;
 
@@ -11,9 +12,11 @@ using SchedulingMeruap.Api.Data;
 namespace SchedulingMeruap.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class SchedulingDBContextModelSnapshot : ModelSnapshot
+    [Migration("20260802205801_ChangeSexToInt")]
+    partial class ChangeSexToInt
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

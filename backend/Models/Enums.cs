@@ -1,4 +1,4 @@
-namespace Program_Scheduling_Meruap.Models.Enums;
+namespace SchedulingMeruap.Api.Models;
 
 public enum TicketStatus
 {
@@ -13,7 +13,7 @@ public enum TicketType
     Off
 }
 
-public enum Sex
+public enum Sex : byte
 {
     Male,
     Female

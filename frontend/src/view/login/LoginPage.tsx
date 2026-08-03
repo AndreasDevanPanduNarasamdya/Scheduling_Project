@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Routes, Route } from "react-router-dom";
-import ForgotPassword from "./ForgotPassword";
 import BgImage from "../../assets/background.png";
 import LogoImage from "../../assets/MeruapLogo.png";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 
 const BG_IMAGE_URL = BgImage;
@@ -14,11 +14,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  <Routes>
-      <Route path="/" element={<LoginPage />} />
-      <Route path="/ForgotPassword" element={<ForgotPassword />} />
-  </Routes>
+  const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,12 +30,22 @@ export default function LoginPage() {
       });
 
       if (!response.ok) {
-        throw new Error("Invalid email or password");
+        throw new Error("Email atau password salah");
       }
 
       const data = await response.json();
-      console.log("Logged in:", data);
-      // TODO: store token/session, redirect to dashboard
+
+      login({
+        userId: data.userId,
+        email: data.email,
+        staff: {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          position: data.position,
+        },
+      });
+
+      navigate("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {

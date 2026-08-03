@@ -1,5 +1,10 @@
 using Microsoft.EntityFrameworkCore;
-using Program_Scheduling_Meruap.Data;
+using SchedulingMeruap.Api.Data;
+
+using SchedulingMeruap.Api.Repositories;
+using SchedulingMeruap.Api.Repositories.Interfaces;
+using SchedulingMeruap.Api.Services;
+using SchedulingMeruap.Api.Services.Interfaces;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,10 +15,16 @@ builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 
 // 2. Register ApplicationDbContext with SQL Server
-builder.Services.AddDbContext<SchedulingDBContext>(options =>
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 3. Configure CORS for your React frontend (Vite defaults to 5173)
+// 3. Register your repositories and services so dependency injection can supply them
+builder.Services.AddScoped<IAuthRepository, AuthRepository>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IStaffRepository, StaffRepository>();
+builder.Services.AddScoped<IStaffService, StaffService>();
+
+// 4. Configure CORS for your React frontend (Vite defaults to 5173)
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
@@ -36,5 +47,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-// 4. Enable Controller route mapping (so requests to /api/auth/login find your controllers)
+// 5. Enable Controller route mapping (so requests to /api/auth/login find your controllers)
 app.MapControllers();
+
+app.Run();
