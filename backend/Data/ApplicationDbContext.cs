@@ -32,10 +32,6 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<User> Users { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-        => optionsBuilder.UseSqlServer("Data Source=localhost\\SQLEXPRESS;Initial Catalog=MERUAP;Integrated Security=True;TrustServerCertificate=True;");
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<ActivityLog>(entity =>
@@ -172,7 +168,9 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasColumnName("POSITION");
-            entity.Property(e => e.Sex).HasColumnName("SEX");
+            entity.Property(e => e.Sex)
+                .HasColumnType("tinyint")
+                .HasColumnName("SEX");
             entity.Property(e => e.UserId)
                 .HasMaxLength(36)
                 .IsUnicode(false)
@@ -244,17 +242,20 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasColumnName("TICKET_ID");
-            entity.Property(e => e.Date)
+            entity.Property(e => e.StartDate)
                 .HasColumnType("datetime")
-                .HasColumnName("DATE");
+                .HasColumnName("START_DATE");
+            entity.Property(e => e.EndDate)
+                .HasColumnType("datetime")
+                .HasColumnName("END_DATE");
             entity.Property(e => e.Description)
                 .HasMaxLength(100)
                 .IsUnicode(false)
                 .HasColumnName("DESCRIPTION");
-            entity.Property(e => e.Document)
-                .HasMaxLength(70)
-                .IsUnicode(false)
-                .HasColumnName("DOCUMENT");
+            // entity.Property(e => e.Document)
+            //     .HasMaxLength(70)
+            //     .IsUnicode(false)
+            //     .HasColumnName("DOCUMENT");
             entity.Property(e => e.Reason)
                 .HasMaxLength(100)
                 .IsUnicode(false)
@@ -266,6 +267,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Status)
                 .HasMaxLength(1)
                 .IsUnicode(false)
+                .HasColumnType("tinyint")
                 .HasColumnName("STATUS");
             entity.Property(e => e.Title)
                 .HasMaxLength(20)
@@ -274,6 +276,7 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Type)
                 .HasMaxLength(1)
                 .IsUnicode(false)
+                .HasColumnType("tinyint")
                 .HasColumnName("TYPE");
 
             entity.HasOne(d => d.Staff).WithMany(p => p.Tickets)

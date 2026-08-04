@@ -35,6 +35,8 @@ export default function LoginPage() {
 
       const data = await response.json();
 
+      localStorage.setItem("jwt_token", data.token);
+
       login({
         userId: data.userId,
         email: data.email,

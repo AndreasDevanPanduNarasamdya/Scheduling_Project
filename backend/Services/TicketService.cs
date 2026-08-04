@@ -20,13 +20,14 @@ public class TicketService : ITicketService
         {
             TicketId = Guid.NewGuid().ToString(),
             StaffId = userId,
-            Date = request.Date,
-            Type = request.Type,
-            Status = "Pending",
+            StartDate = request.StartDate,
+            EndDate = request.EndDate,
+            Type = (TicketType)request.Type,
+            Status = (byte)0,
             Title = request.Title,
             Description = request.Description,
             Reason = null,
-            Document = request.Document
+            // Document = request.Document
         };
 
         await _ticketRepository.CreateAsync(newTicket);

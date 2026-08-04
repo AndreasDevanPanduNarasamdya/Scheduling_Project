@@ -1,13 +1,13 @@
 namespace SchedulingMeruap.Api.Models;
 
-public enum TicketStatus
+public enum TicketStatus : byte
 {
     Pending,
     Approved,
     Declined
 }
 
-public enum TicketType
+public enum TicketType : byte
 {
     On,
     Off

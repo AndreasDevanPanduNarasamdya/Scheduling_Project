@@ -1,14 +1,31 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from "../../context/AuthContext";
+import { fetchWithToken } from "../../api";
 
 export default function Dashboard() {
-    const { user } = useAuth();
+  const { user } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [data, setData] = useState(null);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    
+    const fetchSecureData = async () => {
+      try {
+        const response = await fetchWithToken("http://localhost:5096/api/dashboard");
+        
+        if (response.ok) {
+          const result = await response.json();
+          setData(result);
+        }
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      }
+    };
+    
+    fetchSecureData();
     return () => clearInterval(timer);
-    }, []);
+  }, []);
     
   const day = currentTime.getDate();
   const month = currentTime.toLocaleString("default", { month: "long" });
@@ -41,7 +58,7 @@ export default function Dashboard() {
         
         <div className="flex flex-col mt-2 ml-10">
           <div className="flex items-baseline gap-3 mb-1">
-            <h1 className="text-[28px] font-bold text-[#1e549a] tracking-tight">
+            <h1 className="text-[39px] font-bold text-[#1e549a] tracking-tight">
               {greeting}, {displayName}!
             </h1>
           </div>

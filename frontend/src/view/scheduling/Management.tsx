@@ -1,4 +1,6 @@
+
 import React from "react";
+import { useState, useEffect } from 'react';
 import {
   PersonStanding,
   PlusCircle,
@@ -7,6 +9,8 @@ import {
 } from "lucide-react";
 
 export default function Management() {
+  const [data, setData] = useState(null);
+
   const teams = [
     {
       name: "Tim A",

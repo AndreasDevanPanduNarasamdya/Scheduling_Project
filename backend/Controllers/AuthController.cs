@@ -20,16 +20,21 @@ public class AuthController : ControllerBase
     [HttpPost("login")]
     public async Task<IActionResult> Login(AuthRequest request)
     {
-        var user = await _authService.LoginAsync(request);
-        if (user == null)
+        var loginResult = await _authService.LoginAsync(request);
+
+        if (loginResult == null)
             return Unauthorized(new { message = "Invalid credentials" });
 
+        var user = loginResult.Value.User;
+        var token = loginResult.Value.Token;
         var staff = await _staffService.GetByUserIdAsync(user.UserId);
 
         return Ok(new
         {
+            token,
             user.UserId,
             user.Email,
+            staffId = staff?.StaffId,
             staff?.FirstName,
             staff?.LastName,
             staff?.Position

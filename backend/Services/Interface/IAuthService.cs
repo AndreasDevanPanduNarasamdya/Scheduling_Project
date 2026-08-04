@@ -5,5 +5,5 @@ namespace SchedulingMeruap.Api.Services.Interfaces;
 
 public interface IAuthService
 {
-    Task<User?> LoginAsync(AuthRequest request);
+    Task<(User User, string Token)?> LoginAsync(AuthRequest request);
 }

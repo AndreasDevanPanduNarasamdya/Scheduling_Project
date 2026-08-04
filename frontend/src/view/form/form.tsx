@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Upload, Send } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { fetchWithToken } from "../../api";
 
 
 
@@ -34,7 +35,7 @@ export default function Form() {
     };
 
     try {
-      const response = await fetch(`http://localhost:5096/api/tickets/${staffId}`, {
+      const response = await fetchWithToken(`http://localhost:5096/api/tickets/${staffId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

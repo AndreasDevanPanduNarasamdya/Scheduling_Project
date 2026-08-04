@@ -9,17 +9,17 @@ public partial class Ticket
 
     public string? StaffId { get; set; }
 
-    public DateTime Date { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
 
-    public string Type { get; set; } = null!;
+    public TicketType Type { get; set; }
 
-    public string Status { get; set; } = null!;
+    public TicketStatus Status { get; set; }
 
     public string Title { get; set; } = null!;
 
     public string Description { get; set; } = null!;
 
-    public string Document { get; set; } = null!;
 
     public string? Reason { get; set; }
 
