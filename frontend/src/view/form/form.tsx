@@ -2,13 +2,16 @@ import { useState, useEffect } from 'react';
 import { Calendar, Upload, Send } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { fetchWithToken } from "../../api";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 
 
 export default function Form() {
 
   const [isTicketOn, setIsTicketOn] = useState(true);
-  const [date, setDate] = useState("");
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
+  const [startDate, endDate] = dateRange;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const { user } = useAuth();
@@ -23,16 +26,22 @@ export default function Form() {
       return;
     }
 
+    if (!startDate || !endDate) {
+      alert("Harap pilih rentang tanggal mulai dan selesai!");
+      return;
+    }
+
     const payload = {
       staffId: user?.staff?.staffId,
-      date: date,
-      type: isTicketOn ? "ON" : "OFF",
+      startDate: startDate.toISOString().split('T')[0], 
+      endDate: endDate.toISOString().split('T')[0],
+      type: isTicketOn ? 1 : 0,
       title: title,
       description: description,
     };
 
     try {
-      const response = await fetchWithToken(`http://localhost:5096/api/tickets/${staffId}`, {
+      const response = await fetchWithToken(`http://localhost:5096/api/ticket/${staffId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -126,19 +135,27 @@ export default function Form() {
           </div>
 
           <div>
-            <label className={labelStyles}>Tanggal</label>
-            <div className="relative">
-              <input 
-                type="date" 
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                // showPicker() forces the calendar to open when you click anywhere on the input
-                onClick={(e) => e.currentTarget.showPicker()} 
-                // Hides the default browser calendar icon
-                className={`${inputStyles} pr-10 [&::-webkit-calendar-picker-indicator]:hidden cursor-pointer`} 
-              />
-              {/* pointer-events-none ensures clicking the icon passes through to the input beneath it */}
-              <Calendar className="absolute right-3 top-[10px] text-gray-600 pointer-events-none" size={18} />
+            <label className={labelStyles}>Tanggal Pengajuan</label>
+            <div>
+              <div className="relative w-full text-left"> 
+                
+                <DatePicker
+                  selectsRange={true}
+                  startDate={startDate}
+                  endDate={endDate}
+                  onChange={(update) => setDateRange(update)}
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="Pilih rentang tanggal"
+                  wrapperClassName="w-full" 
+                  onKeyDown={(e) => e.preventDefault()}
+                  className={`${inputStyles} w-full pr-10 cursor-pointer`}
+                />
+                
+                <Calendar 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" 
+                  size={18} 
+                />
+              </div>
             </div>
           </div>
 

@@ -1,13 +1,18 @@
-namespace SchedulingMeruap.Api.DTO.Responses;
-
 using SchedulingMeruap.Api.Models;
 
-public class SubmitTicketRequest
+namespace SchedulingMeruap.Api.DTO.Responses;
+
+public class TicketResponse
 {
-    public DateTime StartDate { get; set; }
-    public DateTime EndDate { get; set; }
-    public byte Type { get; set; }
+    public string TicketID { get; set; } = null!;
+    public string FirstName { get; set; } = null!;
+    public string LastName { get; set; } = null!;
+    public string Role { get; set; } = null!;
+    public string Team { get; set; } = null!;
+    public TicketType Type { get; set; }
     public string Title { get; set; } = null!;
     public string Description { get; set; } = null!;
-    // public string Document { get; set; } = null!;
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public TicketStatus Status { get; set; }
 }

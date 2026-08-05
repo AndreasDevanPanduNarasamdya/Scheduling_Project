@@ -7,6 +7,7 @@ import { useAuth } from "./context/AuthContext";
 import MainLayout from './MainLayout';
 import ProtectedRoute from './SecureRoute';
 import Management from "./view/scheduling/Management";
+import InboxList from "./view/inbox/InboxList";
 
 export default function App() {
   const { user } = useAuth();
@@ -31,6 +32,11 @@ export default function App() {
         <Route 
           path="/management" 
           element={user ? <MainLayout><Management /></MainLayout> : <Navigate to="/" />} 
+        />
+
+        <Route 
+          path="/inbox" 
+          element={user ? <MainLayout><InboxList /></MainLayout> : <Navigate to="/" />} 
         />
       </Route>
     </Routes>

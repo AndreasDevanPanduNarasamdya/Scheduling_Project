@@ -1,7 +1,7 @@
 using SchedulingMeruap.Api.Models;
 using SchedulingMeruap.Api.Repositories.Interfaces;
 using SchedulingMeruap.Api.Services.Interfaces;
-using SchedulingMeruap.Api.DTO.Responses;
+using SchedulingMeruap.Api.DTO.Requests;
 
 namespace SchedulingMeruap.Api.Services;
 
@@ -33,5 +33,30 @@ public class TicketService : ITicketService
         await _ticketRepository.CreateAsync(newTicket);
 
         return newTicket;
+    }
+    public async Task<IEnumerable<Ticket>> GetAllTicketsAsync()
+    {
+        return await _ticketRepository.GetAllTicketsAsync();
+    }
+    public async Task ApproveTicketAsync(string id, string reason)
+    {
+        var ticket = await _ticketRepository.GetByIdAsync(id);
+        if (ticket == null) throw new KeyNotFoundException("Ticket not found");
+
+        ticket.Status = (TicketStatus)1;
+        ticket.Reason = reason;
+
+        await _ticketRepository.UpdateAsync(ticket);
+    }
+
+    public async Task RejectTicketAsync(string id, string reason)
+    {
+        var ticket = await _ticketRepository.GetByIdAsync(id);
+        if (ticket == null) throw new KeyNotFoundException("Ticket not found");
+
+        ticket.Status = (TicketStatus)2;
+        ticket.Reason = reason;
+
+        await _ticketRepository.UpdateAsync(ticket);
     }
 }

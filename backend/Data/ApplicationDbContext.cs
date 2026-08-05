@@ -252,10 +252,6 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(100)
                 .IsUnicode(false)
                 .HasColumnName("DESCRIPTION");
-            // entity.Property(e => e.Document)
-            //     .HasMaxLength(70)
-            //     .IsUnicode(false)
-            //     .HasColumnName("DOCUMENT");
             entity.Property(e => e.Reason)
                 .HasMaxLength(100)
                 .IsUnicode(false)
