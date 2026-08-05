@@ -2,6 +2,7 @@ import { Menu, Home, Calendar, Mail, FileText, Accessibility, Clock, LogOut } fr
 import { Link } from 'react-router-dom';
 import LogoImage from '../src/assets/MeruapLogo.png';
 
+
 const LOGO_URL = LogoImage; 
 
 export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (val: boolean) => void }) {
@@ -37,14 +38,14 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
             <SidebarItem icon={<Calendar size={22} />} text="Jadwal" isOpen={isOpen} path="/jadwal" />
             <SidebarItem icon={<Mail size={22} />} text="Inbox" isOpen={isOpen} path="/inbox" />
             <SidebarItem icon={<FileText size={22} />} text="Pengajuan" isOpen={isOpen} path="/form" />
-            <SidebarItem icon={<Accessibility size={22} />} text="Aksesibilitas" isOpen={isOpen} path="/management" />
+            <SidebarItem icon={<Accessibility size={22} />} text="Management" isOpen={isOpen} path="/management" />
             <SidebarItem icon={<Clock size={22} />} text="Riwayat" isOpen={isOpen} path="/riwayat" />
           </nav>
 
           <div className="mb-4">
             <button 
               className="flex items-center py-3 text-red-500 hover:text-red-400 transition-colors w-full group whitespace-nowrap overflow-hidden pl-1"
-              onClick={() => console.log("Logging out...")}
+              onClick={() => ''}
             >
               <div className="flex items-center justify-center w-[76px] shrink-0">
                 <LogOut size={22} className="transform group-hover:-translate-x-1 transition-transform" />

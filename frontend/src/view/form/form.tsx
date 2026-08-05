@@ -16,8 +16,6 @@ export default function Form() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // console.log("My User Object looks like this:", user);
-
     const staffId = user?.staff?.staffId;
 
     if (!staffId) {
@@ -31,7 +29,6 @@ export default function Form() {
       type: isTicketOn ? "ON" : "OFF",
       title: title,
       description: description,
-      document: "no-document-yet.pdf" // Placeholder until you do file uploads
     };
 
     try {
