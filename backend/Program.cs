@@ -56,6 +56,8 @@ builder.Services.AddScoped<ITicketRepository, TicketRepository>();
 builder.Services.AddScoped<ITicketService, TicketService>();
 builder.Services.AddScoped<ITeamRepository, TeamRepository>();
 builder.Services.AddScoped<ITeamService, TeamService>();
+builder.Services.AddScoped<INewHireRepository, NewHireRepository>();
+builder.Services.AddScoped<INewHireService, NewHireService>();
 
 var app = builder.Build();
 

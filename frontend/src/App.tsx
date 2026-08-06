@@ -8,6 +8,7 @@ import MainLayout from './MainLayout';
 import ProtectedRoute from './SecureRoute';
 import Management from "./view/scheduling/Management";
 import InboxList from "./view/inbox/InboxList";
+import ActivationPage from "./view/activation/activation";
 
 export default function App() {
   const { user } = useAuth();
@@ -17,6 +18,11 @@ export default function App() {
       <Route path="/" element={<LoginPage />} />
 
       <Route path="/ForgotPassword" element={<ForgotPassword />} />
+
+      <Route 
+        path="/activate" 
+        element={<ActivationPage />} 
+      />
 
       <Route element={<ProtectedRoute />}>
         <Route 

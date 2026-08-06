@@ -1,5 +1,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const isTokenExpired = (token: string | null) => {
   if (!token) return true;
@@ -22,17 +24,19 @@ const isTokenExpired = (token: string | null) => {
 };
 
 export default function ProtectedRoute() {
-  const { user, logout } = useAuth();
-  const token = localStorage.getItem("jwt_token");
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
-  if (!user || isTokenExpired(token)) {
-    
-    if (user) {
-      logout();
+  useEffect(() => {
+    if (user === null) {
+      navigate("/");
     }
-    
-    return <Navigate to="/" replace />;
+  }, [user, navigate]);
+
+  if (!user) {
+    return null; // Or a loading spinner while checking auth
   }
 
+  // Outlet renders whatever nested route matches (e.g. /dashboard, /management)
   return <Outlet />;
 }

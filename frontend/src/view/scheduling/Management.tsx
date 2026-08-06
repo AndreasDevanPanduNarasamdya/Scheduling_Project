@@ -2,12 +2,26 @@ import { useState, useEffect } from "react";
 import { ChevronDown, Menu, UserRound, Plus, ArrowLeftRight, Filter } from "lucide-react";
 import type { Team } from "../../types";
 import { fetchTeams } from "../../api"; 
+import { createNewHire } from "../../api"; 
 
 export default function ManagementPage() {
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [staffForm, setStaffForm] = useState({
+    firstName: "",
+    lastName: "",
+    sex: "P", // Default to 'P' for Pria
+    position: "",
+    email: "",
+    phone: "",
+    dob: "",
+    joinDate: ""
+  });
+
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const loadTeams = async () => {
     setIsLoading(true);
@@ -19,6 +33,42 @@ export default function ManagementPage() {
       setError(err instanceof Error ? err.message : "Failed to load teams");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+const handleAddStaffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // 1. Format the payload for the C# backend
+      const payload = {
+        firstName: staffForm.firstName,
+        lastName: staffForm.lastName,
+        sex: staffForm.sex === "P" ? 0 : 1, // Translating to your C# Enum
+        position: staffForm.position,
+        email: staffForm.email,
+        phone: staffForm.phone,
+        dob: staffForm.dob,
+        joinDate: staffForm.joinDate
+      };
+
+      console.log("Sending to backend:", payload);
+
+      // 2. Actually call the backend function!
+      const result = await createNewHire(payload);
+      
+      console.log("Success! Staged New Hire token:", result.tokenId);
+      alert(`Staff added to staging successfully! Token: ${result.tokenId}`);
+      
+      // 3. Reset form and close modal on success
+      setIsAddStaffOpen(false);
+      setStaffForm({ firstName: "", lastName: "", sex: "P", position: "", email: "", phone: "", dob: "", joinDate: "" });
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message || "Failed to add new hire");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -55,7 +105,12 @@ useEffect(() => {
 
         {/* Action bar */}
         <div className="flex flex-wrap items-center gap-3 mb-8">
-          <ActionButton icon={<Plus size={15} />}>Tambah Anggota</ActionButton>
+          <ActionButton 
+            icon={<Plus size={15} />} 
+            onClick={() => setIsAddStaffOpen(true)}
+          >
+            Tambah Anggota
+          </ActionButton>
           <ActionButton icon={<Plus size={15} />}>Tambah Tim</ActionButton>
           <ActionButton icon={<Plus size={15} />}>Tambah Posisi</ActionButton>
           <ActionButton icon={<ArrowLeftRight size={15} />}>Ubah Anggota</ActionButton>
@@ -94,24 +149,174 @@ useEffect(() => {
           </div>
         )}
       </div>
+      {/* Tambah Staff Modal */}
+      {isAddStaffOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 sm:p-6">
+          <div className="bg-white rounded-[24px] w-full max-w-md shadow-xl flex flex-col max-h-[95vh]">
+            
+            {/* Sticky Header */}
+            <h2 className="text-xl font-medium text-center text-gray-800 p-6 pb-2 shrink-0">
+              Tambah Staff
+            </h2>
+            
+            <form onSubmit={handleAddStaffSubmit} className="flex flex-col min-h-0">
+              
+              {/* Scrollable Content Area */}
+              <div className="overflow-y-auto px-6 py-2 space-y-3 text-left">
+                
+                {/* Nama Lengkap - Split inputs */}
+                <div>
+                  <label className="block text-sm mb-1 text-gray-800">Nama Lengkap</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input 
+                      type="text" 
+                      placeholder="Staf" 
+                      className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                      value={staffForm.firstName}
+                      onChange={e => setStaffForm({...staffForm, firstName: e.target.value})}
+                      required
+                    />
+                    <input 
+                      type="text" 
+                      placeholder="A" 
+                      className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                      value={staffForm.lastName}
+                      onChange={e => setStaffForm({...staffForm, lastName: e.target.value})}
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Jenis Kelamin - Toggle Buttons */}
+                <div>
+                  <label className="block text-sm mb-1 text-gray-800">Jenis Kelamin</label>
+                  <div className="flex gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => setStaffForm({...staffForm, sex: "P"})}
+                      className={`w-11 h-9 rounded-lg text-sm font-semibold transition-colors
+                        ${staffForm.sex === "P" ? "bg-[#3558a8] text-white" : "bg-white text-gray-700 border border-gray-300"}`}
+                    >
+                      P
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setStaffForm({...staffForm, sex: "W"})}
+                      className={`w-11 h-9 rounded-lg text-sm font-semibold transition-colors
+                        ${staffForm.sex === "W" ? "bg-[#3558a8] text-white" : "bg-white text-gray-700 border border-gray-300"}`}
+                    >
+                      W
+                    </button>
+                  </div>
+                </div>
+
+                {/* Posisi */}
+                <div>
+                  <label className="block text-sm mb-1 text-gray-800">Posisi</label>
+                  <input 
+                    type="text" 
+                    placeholder="Senior Engineer" 
+                    className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                    value={staffForm.position}
+                    onChange={e => setStaffForm({...staffForm, position: e.target.value})}
+                    required
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block text-sm mb-1 text-gray-800">Email</label>
+                  <input 
+                    type="email" 
+                    placeholder="stafa@gmail.com" 
+                    className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                    value={staffForm.email}
+                    onChange={e => setStaffForm({...staffForm, email: e.target.value})}
+                    required
+                  />
+                </div>
+
+                {/* Nomor Telepon */}
+                <div>
+                  <label className="block text-sm mb-1 text-gray-800">Nomor Telepon</label>
+                  <input 
+                    type="tel" 
+                    placeholder="+6281223551" 
+                    className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                    value={staffForm.phone}
+                    onChange={e => setStaffForm({...staffForm, phone: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1 text-gray-800">Tanggal Lahir</label>
+                  <input 
+                    type="date" 
+                    onClick={(e) => {
+                      // Forces the browser calendar picker to open on click anywhere in the box
+                      try {
+                        (e.target as HTMLInputElement).showPicker();
+                      } catch (err) {
+                        // Fallback for browsers that don't support showPicker yet
+                      }
+                    }}
+                    className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm text-gray-700 cursor-pointer"
+                    value={staffForm.dob}
+                    onChange={e => setStaffForm({...staffForm, dob: e.target.value})}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm mb-1 text-gray-800">Tanggal Bergabung</label>
+                  <input 
+                    type="date" 
+                    onClick={(e) => {
+                      try {
+                        (e.target as HTMLInputElement).showPicker();
+                      } catch (err) {}
+                    }}
+                    className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm text-gray-700 cursor-pointer"
+                    value={staffForm.joinDate}
+                    onChange={e => setStaffForm({...staffForm, joinDate: e.target.value})}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Sticky Actions */}
+              <div className="flex justify-end gap-3 p-6 pt-4 shrink-0 bg-white rounded-b-[24px] border-t border-gray-100 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStaffOpen(false)}
+                  className="px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition"
+                >
+                  Batal
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex items-center gap-2 px-5 py-2 bg-[#6f92c9] hover:bg-[#5a7ab0] text-white rounded-xl text-sm font-medium transition disabled:opacity-50"
+                >
+                  {isSubmitting ? "Memproses..." : "Tambah Staff"}
+                  {!isSubmitting && (
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  )}
+                </button>
+              </div>
+              
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Sub-components ──────────────────────────────────────────────────────
-
-function ActionButton({
-  children,
-  icon,
-  muted = false,
-}: {
-  children: React.ReactNode;
-  icon: React.ReactNode;
-  muted?: boolean;
-}) {
+function ActionButton({ children, icon, muted = false, onClick }: { children: React.ReactNode; icon: React.ReactNode; muted?: boolean; onClick?: () => void; }) {
   return (
     <button
       type="button"
+      onClick={onClick} // <-- THIS IS THE MISSING LINK!
       className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition
         ${
           muted

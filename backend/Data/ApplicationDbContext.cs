@@ -31,6 +31,7 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<Ticket> Tickets { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
+    public virtual DbSet<NewHire> NewHires { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -181,22 +182,33 @@ public partial class ApplicationDbContext : DbContext
                 .HasConstraintName("FK_STAFF_REFERENCE_USER");
         });
 
-        modelBuilder.Entity<Staff>(entity =>
+        modelBuilder.Entity<NewHire>(entity =>
         {
-            entity.ToTable("STAFF");
+            entity.ToTable("NEW_HIRE");
 
+            entity.HasIndex(e => e.ActivationToken, "ACTIVATION_TOKEN_INDX").IsUnique();
             entity.HasIndex(e => e.FirstName, "FIRST_NAME_INDX");
-
             entity.HasIndex(e => e.LastName, "LAST_NAME_INDX");
-
             entity.HasIndex(e => e.Position, "POSITON_INDX");
 
-            entity.HasIndex(e => e.UserId, "USER_INDX");
-
-            entity.Property(e => e.StaffId)
+            entity.Property(e => e.NewHireId)
                 .HasMaxLength(36)
                 .IsUnicode(false)
-                .HasColumnName("STAFF_ID");
+                .HasColumnName("NEW_HIRE_ID");
+
+            entity.Property(e => e.ActivationToken)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasColumnName("ACTIVATION_TOKEN");
+            entity.Property(e => e.TokenExpiry)
+                .HasColumnType("datetime")
+                .HasColumnName("TOKEN_EXPIRY");
+
+            entity.Property(e => e.Email)
+                .HasMaxLength(70)
+                .IsUnicode(false)
+                .HasColumnName("EMAIL");
+
             entity.Property(e => e.Dob)
                 .HasColumnType("datetime")
                 .HasColumnName("DOB");
@@ -222,14 +234,6 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Sex)
                 .HasColumnType("tinyint")
                 .HasColumnName("SEX");
-            entity.Property(e => e.UserId)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasColumnName("USER_ID");
-
-            entity.HasOne(d => d.User).WithMany(p => p.Staff)
-                .HasForeignKey(d => d.UserId)
-                .HasConstraintName("FK_STAFF_REFERENCE_USER");
         });
 
         modelBuilder.Entity<StaffTeam>(entity =>

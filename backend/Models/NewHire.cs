@@ -9,7 +9,6 @@ public partial class NewHire
     public required string NewHireId { get; set; }
     public string ActivationToken { get; set; } = null!;
     public DateTime TokenExpiry { get; set; }
-
     public string FirstName { get; set; } = null!;
 
     public string LastName { get; set; } = null!;

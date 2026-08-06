@@ -45,3 +45,36 @@ export async function fetchTeams(): Promise<Team[]> {
     }))
   }));
 }
+
+export async function createNewHire(payload: any) {
+  const response = await fetchWithToken("http://localhost:5096/api/newhire/new-hire", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to add new hire");
+  }
+
+  return response.json();
+}
+
+export async function activateAccount(token: string, password: string) {
+  const response = await fetch("http://localhost:5096/api/newhire/activate", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ token, password }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to activate account");
+  }
+
+  return response.json();
+}
