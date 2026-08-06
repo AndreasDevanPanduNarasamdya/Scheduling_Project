@@ -15,3 +15,17 @@ export interface Ticket {
   dateRange?: string;
   status: TicketStatus;
 }
+
+export interface StaffMember {
+  staffId: string;
+  name: string;
+  position: string;
+  status: "ON" | "OFF";
+  note?: string | null;
+}
+
+export interface Team {
+  teamId: string;
+  teamName: string;
+  members: StaffMember[];
+}

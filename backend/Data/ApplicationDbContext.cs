@@ -181,6 +181,57 @@ public partial class ApplicationDbContext : DbContext
                 .HasConstraintName("FK_STAFF_REFERENCE_USER");
         });
 
+        modelBuilder.Entity<Staff>(entity =>
+        {
+            entity.ToTable("STAFF");
+
+            entity.HasIndex(e => e.FirstName, "FIRST_NAME_INDX");
+
+            entity.HasIndex(e => e.LastName, "LAST_NAME_INDX");
+
+            entity.HasIndex(e => e.Position, "POSITON_INDX");
+
+            entity.HasIndex(e => e.UserId, "USER_INDX");
+
+            entity.Property(e => e.StaffId)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasColumnName("STAFF_ID");
+            entity.Property(e => e.Dob)
+                .HasColumnType("datetime")
+                .HasColumnName("DOB");
+            entity.Property(e => e.FirstName)
+                .HasMaxLength(30)
+                .IsUnicode(false)
+                .HasColumnName("FIRST_NAME");
+            entity.Property(e => e.JoinDate)
+                .HasColumnType("datetime")
+                .HasColumnName("JOIN_DATE");
+            entity.Property(e => e.LastName)
+                .HasMaxLength(30)
+                .IsUnicode(false)
+                .HasColumnName("LAST_NAME");
+            entity.Property(e => e.Phone)
+                .HasMaxLength(12)
+                .IsUnicode(false)
+                .HasColumnName("PHONE");
+            entity.Property(e => e.Position)
+                .HasMaxLength(20)
+                .IsUnicode(false)
+                .HasColumnName("POSITION");
+            entity.Property(e => e.Sex)
+                .HasColumnType("tinyint")
+                .HasColumnName("SEX");
+            entity.Property(e => e.UserId)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasColumnName("USER_ID");
+
+            entity.HasOne(d => d.User).WithMany(p => p.Staff)
+                .HasForeignKey(d => d.UserId)
+                .HasConstraintName("FK_STAFF_REFERENCE_USER");
+        });
+
         modelBuilder.Entity<StaffTeam>(entity =>
         {
             entity.ToTable("STAFF_TEAM");

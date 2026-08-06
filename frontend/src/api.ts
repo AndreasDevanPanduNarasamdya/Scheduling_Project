@@ -1,3 +1,5 @@
+import type { Team } from "./types"; // Adjust the path if your types file is somewhere else
+
 export const fetchWithToken = async (url: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("jwt_token");
 
@@ -25,3 +27,21 @@ export const fetchWithToken = async (url: string, options: RequestInit = {}) => 
 
   return response;
 };
+
+export async function fetchTeams(): Promise<Team[]> {
+  const response = await fetchWithToken("http://localhost:5096/api/teams");
+  if (!response.ok) throw new Error("Failed to load teams");
+  
+  const rawData = await response.json();
+  return rawData.map((t: any) => ({
+    teamId: t.teamId || t.TeamId,
+    teamName: t.teamName || t.TeamName,
+    members: (t.members || t.Members || []).map((m: any) => ({
+      staffId: m.staffId || m.StaffId,
+      name: m.name || m.Name,
+      position: m.position || m.Position,
+      status: m.status || m.Status,
+      note: m.note ?? m.Note ?? null
+    }))
+  }));
+}
