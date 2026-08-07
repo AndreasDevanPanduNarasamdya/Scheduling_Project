@@ -35,7 +35,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
       
           <nav className="flex flex-col flex-grow">
             <SidebarItem icon={<Home size={22} />} text="Dasbor" isOpen={isOpen} path="/dashboard" />
-            <SidebarItem icon={<Calendar size={22} />} text="Jadwal" isOpen={isOpen} path="/jadwal" />
+            <SidebarItem icon={<Calendar size={22} />} text="Jadwal" isOpen={isOpen} path="/timeline" />
             <SidebarItem icon={<Mail size={22} />} text="Inbox" isOpen={isOpen} path="/inbox" />
             <SidebarItem icon={<FileText size={22} />} text="Pengajuan" isOpen={isOpen} path="/form" />
             <SidebarItem icon={<Accessibility size={22} />} text="Management" isOpen={isOpen} path="/management" />

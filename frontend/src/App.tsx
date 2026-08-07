@@ -8,6 +8,7 @@ import MainLayout from './MainLayout';
 import ProtectedRoute from './SecureRoute';
 import Management from "./view/scheduling/Management";
 import InboxList from "./view/inbox/InboxList";
+import Timeline from "./view/scheduling/Timeline";
 import ActivationPage from "./view/activation/Activation";
 
 export default function App() {
@@ -43,6 +44,11 @@ export default function App() {
         <Route 
           path="/inbox" 
           element={user ? <MainLayout><InboxList /></MainLayout> : <Navigate to="/" />} 
+        />
+
+        <Route 
+          path="/timeline" 
+          element={user ? <MainLayout><Timeline /></MainLayout> : <Navigate to="/" />} 
         />
       </Route>
     </Routes>
