@@ -36,4 +36,33 @@ public class StaffRepository : IStaffRepository
         _dbContext.Staff.Update(staff);
         await _dbContext.SaveChangesAsync();
     }
+    public async Task<List<Staff>> GetUnassignedStaffAsync()
+    {
+        return await _dbContext.Staff
+            .Include(s => s.StaffTeams)
+            .Where(s => !s.StaffTeams.Any())
+            .ToListAsync();
+    }
+    public async Task AssignStaffToTeamAsync(string staffId, string teamId)
+    {
+        // 1. Remove old assignments for this staff
+        var existingAssignments = await _dbContext.StaffTeams
+            .Where(st => st.StaffId == staffId)
+            .ToListAsync();
+
+        _dbContext.StaffTeams.RemoveRange(existingAssignments);
+
+        // 2. Add new assignment (unless frontend sent "unassigned")
+        if (teamId != "unassigned" && !string.IsNullOrWhiteSpace(teamId))
+        {
+            _dbContext.StaffTeams.Add(new StaffTeam
+            {
+                StaffTeamId = Guid.NewGuid().ToString(), // Generate the string ID!
+                StaffId = staffId,
+                TeamId = teamId
+            });
+        }
+
+        await _dbContext.SaveChangesAsync();
+    }
 }

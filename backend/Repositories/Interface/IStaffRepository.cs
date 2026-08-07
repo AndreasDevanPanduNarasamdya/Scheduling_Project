@@ -8,4 +8,6 @@ public interface IStaffRepository
     Task<Staff?> GetByUserIdAsync(string userId);
     Task<List<Staff>> GetAllAsync();
     Task UpdateAsync(Staff staff);
+    Task<List<Staff>> GetUnassignedStaffAsync();
+    Task AssignStaffToTeamAsync(string staffId, string teamId);
 }

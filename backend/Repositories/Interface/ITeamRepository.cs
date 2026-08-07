@@ -6,4 +6,5 @@ namespace SchedulingMeruap.Api.Repositories.Interfaces;
 public interface ITeamRepository
 {
     Task<List<Team>> GetAllTeamsWithStaffAsync();
+    Task AddTeamAsync(Team team);
 }

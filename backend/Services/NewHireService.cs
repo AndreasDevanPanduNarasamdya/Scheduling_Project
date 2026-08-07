@@ -73,4 +73,21 @@ public class NewHireService : INewHireService
             throw;
         }
     }
+    public async Task<string> ValidateTokenAsync(string token)
+    {
+        var newHire = await _newHireRepository.GetByTokenAsync(token);
+
+        if (newHire == null)
+        {
+            // Either never existed, or already activated (row was deleted on activation).
+            return "invalid";
+        }
+
+        if (newHire.TokenExpiry < DateTime.Now)
+        {
+            return "expired";
+        }
+
+        return "valid";
+    }
 }

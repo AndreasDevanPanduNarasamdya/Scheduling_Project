@@ -13,3 +13,9 @@ public class NewHireRequest
     public DateTime Dob { get; set; }
     public DateTime JoinDate { get; set; }
 }
+
+public class ActivateAccountRequest
+{
+    public string Token { get; set; } = null!;
+    public string Password { get; set; } = null!;
+}

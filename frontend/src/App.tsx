@@ -8,7 +8,7 @@ import MainLayout from './MainLayout';
 import ProtectedRoute from './SecureRoute';
 import Management from "./view/scheduling/Management";
 import InboxList from "./view/inbox/InboxList";
-import ActivationPage from "./view/activation/activation";
+import ActivationPage from "./view/activation/Activation";
 
 export default function App() {
   const { user } = useAuth();

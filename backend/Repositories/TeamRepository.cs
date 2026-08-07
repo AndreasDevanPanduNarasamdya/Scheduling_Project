@@ -22,4 +22,9 @@ public class TeamRepository : ITeamRepository
                 .ThenInclude(st => st.Staff)
             .ToListAsync();
     }
+    public async Task AddTeamAsync(Team team)
+    {
+        _context.Teams.Add(team);
+        await _context.SaveChangesAsync();
+    }
 }

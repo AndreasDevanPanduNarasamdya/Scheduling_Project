@@ -46,6 +46,41 @@ export async function fetchTeams(): Promise<Team[]> {
   }));
 }
 
+export async function fetchUnassignedStaff() {
+  // Just use fetchWithToken directly!
+  const response = await fetchWithToken("http://localhost:5096/api/staff/unassigned");
+  
+  if (!response.ok) throw new Error("Failed to fetch unassigned staff");
+  return response.json();
+}
+
+export async function createTeam(payload: { teamName: string }) {
+  const response = await fetchWithToken("http://localhost:5096/api/teams", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      // fetchWithToken will automatically inject the Authorization header here
+    },
+    body: JSON.stringify(payload)
+  });
+  
+  if (!response.ok) throw new Error("Failed to create team");
+  return response.json();
+}
+
+export async function assignStaffToTeam(staffId: string, teamId: string) {
+  const response = await fetchWithToken("http://localhost:5096/api/staff/assign", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ staffId, teamId })
+  });
+  
+  if (!response.ok) throw new Error("Failed to assign staff");
+  return response.json();
+}
+
 export async function createNewHire(payload: any) {
   const response = await fetchWithToken("http://localhost:5096/api/newhire/new-hire", {
     method: "POST",
@@ -63,6 +98,22 @@ export async function createNewHire(payload: any) {
   return response.json();
 }
 
+export type TokenValidationResult = {
+  status: "valid" | "expired" | "used" | "invalid";
+};
+ 
+export async function validateActivationToken(token: string): Promise<TokenValidationResult> {
+  const response = await fetch(
+    `http://localhost:5096/api/newhire/activate/validate?token=${encodeURIComponent(token)}`
+  );
+ 
+  if (!response.ok) {
+    return { status: "invalid" };
+  }
+ 
+  return response.json();
+}
+ 
 export async function activateAccount(token: string, password: string) {
   const response = await fetch("http://localhost:5096/api/newhire/activate", {
     method: "POST",
@@ -71,10 +122,11 @@ export async function activateAccount(token: string, password: string) {
     },
     body: JSON.stringify({ token, password }),
   });
-
+ 
   if (!response.ok) {
-    throw new Error("Failed to activate account");
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Failed to activate account");
   }
-
+ 
   return response.json();
 }

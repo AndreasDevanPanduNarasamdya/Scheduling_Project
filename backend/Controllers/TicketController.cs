@@ -11,7 +11,6 @@ using SchedulingMeruap.Api.Data;
 [Route("api/[controller]")]
 public class TicketController : ControllerBase
 {
-    private readonly ApplicationDbContext _context;
     private readonly ITicketService _ticketService;
 
     public TicketController(ITicketService ticketService)
