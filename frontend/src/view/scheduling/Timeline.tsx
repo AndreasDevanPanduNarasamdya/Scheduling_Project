@@ -10,7 +10,6 @@ const MONTH_NAMES = [
 
 const COLUMN_WIDTH = 40;
 
-// --- DYNAMIC GENERATOR ---
 function generateTimeline(startYear: number, endYear: number) {
   const days = [];
   const months = [];
@@ -51,7 +50,6 @@ export default function TimelinePage() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Start with ONLY the current year rendered
   const currentYear = new Date().getFullYear();
   const [yearRange, setYearRange] = useState({ start: currentYear, end: currentYear });
   const [visibleYear, setVisibleYear] = useState(currentYear);
@@ -68,7 +66,6 @@ export default function TimelinePage() {
     const totalWidth = days.length * COLUMN_WIDTH;
     
 
-// Fetch Teams independently on mount
   useEffect(() => {
     let isMounted = true;
     
