@@ -1,5 +1,24 @@
 export type TicketStatus = 0 | 1 | 2;
-export type TicketType = 'ON' | 'OFF' |0 | 1;;
+export type TicketType = 'ON' | 'OFF' | 0 | 1;
+export type BarType = "None" | "OffDuty" | "Leave" | "Transition";
+
+export interface TimelineDay {
+  date: string;       // ISO date string, e.g. "2026-07-24"
+  barType: BarType;
+}
+
+export interface TimelineStaff {
+  staffId: string;
+  name: string;
+  position: string;
+  days: TimelineDay[];
+}
+
+export interface TimelineTeam {
+  teamId: string;
+  teamName: string;
+  members: TimelineStaff[];
+}
 
 export interface Ticket {
   ticketID: string;

@@ -6,11 +6,30 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SchedulingMeruap.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class AddNewHireTable : Migration
+    public partial class AddRotationPatternRemoveScheduleShift : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.CreateTable(
+                name: "ACTIVITY_LOG",
+                columns: table => new
+                {
+                    LOG_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
+                    ScheduleId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    FIRST_NAME = table.Column<string>(type: "varchar(30)", unicode: false, maxLength: 30, nullable: false),
+                    LAST_NAME = table.Column<string>(type: "varchar(30)", unicode: false, maxLength: 30, nullable: false),
+                    POSITION = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false),
+                    TEAM = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false),
+                    TYPE = table.Column<string>(type: "varchar(1)", unicode: false, maxLength: 1, nullable: false),
+                    DESCRIPTION = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: false),
+                    DOCUMENT = table.Column<string>(type: "varchar(70)", unicode: false, maxLength: 70, nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ACTIVITY_LOG", x => x.LOG_ID);
+                });
+
             migrationBuilder.CreateTable(
                 name: "NEW_HIRE",
                 columns: table => new
@@ -30,18 +49,6 @@ namespace SchedulingMeruap.Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_NEW_HIRE", x => x.NEW_HIRE_ID);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "SCHEDULE",
-                columns: table => new
-                {
-                    SCHEDULE_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
-                    DATE = table.Column<DateTime>(type: "datetime", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SCHEDULE", x => x.SCHEDULE_ID);
                 });
 
             migrationBuilder.CreateTable(
@@ -73,55 +80,6 @@ namespace SchedulingMeruap.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ACTIVITY_LOG",
-                columns: table => new
-                {
-                    LOG_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
-                    SCHEDULE_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
-                    FIRST_NAME = table.Column<string>(type: "varchar(30)", unicode: false, maxLength: 30, nullable: false),
-                    LAST_NAME = table.Column<string>(type: "varchar(30)", unicode: false, maxLength: 30, nullable: false),
-                    POSITION = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false),
-                    TEAM = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false),
-                    TYPE = table.Column<string>(type: "varchar(1)", unicode: false, maxLength: 1, nullable: false),
-                    DESCRIPTION = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: false),
-                    DOCUMENT = table.Column<string>(type: "varchar(70)", unicode: false, maxLength: 70, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ACTIVITY_LOG", x => x.LOG_ID);
-                    table.ForeignKey(
-                        name: "FK_ACTIVITY_REFERENCE_SCHEDULE",
-                        column: x => x.SCHEDULE_ID,
-                        principalTable: "SCHEDULE",
-                        principalColumn: "SCHEDULE_ID");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "SHIFT",
-                columns: table => new
-                {
-                    SHIFT_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
-                    SCHEDULE_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
-                    TEAM_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SHIFT", x => x.SHIFT_ID);
-                    table.ForeignKey(
-                        name: "FK_SHIFT_REFERENCE_SCHEDULE",
-                        column: x => x.SCHEDULE_ID,
-                        principalTable: "SCHEDULE",
-                        principalColumn: "SCHEDULE_ID",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_SHIFT_REFERENCE_TEAM",
-                        column: x => x.TEAM_ID,
-                        principalTable: "TEAM",
-                        principalColumn: "TEAM_ID",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "STAFF",
                 columns: table => new
                 {
@@ -146,12 +104,42 @@ namespace SchedulingMeruap.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ROTATION_PATTERN",
+                columns: table => new
+                {
+                    ROTATION_PATTERN_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
+                    TEAM_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: true),
+                    STAFF_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: true),
+                    START_DATE = table.Column<DateTime>(type: "datetime", nullable: false),
+                    DAYS_ON = table.Column<int>(type: "int", nullable: false),
+                    DAYS_OFF = table.Column<int>(type: "int", nullable: false),
+                    END_DATE = table.Column<DateTime>(type: "datetime", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ROTATION_PATTERN", x => x.ROTATION_PATTERN_ID);
+                    table.ForeignKey(
+                        name: "FK_ROTATION_REFERENCE_STAFF",
+                        column: x => x.STAFF_ID,
+                        principalTable: "STAFF",
+                        principalColumn: "STAFF_ID",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_ROTATION_REFERENCE_TEAM",
+                        column: x => x.TEAM_ID,
+                        principalTable: "TEAM",
+                        principalColumn: "TEAM_ID",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "STAFF_TEAM",
                 columns: table => new
                 {
                     STAFF_TEAM_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
                     TEAM_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
-                    STAFF_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false)
+                    STAFF_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
+                    FOLLOWS_TEAM_SCHEDULE = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
@@ -196,11 +184,6 @@ namespace SchedulingMeruap.Api.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "SCHEDULE_INDX",
-                table: "ACTIVITY_LOG",
-                column: "SCHEDULE_ID");
-
-            migrationBuilder.CreateIndex(
                 name: "ACTIVATION_TOKEN_INDX",
                 table: "NEW_HIRE",
                 column: "ACTIVATION_TOKEN",
@@ -222,18 +205,13 @@ namespace SchedulingMeruap.Api.Migrations
                 column: "POSITION");
 
             migrationBuilder.CreateIndex(
-                name: "DATE_INDX",
-                table: "SCHEDULE",
-                column: "DATE");
-
-            migrationBuilder.CreateIndex(
-                name: "SCHEDULE_INDX",
-                table: "SHIFT",
-                column: "SCHEDULE_ID");
+                name: "STAFF_INDX",
+                table: "ROTATION_PATTERN",
+                column: "STAFF_ID");
 
             migrationBuilder.CreateIndex(
                 name: "TEAM_INDX",
-                table: "SHIFT",
+                table: "ROTATION_PATTERN",
                 column: "TEAM_ID");
 
             migrationBuilder.CreateIndex(
@@ -297,16 +275,13 @@ namespace SchedulingMeruap.Api.Migrations
                 name: "NEW_HIRE");
 
             migrationBuilder.DropTable(
-                name: "SHIFT");
+                name: "ROTATION_PATTERN");
 
             migrationBuilder.DropTable(
                 name: "STAFF_TEAM");
 
             migrationBuilder.DropTable(
                 name: "TICKET");
-
-            migrationBuilder.DropTable(
-                name: "SCHEDULE");
 
             migrationBuilder.DropTable(
                 name: "TEAM");

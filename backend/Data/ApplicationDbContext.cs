@@ -16,11 +16,12 @@ public partial class ApplicationDbContext : DbContext
     {
     }
 
+    public virtual DbSet<Timeline> Timelines { get; set; }
     public virtual DbSet<ActivityLog> ActivityLogs { get; set; }
 
-    public virtual DbSet<Schedule> Schedules { get; set; }
+    // public virtual DbSet<Schedule> Schedules { get; set; }
 
-    public virtual DbSet<Shift> Shifts { get; set; }
+    // public virtual DbSet<Shift> Shifts { get; set; }
 
     public virtual DbSet<Staff> Staff { get; set; }
 
@@ -35,13 +36,55 @@ public partial class ApplicationDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Timeline>(entity =>
+        {
+            entity.ToTable("TIMELINE");
+
+            entity.HasIndex(e => e.TeamId, "TEAM_INDX");
+            entity.HasIndex(e => e.StaffId, "STAFF_INDX");
+
+            entity.Property(e => e.TimelineId)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasColumnName("TIMELINE_ID");
+            entity.Property(e => e.TeamId)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasColumnName("TEAM_ID");
+            entity.Property(e => e.StaffId)
+                .HasMaxLength(36)
+                .IsUnicode(false)
+                .HasColumnName("STAFF_ID");
+            entity.Property(e => e.StartDate)
+                .HasColumnType("datetime")
+                .HasColumnName("START_DATE");
+            entity.Property(e => e.DaysOn)
+                .HasColumnName("DAYS_ON");
+            entity.Property(e => e.DaysOff)
+                .HasColumnName("DAYS_OFF");
+            entity.Property(e => e.EndDate)
+                .HasColumnType("datetime")
+                .HasColumnName("END_DATE");
+
+            entity.HasOne(d => d.Team)
+                .WithMany()
+                .HasForeignKey(d => d.TeamId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ROTATION_REFERENCE_TEAM");
+
+            entity.HasOne(d => d.Staff)
+                .WithMany()
+                .HasForeignKey(d => d.StaffId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_ROTATION_REFERENCE_STAFF");
+        });
         modelBuilder.Entity<ActivityLog>(entity =>
         {
             entity.HasKey(e => e.LogId);
 
             entity.ToTable("ACTIVITY_LOG");
 
-            entity.HasIndex(e => e.ScheduleId, "SCHEDULE_INDX");
+            // entity.HasIndex(e => e.ScheduleId, "SCHEDULE_INDX");
 
             entity.Property(e => e.LogId)
                 .HasMaxLength(36)
@@ -67,10 +110,10 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasColumnName("POSITION");
-            entity.Property(e => e.ScheduleId)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasColumnName("SCHEDULE_ID");
+            // entity.Property(e => e.ScheduleId)
+            //     .HasMaxLength(36)
+            //     .IsUnicode(false)
+            //     .HasColumnName("SCHEDULE_ID");
             entity.Property(e => e.Team)
                 .HasMaxLength(20)
                 .IsUnicode(false)
@@ -80,56 +123,56 @@ public partial class ApplicationDbContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("TYPE");
 
-            entity.HasOne(d => d.Schedule).WithMany(p => p.ActivityLogs)
-                .HasForeignKey(d => d.ScheduleId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ACTIVITY_REFERENCE_SCHEDULE");
+            // entity.HasOne(d => d.Schedule).WithMany(p => p.ActivityLogs)
+            //     .HasForeignKey(d => d.ScheduleId)
+            //     .OnDelete(DeleteBehavior.ClientSetNull)
+            //     .HasConstraintName("FK_ACTIVITY_REFERENCE_SCHEDULE");
         });
 
-        modelBuilder.Entity<Schedule>(entity =>
-        {
-            entity.ToTable("SCHEDULE");
+        // modelBuilder.Entity<Schedule>(entity =>
+        // {
+        //     entity.ToTable("SCHEDULE");
 
-            entity.HasIndex(e => e.Date, "DATE_INDX");
+        //     entity.HasIndex(e => e.Date, "DATE_INDX");
 
-            entity.Property(e => e.ScheduleId)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasColumnName("SCHEDULE_ID");
-            entity.Property(e => e.Date)
-                .HasColumnType("datetime")
-                .HasColumnName("DATE");
-        });
+        //     entity.Property(e => e.ScheduleId)
+        //         .HasMaxLength(36)
+        //         .IsUnicode(false)
+        //         .HasColumnName("SCHEDULE_ID");
+        //     entity.Property(e => e.Date)
+        //         .HasColumnType("datetime")
+        //         .HasColumnName("DATE");
+        // });
 
-        modelBuilder.Entity<Shift>(entity =>
-        {
-            entity.ToTable("SHIFT");
+        // modelBuilder.Entity<Shift>(entity =>
+        // {
+        //     entity.ToTable("SHIFT");
 
-            entity.HasIndex(e => e.ScheduleId, "SCHEDULE_INDX");
+        //     entity.HasIndex(e => e.ScheduleId, "SCHEDULE_INDX");
 
-            entity.HasIndex(e => e.TeamId, "TEAM_INDX");
+        //     entity.HasIndex(e => e.TeamId, "TEAM_INDX");
 
-            entity.Property(e => e.ShiftId)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasColumnName("SHIFT_ID");
-            entity.Property(e => e.ScheduleId)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasColumnName("SCHEDULE_ID");
-            entity.Property(e => e.TeamId)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasColumnName("TEAM_ID");
+        //     entity.Property(e => e.ShiftId)
+        //         .HasMaxLength(36)
+        //         .IsUnicode(false)
+        //         .HasColumnName("SHIFT_ID");
+        //     entity.Property(e => e.ScheduleId)
+        //         .HasMaxLength(36)
+        //         .IsUnicode(false)
+        //         .HasColumnName("SCHEDULE_ID");
+        //     entity.Property(e => e.TeamId)
+        //         .HasMaxLength(36)
+        //         .IsUnicode(false)
+        //         .HasColumnName("TEAM_ID");
 
-            entity.HasOne(d => d.Schedule).WithMany(p => p.Shifts)
-                .HasForeignKey(d => d.ScheduleId)
-                .HasConstraintName("FK_SHIFT_REFERENCE_SCHEDULE");
+        //     entity.HasOne(d => d.Schedule).WithMany(p => p.Shifts)
+        //         .HasForeignKey(d => d.ScheduleId)
+        //         .HasConstraintName("FK_SHIFT_REFERENCE_SCHEDULE");
 
-            entity.HasOne(d => d.Team).WithMany(p => p.Shifts)
-                .HasForeignKey(d => d.TeamId)
-                .HasConstraintName("FK_SHIFT_REFERENCE_TEAM");
-        });
+        //     entity.HasOne(d => d.Team).WithMany(p => p.Shifts)
+        //         .HasForeignKey(d => d.TeamId)
+        //         .HasConstraintName("FK_SHIFT_REFERENCE_TEAM");
+        // });
 
         modelBuilder.Entity<Staff>(entity =>
         {
@@ -256,6 +299,9 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasColumnName("TEAM_ID");
+            entity.Property(e => e.FollowsTeamSchedule)
+                .HasDefaultValue(true)
+                .HasColumnName("FOLLOWS_TEAM_SCHEDULE");
 
             entity.HasOne(d => d.Staff).WithMany(p => p.StaffTeams)
                 .HasForeignKey(d => d.StaffId)

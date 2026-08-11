@@ -12,8 +12,8 @@ using SchedulingMeruap.Api.Data;
 namespace SchedulingMeruap.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260807100617_NewHire")]
-    partial class NewHire
+    [Migration("20260810204253_AddRotationPatternRemoveScheduleShift")]
+    partial class AddRotationPatternRemoveScheduleShift
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -70,10 +70,7 @@ namespace SchedulingMeruap.Api.Migrations
 
                     b.Property<string>("ScheduleId")
                         .IsRequired()
-                        .HasMaxLength(36)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("SCHEDULE_ID");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Team")
                         .IsRequired()
@@ -90,8 +87,6 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnName("TYPE");
 
                     b.HasKey("LogId");
-
-                    b.HasIndex(new[] { "ScheduleId" }, "SCHEDULE_INDX");
 
                     b.ToTable("ACTIVITY_LOG", (string)null);
                 });
@@ -176,56 +171,6 @@ namespace SchedulingMeruap.Api.Migrations
                     b.ToTable("NEW_HIRE", (string)null);
                 });
 
-            modelBuilder.Entity("SchedulingMeruap.Api.Models.Schedule", b =>
-                {
-                    b.Property<string>("ScheduleId")
-                        .HasMaxLength(36)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("SCHEDULE_ID");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("datetime")
-                        .HasColumnName("DATE");
-
-                    b.HasKey("ScheduleId");
-
-                    b.HasIndex(new[] { "Date" }, "DATE_INDX");
-
-                    b.ToTable("SCHEDULE", (string)null);
-                });
-
-            modelBuilder.Entity("SchedulingMeruap.Api.Models.Shift", b =>
-                {
-                    b.Property<string>("ShiftId")
-                        .HasMaxLength(36)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("SHIFT_ID");
-
-                    b.Property<string>("ScheduleId")
-                        .IsRequired()
-                        .HasMaxLength(36)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("SCHEDULE_ID");
-
-                    b.Property<string>("TeamId")
-                        .IsRequired()
-                        .HasMaxLength(36)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("TEAM_ID");
-
-                    b.HasKey("ShiftId");
-
-                    b.HasIndex(new[] { "ScheduleId" }, "SCHEDULE_INDX");
-
-                    b.HasIndex(new[] { "TeamId" }, "TEAM_INDX");
-
-                    b.ToTable("SHIFT", (string)null);
-                });
-
             modelBuilder.Entity("SchedulingMeruap.Api.Models.Staff", b =>
                 {
                     b.Property<string>("StaffId")
@@ -300,6 +245,12 @@ namespace SchedulingMeruap.Api.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(36)")
                         .HasColumnName("STAFF_TEAM_ID");
+
+                    b.Property<bool>("FollowsTeamSchedule")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true)
+                        .HasColumnName("FOLLOWS_TEAM_SCHEDULE");
 
                     b.Property<string>("StaffId")
                         .IsRequired()
@@ -413,6 +364,51 @@ namespace SchedulingMeruap.Api.Migrations
                     b.ToTable("TICKET", (string)null);
                 });
 
+            modelBuilder.Entity("SchedulingMeruap.Api.Models.Timeline", b =>
+                {
+                    b.Property<string>("TimelineId")
+                        .HasMaxLength(36)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(36)")
+                        .HasColumnName("ROTATION_PATTERN_ID");
+
+                    b.Property<int>("DaysOff")
+                        .HasColumnType("int")
+                        .HasColumnName("DAYS_OFF");
+
+                    b.Property<int>("DaysOn")
+                        .HasColumnType("int")
+                        .HasColumnName("DAYS_ON");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("datetime")
+                        .HasColumnName("END_DATE");
+
+                    b.Property<string>("StaffId")
+                        .HasMaxLength(36)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(36)")
+                        .HasColumnName("STAFF_ID");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime")
+                        .HasColumnName("START_DATE");
+
+                    b.Property<string>("TeamId")
+                        .HasMaxLength(36)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(36)")
+                        .HasColumnName("TEAM_ID");
+
+                    b.HasKey("TimelineId");
+
+                    b.HasIndex(new[] { "StaffId" }, "STAFF_INDX");
+
+                    b.HasIndex(new[] { "TeamId" }, "TEAM_INDX");
+
+                    b.ToTable("ROTATION_PATTERN", (string)null);
+                });
+
             modelBuilder.Entity("SchedulingMeruap.Api.Models.User", b =>
                 {
                     b.Property<string>("UserId")
@@ -448,38 +444,6 @@ namespace SchedulingMeruap.Api.Migrations
                     b.HasIndex(new[] { "Email" }, "EMAIL_INDX");
 
                     b.ToTable("USER", (string)null);
-                });
-
-            modelBuilder.Entity("SchedulingMeruap.Api.Models.ActivityLog", b =>
-                {
-                    b.HasOne("SchedulingMeruap.Api.Models.Schedule", "Schedule")
-                        .WithMany("ActivityLogs")
-                        .HasForeignKey("ScheduleId")
-                        .IsRequired()
-                        .HasConstraintName("FK_ACTIVITY_REFERENCE_SCHEDULE");
-
-                    b.Navigation("Schedule");
-                });
-
-            modelBuilder.Entity("SchedulingMeruap.Api.Models.Shift", b =>
-                {
-                    b.HasOne("SchedulingMeruap.Api.Models.Schedule", "Schedule")
-                        .WithMany("Shifts")
-                        .HasForeignKey("ScheduleId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_SHIFT_REFERENCE_SCHEDULE");
-
-                    b.HasOne("SchedulingMeruap.Api.Models.Team", "Team")
-                        .WithMany("Shifts")
-                        .HasForeignKey("TeamId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_SHIFT_REFERENCE_TEAM");
-
-                    b.Navigation("Schedule");
-
-                    b.Navigation("Team");
                 });
 
             modelBuilder.Entity("SchedulingMeruap.Api.Models.Staff", b =>
@@ -524,11 +488,23 @@ namespace SchedulingMeruap.Api.Migrations
                     b.Navigation("Staff");
                 });
 
-            modelBuilder.Entity("SchedulingMeruap.Api.Models.Schedule", b =>
+            modelBuilder.Entity("SchedulingMeruap.Api.Models.Timeline", b =>
                 {
-                    b.Navigation("ActivityLogs");
+                    b.HasOne("SchedulingMeruap.Api.Models.Staff", "Staff")
+                        .WithMany()
+                        .HasForeignKey("StaffId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_ROTATION_REFERENCE_STAFF");
 
-                    b.Navigation("Shifts");
+                    b.HasOne("SchedulingMeruap.Api.Models.Team", "Team")
+                        .WithMany()
+                        .HasForeignKey("TeamId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_ROTATION_REFERENCE_TEAM");
+
+                    b.Navigation("Staff");
+
+                    b.Navigation("Team");
                 });
 
             modelBuilder.Entity("SchedulingMeruap.Api.Models.Staff", b =>
@@ -540,8 +516,6 @@ namespace SchedulingMeruap.Api.Migrations
 
             modelBuilder.Entity("SchedulingMeruap.Api.Models.Team", b =>
                 {
-                    b.Navigation("Shifts");
-
                     b.Navigation("StaffTeams");
                 });
 

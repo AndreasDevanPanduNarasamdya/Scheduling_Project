@@ -23,5 +23,5 @@ public partial class ActivityLog
 
     public string Document { get; set; } = null!;
 
-    public virtual Schedule Schedule { get; set; } = null!;
+    // public virtual Schedule Schedule { get; set; } = null!;
 }

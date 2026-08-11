@@ -1,4 +1,15 @@
 import type { Team } from "./types"; // Adjust the path if your types file is somewhere else
+import type { TimelineTeam } from "./types";
+
+export async function fetchTimeline(startDate: string, endDate: string): Promise<TimelineTeam[]> {
+  const response = await fetch(
+    `http://localhost:5096/api/timeline?startDate=${startDate}&endDate=${endDate}`
+  );
+  if (!response.ok) {
+    throw new Error("Failed to fetch timeline");
+  }
+  return response.json();
+}
 
 export const fetchWithToken = async (url: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("jwt_token");

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
 import { Menu, Filter } from "lucide-react";
-import type { Team } from "../../types";
-import { fetchTeams } from "../../api"; 
+import type { TimelineTeam, BarType } from "../../types";
+import { fetchTimeline } from "../../api";
 
 const MONTH_NAMES = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
@@ -9,6 +9,13 @@ const MONTH_NAMES = [
 ];
 
 const COLUMN_WIDTH = 40;
+
+const BAR_COLORS: Record<BarType, string> = {
+  None: "",
+  OffDuty: "bg-gray-300",
+  Leave: "bg-amber-400",
+  Transition: "bg-sky-400",
+};
 
 function generateTimeline(startYear: number, endYear: number) {
   const days = [];
@@ -46,13 +53,35 @@ function generateTimeline(startYear: number, endYear: number) {
   return { days, months };
 }
 
+function toDateKey(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+function useDayLookup(teams: TimelineTeam[]) {
+  return useMemo(() => {
+    const map = new Map<string, Map<string, BarType>>();
+    for (const team of teams) {
+      for (const member of team.members) {
+        const dayMap = new Map<string, BarType>();
+        for (const day of member.days) {
+          dayMap.set(day.date, day.barType);
+        }
+        map.set(member.staffId, dayMap);
+      }
+    }
+    return map;
+  }, [teams]);
+}
+
 export default function TimelinePage() {
-  const [teams, setTeams] = useState<Team[]>([]);
+  const [teams, setTeams] = useState<TimelineTeam[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const currentYear = new Date().getFullYear();
   const [yearRange, setYearRange] = useState({ start: currentYear, end: currentYear });
   const [visibleYear, setVisibleYear] = useState(currentYear);
+  const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
+  const [selectedTeamFilter, setSelectedTeamFilter] = useState("All");
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const previousScrollState = useRef({ width: 0, left: 0 });
@@ -63,20 +92,33 @@ export default function TimelinePage() {
     return generateTimeline(yearRange.start, yearRange.end);
   }, [yearRange.start, yearRange.end]);
 
-    const totalWidth = days.length * COLUMN_WIDTH;
+  const totalWidth = days.length * COLUMN_WIDTH;
+  const dayLookup = useDayLookup(teams);
+
+  // Form State for the Modal
+  const [formData, setFormData] = useState({
+    targetId: "", // Will hold either "team:123" or "staff:456"
+    daysOn: "",
+    daysOff: "",
+    startDate: ""
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
     
 
   useEffect(() => {
     let isMounted = true;
-    
+
     const loadData = async () => {
+      setIsLoading(true);
       try {
-        const data = await fetchTeams();
+        const startDate = `${yearRange.start}-01-01`;
+        const endDate = `${yearRange.end}-12-31`;
+        const data = await fetchTimeline(startDate, endDate);
         if (isMounted) {
           setTeams(Array.isArray(data) ? data : []);
         }
       } catch (err) {
-        console.error("Failed to fetch teams:", err);
+        console.error("Failed to fetch timeline:", err);
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -89,10 +131,8 @@ export default function TimelinePage() {
     return () => {
       isMounted = false;
     };
-  }, []);
-    
+  }, [yearRange.start, yearRange.end]);
 
-  // --- INITIAL SCROLL TO TODAY ---
   useLayoutEffect(() => {
     if (!hasInitialScrolled.current && scrollContainerRef.current && days.length > 0) {
       const todayIndex = days.findIndex(d => d.isToday);
@@ -104,7 +144,6 @@ export default function TimelinePage() {
     }
   }, [days]);
 
-  // --- SEAMLESS SCROLL COMPENSATION FOR PAST YEARS ---
   useLayoutEffect(() => {
     const container = scrollContainerRef.current;
     // If we just appended a year to the past, the width grew on the left side.
@@ -147,21 +186,81 @@ const handleScroll = () => {
     }
   };
 
+  const handleSaveSchedule = async () => {
+    // 1. Validate the input
+    if (!formData.targetId || !formData.daysOn || !formData.daysOff || !formData.startDate) {
+      alert("Harap isi semua kolom!");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // 2. Figure out if HR selected a Team or a specific Staff member
+      const isTeam = formData.targetId.startsWith("team:");
+      const actualId = formData.targetId.split(":")[1];
+
+      // 3. Build the payload exactly as C# expects (CreateTimelineRequest)
+      const payload = {
+        TeamId: isTeam ? actualId : null,
+        StaffId: !isTeam ? actualId : null,
+        StartDate: formData.startDate,
+        DaysOn: parseInt(formData.daysOn, 10),
+        DaysOff: parseInt(formData.daysOff, 10)
+      };
+
+      // 4. Send to your C# API (Update the URL to your actual backend port!)
+      const response = await fetch("http://localhost:5096/api/timeline", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        throw new Error("Gagal menyimpan jadwal");
+      }
+
+      alert("Jadwal berhasil disimpan!");
+      
+      // 5. Clean up and close modal
+      setIsAssignModalOpen(false);
+      setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "" });
+      
+      // Note: To see the new bars instantly, you would call your loadData() function here again!
+
+    } catch (error) {
+      console.error(error);
+      alert("Terjadi kesalahan saat menyimpan jadwal.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    // 'min-w-0' is crucial here. It stops the flex child from blowing past the screen bounds 
-    // when paired with your sidebar layout.
-    <div className="w-full h-full flex flex-col bg-white font-sans overflow-hidden min-w-0">
+    <div className="flex-1 w-full h-full flex flex-col bg-white font-sans overflow-hidden min-w-0">
       
       {/* TOP NAVBAR */}
-      <div className="bg-[#244376] text-white p-2.5 flex gap-4 items-center shrink-0 shadow-sm z-30 relative w-full">
-        <button className="p-1.5 hover:bg-white/20 rounded transition">
+      <div className="bg-[#244376] text-white p-2.5 flex items-center gap-4 shrink-0 shadow-sm z-30 relative w-full">
+        
+        {/* Menu Toggle */}
+        <button className="p-1.5 hover:bg-white/20 rounded transition shrink-0">
           <Menu size={22} />
         </button>
-        <div className="flex gap-2">
-          <select className="bg-white text-gray-800 px-3 py-1.5 rounded-md text-sm font-medium shadow-sm"><option>Filter</option></select>
-          <select className="bg-white text-gray-800 px-3 py-1.5 rounded-md text-sm font-medium shadow-sm"><option>Date</option></select>
-          <select className="bg-white text-gray-800 px-3 py-1.5 rounded-md text-sm font-medium shadow-sm"><option>Employee</option></select>
+        
+        {/* HR Action Buttons (Now safely on the left) */}
+        <div className="flex gap-2 shrink-0">
+          <button 
+            onClick={() => setIsAssignModalOpen(true)}
+            className="bg-[#356bb3] hover:bg-[#2a5691] text-white px-4 py-1.5 rounded-md text-sm font-bold shadow-sm transition"
+          >
+            + Atur Jadwal
+          </button>
+          <button className="bg-white text-[#244376] hover:bg-gray-100 px-4 py-1.5 rounded-md text-sm font-bold shadow-sm transition">
+            + Tim Baru
+          </button>
         </div>
+
       </div>
 
       <div className="flex flex-1 overflow-hidden relative w-full">
@@ -250,19 +349,118 @@ const handleScroll = () => {
             <div className="relative z-10">
               {!isLoading && teams.map((team) => (
                 <div key={`grid-team-${team.teamId}`}>
-                  <div className="h-[41px]" /> 
+                  <div className="h-[41px]" />
                   {team.members.length === 0 ? (
                     <div className="h-[42px] border-b border-transparent" />
                   ) : (
-                    team.members.map((member) => (
-                      <div key={`grid-staff-${member.staffId}`} className="h-[42px] border-b border-transparent relative flex items-center" />
-                    ))
+                    team.members.map((member) => {
+                      const memberDays = dayLookup.get(member.staffId);
+                      return (
+                        <div
+                          key={`grid-staff-${member.staffId}`}
+                          className="h-[42px] border-b border-transparent relative flex items-center"
+                        >
+                          {days.map((d, i) => {
+                            const barType = memberDays?.get(toDateKey(d.date)) ?? "None";
+                            if (barType === "None") return null;
+                            return (
+                              <div
+                                key={i}
+                                className={`absolute h-4 rounded-sm ${BAR_COLORS[barType]}`}
+                                style={{ left: i * COLUMN_WIDTH + 4, width: COLUMN_WIDTH - 8 }}
+                                title={barType}
+                              />
+                            );
+                          })}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               ))}
             </div>
           </div>
         </div>
+        {/* ---> NEW MODAL OVERLAY START <--- */}
+        {isAssignModalOpen && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-xl w-[500px] p-6 text-left">
+              <h2 className="text-xl font-bold mb-4 text-[#244376]">Atur Rotasi Staf</h2>
+              
+              <div className="flex flex-col gap-3">
+                <label className="text-sm font-medium text-gray-700">Pilih Staf / Tim</label>
+                
+                {/* Dynamic Dropdown populated by your C# data */}
+                <select 
+                  className="border border-gray-300 rounded p-2 text-black"
+                  value={formData.targetId}
+                  onChange={(e) => setFormData({ ...formData, targetId: e.target.value })}
+                >
+                  <option value="">Pilih...</option>
+                  {teams.map((team) => (
+                    <optgroup key={team.teamId} label={`Tim: ${team.teamName}`}>
+                      <option value={`team:${team.teamId}`}>Seluruh {team.teamName}</option>
+                      {team.members.map((member) => (
+                        <option key={member.staffId} value={`staff:${member.staffId}`}>
+                          - {member.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                
+                <label className="text-sm font-medium text-gray-700">Pola Shift (Days On / Days Off)</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="number" 
+                    placeholder="On (e.g. 5)" 
+                    className="border border-gray-300 rounded p-2 w-full text-black"
+                    value={formData.daysOn}
+                    onChange={(e) => setFormData({ ...formData, daysOn: e.target.value })}
+                  />
+                  <input 
+                    type="number" 
+                    placeholder="Off (e.g. 2)" 
+                    className="border border-gray-300 rounded p-2 w-full text-black"
+                    value={formData.daysOff}
+                    onChange={(e) => setFormData({ ...formData, daysOff: e.target.value })}
+                  />
+                </div>
+                
+                <label className="text-sm font-medium text-gray-700">Tanggal Mulai</label>
+                <input 
+                  type="date" 
+                  className="border border-gray-300 rounded p-2 text-black w-full"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                  // Add this exact line below:
+                  onClick={(e) => e.currentTarget.showPicker()} 
+                />
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button 
+                  onClick={() => {
+                    setIsAssignModalOpen(false);
+                    setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "" });
+                  }} 
+                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded font-medium transition"
+                  disabled={isSubmitting}
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={handleSaveSchedule}
+                  className="px-4 py-2 bg-[#356bb3] hover:bg-[#2a5691] text-white rounded font-bold transition disabled:opacity-50"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Menyimpan..." : "Simpan Jadwal"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* ---> NEW MODAL OVERLAY END <--- */}
       </div>
     </div>
   );
