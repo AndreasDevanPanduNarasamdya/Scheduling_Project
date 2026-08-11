@@ -16,7 +16,6 @@ public class TimelineService : ITimelineService
         _repository = repository;
     }
 
-    // ---> THIS IS YOUR PERFECTED GET METHOD (Read) <---
     public async Task<List<TimelineTeamResponse>> GetTimelineDataAsync(TimelineRequest request)
     {
         var teamsData = await _repository.GetTeamsWithStaffAndTicketsAsync();
@@ -45,53 +44,51 @@ public class TimelineService : ITimelineService
                     Days = new List<TimelineDayResponse>()
                 };
 
-                // Point 1 Fix: Respect FollowsTeamSchedule hierarchy
-                Timeline rotation = null;
-                if (staffTeam.FollowsTeamSchedule)
-                {
-                    rotation = activeTimelines.FirstOrDefault(t => t.TeamId == team.TeamId)
-                            ?? activeTimelines.FirstOrDefault(t => t.StaffId == staff.StaffId);
-                }
-                else
-                {
-                    rotation = activeTimelines.FirstOrDefault(t => t.StaffId == staff.StaffId)
-                            ?? activeTimelines.FirstOrDefault(t => t.TeamId == team.TeamId);
-                }
-
                 for (var date = request.StartDate.Date; date <= request.EndDate.Date; date = date.AddDays(1))
                 {
                     string barType = "None";
 
-                    // --- 1. Base Rotation Math ---
+                    Timeline? rotation = null;
+                    if (staffTeam.FollowsTeamSchedule)
+                    {
+                        rotation = GetApplicableTimeline(activeTimelines, team.TeamId, isTeam: true, date);
+                    }
+                    else
+                    {
+                        rotation = GetApplicableTimeline(activeTimelines, staff.StaffId, isTeam: false, date);
+                    }
+
+                    // 2. Base Rotation Math
                     if (rotation != null && date >= rotation.StartDate.Date)
                     {
-                        if (!rotation.EndDate.HasValue || date <= rotation.EndDate.Value.Date)
-                        {
-                            int cycleLength = rotation.DaysOn + rotation.DaysOff;
-                            int daysSinceStart = (date - rotation.StartDate.Date).Days;
-                            int dayInCycle = daysSinceStart % cycleLength;
+                        int cycleLength = rotation.DaysOn + rotation.DaysOff;
+                        int daysSinceStart = (date - rotation.StartDate.Date).Days;
+                        int dayInCycle = daysSinceStart % cycleLength;
 
-                            if (dayInCycle >= rotation.DaysOn)
-                            {
-                                barType = "OffDuty";
-                            }
+                        if (dayInCycle >= rotation.DaysOn)
+                        {
+                            barType = "OffDuty";
                         }
                     }
 
-                    // --- 2. Ticket Overrides ---
+                    // 3. Ticket Overrides (Exceptions take precedence over base rotation)
                     var activeTicket = staff.Tickets.FirstOrDefault(t =>
                         t.Status == TicketStatus.Approved &&
                         date >= t.StartDate.Date && date <= t.EndDate.Date);
 
-                    if (activeTicket != null && activeTicket.Type == TicketType.Off)
+                    if (activeTicket != null)
                     {
-                        var ticketStart = activeTicket.StartDate.Date;
-                        var ticketEnd = activeTicket.EndDate.Date;
-
-                        if (date == ticketStart || date == ticketEnd)
-                            barType = "Transition";
-                        else
-                            barType = "Leave";
+                        if (activeTicket.Type == TicketType.Off)
+                        {
+                            var ticketStart = activeTicket.StartDate.Date;
+                            var ticketEnd = activeTicket.EndDate.Date;
+                            barType = (date == ticketStart || date == ticketEnd) ? "Transition" : "Leave";
+                        }
+                        else if (activeTicket.Type == TicketType.On)
+                        {
+                            // Approved ON ticket overrides an OffDuty rotation day back to working status
+                            barType = "None";
+                        }
                     }
 
                     if (barType != "None")
@@ -99,7 +96,8 @@ public class TimelineService : ITimelineService
                         staffDto.Days.Add(new TimelineDayResponse
                         {
                             Date = date.ToString("yyyy-MM-dd"),
-                            BarType = barType
+                            BarType = barType,
+                            Label = activeTicket?.Reason
                         });
                     }
                 }
@@ -112,26 +110,128 @@ public class TimelineService : ITimelineService
         return response;
     }
 
-    // ---> THIS IS THE MISSING POST METHOD (Write) <---
+    private static Timeline? GetApplicableTimeline(List<Timeline> timelines, string targetId, bool isTeam, DateTime date)
+    {
+        return timelines
+            .Where(t => (isTeam ? t.TeamId == targetId : t.StaffId == targetId))
+            .Where(t => t.StartDate.Date <= date.Date && (!t.EndDate.HasValue || t.EndDate.Value.Date >= date.Date))
+            .OrderByDescending(t => t.StartDate)
+            .FirstOrDefault();
+    }
+
     public async Task<Timeline> CreateTimelineAsync(CreateTimelineRequest request)
     {
-        // Validation to ensure they picked either a team or a staff member
-        if (string.IsNullOrEmpty(request.TeamId) && string.IsNullOrEmpty(request.StaffId))
-        {
+        // Validation: Exactly one target must be specified
+        bool hasTeam = !string.IsNullOrEmpty(request.TeamId);
+        bool hasStaff = !string.IsNullOrEmpty(request.StaffId);
+
+        if (!hasTeam && !hasStaff)
             throw new ArgumentException("You must provide either a TeamId or a StaffId.");
+        if (hasTeam && hasStaff)
+            throw new ArgumentException("Provide only one of TeamId or StaffId, not both.");
+
+        if (request.DaysOn < 1 || request.DaysOff < 1)
+            throw new ArgumentException("DaysOn and DaysOff must be greater than or equal to 1.");
+
+        // Validation: Ensure entity exists in the database
+        if (hasTeam && !await _repository.TeamExistsAsync(request.TeamId!))
+            throw new ArgumentException($"Team with ID '{request.TeamId}' does not exist.");
+        if (hasStaff && !await _repository.StaffExistsAsync(request.StaffId!))
+            throw new ArgumentException($"Staff with ID '{request.StaffId}' does not exist.");
+
+        // Handle Versioning & Overlap Prevention
+        var existingTimelines = await _repository.GetTimelinesByTargetAsync(request.TeamId, request.StaffId);
+        var openTimeline = existingTimelines.FirstOrDefault(t => t.EndDate == null);
+
+        if (openTimeline != null)
+        {
+            if (request.StartDate.Date <= openTimeline.StartDate.Date)
+            {
+                throw new ArgumentException("New timeline StartDate must be chronologically after the current schedule's StartDate.");
+            }
+
+            // Automatically close the existing schedule version the day before the new one starts
+            openTimeline.EndDate = request.StartDate.Date.AddDays(-1);
+            await _repository.UpdateTimelineAsync(openTimeline);
         }
 
         var newTimeline = new Timeline
         {
-            TimelineId = Guid.NewGuid().ToString(), // Assuming string ID in your DB
+            TimelineId = Guid.NewGuid().ToString(),
             TeamId = request.TeamId,
             StaffId = request.StaffId,
-            StartDate = request.StartDate,
+            StartDate = request.StartDate.Date,
             DaysOn = request.DaysOn,
             DaysOff = request.DaysOff,
-            EndDate = null // Loops infinitely until HR changes it
+            EndDate = null
         };
 
-        return await _repository.CreateTimelineAsync(newTimeline);
+        var created = await _repository.CreateTimelineAsync(newTimeline);
+
+        if (hasStaff)
+        {
+            await _repository.SetFollowsTeamScheduleAsync(request.StaffId!, followsTeam: false);
+        }
+
+        return created;
+    }
+
+    public async Task<List<TimelineHistoryResponse>> GetTimelineHistoryAsync(string? teamId, string? staffId)
+    {
+        if (string.IsNullOrEmpty(teamId) && string.IsNullOrEmpty(staffId))
+            throw new ArgumentException("You must provide either a TeamId or a StaffId.");
+        if (!string.IsNullOrEmpty(teamId) && !string.IsNullOrEmpty(staffId))
+            throw new ArgumentException("Provide only one of TeamId or StaffId, not both.");
+
+        var timelines = await _repository.GetTimelinesByTargetAsync(teamId, staffId);
+        var today = DateTime.UtcNow.Date;
+
+        return timelines.OrderByDescending(t => t.StartDate).Select(t =>
+        {
+            string status = "Historical";
+            if (t.StartDate.Date <= today && (!t.EndDate.HasValue || t.EndDate.Value.Date >= today))
+            {
+                status = "Active";
+            }
+            else if (t.StartDate.Date > today)
+            {
+                status = "Future";
+            }
+
+            return new TimelineHistoryResponse
+            {
+                TimelineId = t.TimelineId,
+                TeamId = t.TeamId,
+                StaffId = t.StaffId,
+                StartDate = t.StartDate.ToString("yyyy-MM-dd"),
+                EndDate = t.EndDate?.ToString("yyyy-MM-dd"),
+                DaysOn = t.DaysOn,
+                DaysOff = t.DaysOff,
+                Status = status
+            };
+        }).ToList();
+    }
+
+    public async Task EndActiveTimelineAsync(EndTimelineRequest request)
+    {
+        bool hasTeam = !string.IsNullOrEmpty(request.TeamId);
+        bool hasStaff = !string.IsNullOrEmpty(request.StaffId);
+
+        if (!hasTeam && !hasStaff)
+            throw new ArgumentException("You must provide either a TeamId or a StaffId.");
+        if (hasTeam && hasStaff)
+            throw new ArgumentException("Provide only one of TeamId or StaffId, not both.");
+
+        var existingTimelines = await _repository.GetTimelinesByTargetAsync(request.TeamId, request.StaffId);
+        var openTimeline = existingTimelines.FirstOrDefault(t => t.EndDate == null);
+
+        if (openTimeline == null)
+            throw new ArgumentException("No active open-ended schedule exists for this target.");
+
+        if (request.EffectiveEndDate.Date < openTimeline.StartDate.Date)
+            throw new ArgumentException("The EffectiveEndDate cannot be earlier than the schedule's StartDate.");
+
+        openTimeline.EndDate = request.EffectiveEndDate.Date;
+        await _repository.UpdateTimelineAsync(openTimeline);
     }
 }

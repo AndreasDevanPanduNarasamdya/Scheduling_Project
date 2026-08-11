@@ -1,15 +1,11 @@
-import type { Team } from "./types"; // Adjust the path if your types file is somewhere else
-import type { TimelineTeam } from "./types";
+import type { 
+  TimelineTeam, 
+  Team, 
+  CreateTimelinePayload, 
+  TokenValidationResult 
+} from "./types";
 
-export async function fetchTimeline(startDate: string, endDate: string): Promise<TimelineTeam[]> {
-  const response = await fetch(
-    `http://localhost:5096/api/timeline?startDate=${startDate}&endDate=${endDate}`
-  );
-  if (!response.ok) {
-    throw new Error("Failed to fetch timeline");
-  }
-  return response.json();
-}
+const API_BASE_URL = "http://localhost:5096/api";
 
 export const fetchWithToken = async (url: string, options: RequestInit = {}) => {
   const token = localStorage.getItem("jwt_token");
@@ -27,20 +23,39 @@ export const fetchWithToken = async (url: string, options: RequestInit = {}) => 
 
   if (response.status === 401) {
     console.warn("Token expired or invalid. Logging out...");
-
     localStorage.removeItem("jwt_token");
     localStorage.removeItem("user_info");
-
     window.location.href = "/"; 
-    
     return response; 
   }
 
   return response;
 };
 
+export async function fetchTimeline(startDate: string, endDate: string): Promise<TimelineTeam[]> {
+  const url = `${API_BASE_URL}/timeline?StartDate=${encodeURIComponent(startDate)}&EndDate=${encodeURIComponent(endDate)}`;
+  const response = await fetchWithToken(url);
+  
+  if (!response.ok) {
+    throw new Error("Failed to fetch timeline");
+  }
+  return response.json();
+}
+
+export async function createTimeline(payload: CreateTimelinePayload): Promise<void> {
+  const response = await fetchWithToken(`${API_BASE_URL}/timeline`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Gagal menyimpan jadwal");
+  }
+}
+
 export async function fetchTeams(): Promise<Team[]> {
-  const response = await fetchWithToken("http://localhost:5096/api/teams");
+  const response = await fetchWithToken(`${API_BASE_URL}/teams`);
   if (!response.ok) throw new Error("Failed to load teams");
   
   const rawData = await response.json();
@@ -58,46 +73,32 @@ export async function fetchTeams(): Promise<Team[]> {
 }
 
 export async function fetchUnassignedStaff() {
-  // Just use fetchWithToken directly!
-  const response = await fetchWithToken("http://localhost:5096/api/staff/unassigned");
-  
+  const response = await fetchWithToken(`${API_BASE_URL}/staff/unassigned`);
   if (!response.ok) throw new Error("Failed to fetch unassigned staff");
   return response.json();
 }
 
 export async function createTeam(payload: { teamName: string }) {
-  const response = await fetchWithToken("http://localhost:5096/api/teams", {
+  const response = await fetchWithToken(`${API_BASE_URL}/teams`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      // fetchWithToken will automatically inject the Authorization header here
-    },
     body: JSON.stringify(payload)
   });
-  
   if (!response.ok) throw new Error("Failed to create team");
   return response.json();
 }
 
 export async function assignStaffToTeam(staffId: string, teamId: string) {
-  const response = await fetchWithToken("http://localhost:5096/api/staff/assign", {
+  const response = await fetchWithToken(`${API_BASE_URL}/staff/assign`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify({ staffId, teamId })
   });
-  
   if (!response.ok) throw new Error("Failed to assign staff");
   return response.json();
 }
 
 export async function createNewHire(payload: any) {
-  const response = await fetchWithToken("http://localhost:5096/api/newhire/new-hire", {
+  const response = await fetchWithToken(`${API_BASE_URL}/newhire/new-hire`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(payload),
   });
 
@@ -105,39 +106,59 @@ export async function createNewHire(payload: any) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || "Failed to add new hire");
   }
-
   return response.json();
 }
 
-export type TokenValidationResult = {
-  status: "valid" | "expired" | "used" | "invalid";
-};
- 
 export async function validateActivationToken(token: string): Promise<TokenValidationResult> {
   const response = await fetch(
-    `http://localhost:5096/api/newhire/activate/validate?token=${encodeURIComponent(token)}`
+    `${API_BASE_URL}/newhire/activate/validate?token=${encodeURIComponent(token)}`
   );
- 
   if (!response.ok) {
     return { status: "invalid" };
   }
- 
   return response.json();
 }
- 
+
 export async function activateAccount(token: string, password: string) {
-  const response = await fetch("http://localhost:5096/api/newhire/activate", {
+  const response = await fetch(`${API_BASE_URL}/newhire/activate`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ token, password }),
   });
- 
+
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || "Failed to activate account");
   }
- 
   return response.json();
+}
+
+export async function fetchTimelineHistory(teamId?: string, staffId?: string): Promise<TimelineHistoryRecord[]> {
+  const params = new URLSearchParams();
+  if (teamId) params.append("teamId", teamId);
+  if (staffId) params.append("staffId", staffId);
+
+  const url = `${API_BASE_URL}/timeline/history?${params.toString()}`;
+  const response = await fetchWithToken(url);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Failed to fetch timeline history");
+  }
+
+  return response.json();
+}
+
+export async function endActiveTimeline(payload: EndTimelinePayload): Promise<void> {
+  const response = await fetchWithToken(`${API_BASE_URL}/timeline/end`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Gagal mengakhiri jadwal aktif");
+  }
 }

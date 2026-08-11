@@ -8,4 +8,6 @@ public interface ITimelineService
 {
     Task<List<TimelineTeamResponse>> GetTimelineDataAsync(TimelineRequest request);
     Task<Timeline> CreateTimelineAsync(CreateTimelineRequest request);
+    Task<List<TimelineHistoryResponse>> GetTimelineHistoryAsync(string? teamId, string? staffId);
+    Task EndActiveTimelineAsync(EndTimelineRequest request);
 }

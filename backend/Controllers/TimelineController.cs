@@ -52,5 +52,34 @@ namespace SchedulingMeruap.Api.Controllers
                 return BadRequest(ex.Message);
             }
         }
+
+        [HttpGet("history")]
+        public async Task<IActionResult> GetTimelineHistory([FromQuery] string? teamId, [FromQuery] string? staffId)
+        {
+            try
+            {
+                var history = await _timelineService.GetTimelineHistoryAsync(teamId, staffId);
+                return Ok(history);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost("end")]
+        public async Task<IActionResult> EndTimeline([FromBody] EndTimelineRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+            try
+            {
+                await _timelineService.EndActiveTimelineAsync(request);
+                return Ok(new { message = "Schedule successfully closed." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }

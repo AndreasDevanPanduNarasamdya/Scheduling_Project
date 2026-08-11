@@ -21,5 +21,18 @@ namespace SchedulingMeruap.Api.DTO.Responses
     {
         public string Date { get; set; } = string.Empty;
         public string BarType { get; set; } = string.Empty;
+        public string? Label { get; set; }
+    }
+
+    public class TimelineHistoryResponse
+    {
+        public string TimelineId { get; set; } = string.Empty;
+        public string? TeamId { get; set; }
+        public string? StaffId { get; set; }
+        public string StartDate { get; set; } = string.Empty;
+        public string? EndDate { get; set; }
+        public int DaysOn { get; set; }
+        public int DaysOff { get; set; }
+        public string Status { get; set; } = string.Empty; // "Active", "Historical", or "Future"
     }
 }
