@@ -20,6 +20,8 @@ namespace SchedulingMeruap.Api.DTO.Requests
         [Required]
         public DateTime StartDate { get; set; }
 
+        public DateTime? EndDate { get; set; }
+
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "DaysOn must be greater than or equal to 1.")]
         public int DaysOn { get; set; }

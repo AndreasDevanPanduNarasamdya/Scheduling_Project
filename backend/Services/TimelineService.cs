@@ -67,7 +67,15 @@ public class TimelineService : ITimelineService
 
                         if (dayInCycle >= rotation.DaysOn)
                         {
-                            barType = "OffDuty";
+                            // NEW LOGIC: Check if it's the FIRST day off or the LAST day off
+                            if (dayInCycle == rotation.DaysOn || dayInCycle == cycleLength - 1)
+                            {
+                                barType = "Transition"; // Airport Pickup (Yellow)
+                            }
+                            else
+                            {
+                                barType = "OffDuty"; // Normal Break (Blue)
+                            }
                         }
                     }
 
@@ -82,12 +90,13 @@ public class TimelineService : ITimelineService
                         {
                             var ticketStart = activeTicket.StartDate.Date;
                             var ticketEnd = activeTicket.EndDate.Date;
+
+                            // Tickets ALSO get the airport pickup treatment at start and end!
                             barType = (date == ticketStart || date == ticketEnd) ? "Transition" : "Leave";
                         }
                         else if (activeTicket.Type == TicketType.On)
                         {
-                            // Approved ON ticket overrides an OffDuty rotation day back to working status
-                            barType = "None";
+                            barType = "None"; // Force back to working
                         }
                     }
 
@@ -124,6 +133,9 @@ public class TimelineService : ITimelineService
         // Validation: Exactly one target must be specified
         bool hasTeam = !string.IsNullOrEmpty(request.TeamId);
         bool hasStaff = !string.IsNullOrEmpty(request.StaffId);
+
+        if (request.EndDate.HasValue && request.EndDate.Value.Date < request.StartDate.Date)
+            throw new ArgumentException("EndDate cannot be earlier than StartDate.");
 
         if (!hasTeam && !hasStaff)
             throw new ArgumentException("You must provide either a TeamId or a StaffId.");
@@ -163,7 +175,7 @@ public class TimelineService : ITimelineService
             StartDate = request.StartDate.Date,
             DaysOn = request.DaysOn,
             DaysOff = request.DaysOff,
-            EndDate = null
+            EndDate = request.EndDate?.Date
         };
 
         var created = await _repository.CreateTimelineAsync(newTimeline);

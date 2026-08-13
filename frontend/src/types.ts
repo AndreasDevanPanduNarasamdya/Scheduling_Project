@@ -43,6 +43,7 @@ export interface CreateTimelinePayload {
   teamId: string | null;
   staffId: string | null;
   startDate: string;
+  endDate?: string | null;
   daysOn: number;
   daysOff: number;
 }

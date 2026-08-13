@@ -58,7 +58,7 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center bg-gray-900">
-      <style>{`
+      {/* <style>{`
         @keyframes seamlessSlide {
           0% { transform: translate3d(0, 0, 0); }
           100% { transform: translate3d(-50%, 0, 0); }
@@ -67,21 +67,14 @@ export default function LoginPage() {
           animation: seamlessSlide 40s linear infinite;
           width: max-content;
         }
-      `}</style>
+      `}</style> */}
 
       <div className="absolute inset-0 z-0 overflow-hidden">
-        <div className="absolute inset-y-0 left-0 flex animate-seamless h-full">
-          <img
-            src={BG_IMAGE_URL}
-            alt="background 1"
-            className="h-full w-auto max-w-none shrink-0 select-none block"
-          />
-          <img
-            src={BG_IMAGE_URL}
-            alt="background 2"
-            className="h-full w-auto max-w-none shrink-0 select-none block"
-          />
-        </div>
+        <img
+          src={BG_IMAGE_URL}
+          alt="background"
+          className="h-full w-full object-cover select-none block"
+        />
       </div>
 
       <form

@@ -18,8 +18,8 @@ export default function InboxSelected({ ticket, onClose, onActionComplete, class
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const typeStyles =
-    ticket?.type === 1 || ticket?.type === 'ON'
+const typeStyles =
+    ticket?.type === 'On'
       ? { bg: "bg-blue-100 text-blue-700", label: "ON SHIFT" }
       : { bg: "bg-violet-100 text-violet-700", label: "OFF SHIFT" };
 

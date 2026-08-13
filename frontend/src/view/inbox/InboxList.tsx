@@ -10,13 +10,13 @@ interface TicketCardProps {
 }
 
 function TicketCard({ ticket, onClick }: TicketCardProps) {
-  const getStatusStyles = (status: TicketStatus) => {
+const getStatusStyles = (status: TicketStatus) => {
     switch (status) {
-      case 0:
+      case "Pending":
         return { bg: "bg-amber-400", text: "text-amber-950", label: "Pending", icon: <AlertCircle size={16} /> };
-      case 1:
+      case "Approved":
         return { bg: "bg-emerald-500", text: "text-white", label: "Approved", icon: <Check size={16} /> };
-      case 2:
+      case "Declined":
         return { bg: "bg-red-500", text: "text-white", label: "Declined", icon: <X size={16} /> };
       default:
         return { bg: "bg-gray-300", text: "text-gray-700", label: "Unknown", icon: null };
@@ -43,7 +43,7 @@ function TicketCard({ ticket, onClick }: TicketCardProps) {
               <p className="text-gray-600 text-sm text-left font-medium">{ticket.team}</p>
             </div>
             <span className="bg-[#e8eff7] text-[#2a66b0] px-2.5 py-1 rounded-md text-xs font-bold">
-              {ticket.type === 1 || ticket.type === 'ON' ? 'ON' : 'OFF'}
+              {ticket.type === 'On' ? 'ON' : 'OFF'}
             </span>
           </div>
           <div className="mb-4">
@@ -76,11 +76,27 @@ export default function InboxList() {
         if (response.ok) {
           const rawData = await response.json();
           
-          const formattedTickets = rawData.map((t: any) => ({
-            ...t,
-            ticketID: t.ticketID || t.TicketID,
-            dateRange: `${new Date(t.startDate || t.StartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} - ${new Date(t.endDate || t.EndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
-          }));
+          const formattedTickets = rawData.map((t: any) => {
+            // 1. Translate the Status number to the exact word TypeScript wants
+            let mappedStatus = "Pending";
+            const rawStatus = t.status ?? t.Status;
+            if (rawStatus === 0) mappedStatus = "Pending";
+            if (rawStatus === 1) mappedStatus = "Approved";
+            if (rawStatus === 2) mappedStatus = "Declined";
+
+            // 2. Translate the Type number (1 for ON, anything else for OFF)
+            let mappedType = "Off";
+            const rawType = t.type ?? t.Type;
+            if (rawType === 1 || rawType === "On" || rawType === "ON") mappedType = "On";
+
+            return {
+              ...t,
+              ticketID: t.ticketID || t.TicketID,
+              status: mappedStatus, // Use the translated word here!
+              type: mappedType,     // Use the translated type here!
+              dateRange: `${new Date(t.startDate || t.StartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} - ${new Date(t.endDate || t.EndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+            };
+          });
 
           setTickets(formattedTickets);
         } else {
@@ -96,7 +112,7 @@ export default function InboxList() {
     fetchTickets();
   }, []);
 
-  const pendingCount = tickets.filter(t => t.status === 0).length;
+  const pendingCount = tickets.filter(t => t.status === "Pending").length;
 
   return (
     <div className="w-full p-8 font-sans flex flex-col">

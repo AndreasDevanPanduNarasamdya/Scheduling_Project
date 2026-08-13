@@ -35,9 +35,9 @@ const COLUMN_WIDTH = 40;
 
 const BAR_COLORS: Record<BarType, string> = {
   None: "",
-  OffDuty: "bg-gray-300",
-  Leave: "bg-amber-400",
-  Transition: "bg-sky-400",
+  OffDuty: "bg-blue-500 shadow-sm",
+  Leave: "bg-red-500 shadow-sm",
+  Transition: "bg-yellow-400",
 };
 
 function generateTimeline(startYear: number, endYear: number) {
@@ -176,11 +176,12 @@ export default function TimelinePage() {
   const [selectedAssignTeamId, setSelectedAssignTeamId] = useState("");
 
   // UX Feedback Banner State
-  const [formData, setFormData] = useState({
+const [formData, setFormData] = useState({
     targetId: "",
     daysOn: "",
     daysOff: "",
-    startDate: ""
+    startDate: "",
+    endDate: "" 
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -191,6 +192,9 @@ export default function TimelinePage() {
   const hasInitialScrolled = useRef(false);
   const isAddingPast = useRef(false);
   const isExpandingRef = useRef(false);
+
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [endDateInput, setEndDateInput] = useState("");
 
   const { days, months } = useMemo(() => {
     return generateTimeline(yearRange.start, yearRange.end);
@@ -278,6 +282,7 @@ export default function TimelinePage() {
     setSelectedInspection({ id, name, type, subtitle });
     setIsLoadingHistory(true);
     setErrorMessage(null);
+    setShowEndDatePicker(false);
     try {
       const history = await fetchTimelineHistory(
         type === "team" ? id : undefined,
@@ -319,13 +324,14 @@ export default function TimelinePage() {
         teamId: isTeam ? actualId : null,
         staffId: !isTeam ? actualId : null,
         startDate: formData.startDate,
+        endDate: formData.endDate ? formData.endDate : null,
         daysOn: daysOnNum,
         daysOff: daysOffNum,
       });
 
       setSuccessMessage("Versi jadwal baru berhasil disimpan dan diberlakukan!");
       setIsAssignModalOpen(false);
-      setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "" });
+      setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "" });
       
       await loadData();
       if (selectedInspection) {
@@ -505,12 +511,13 @@ export default function TimelinePage() {
         
         {/* LEFT SIDEBAR (FIXED DIMENSIONS: 41px Header, 42px Row) */}
         <div className="w-56 flex-shrink-0 border-r border-gray-300 flex flex-col bg-white z-20 shadow-[2px_0_10px_-3px_rgba(0,0,0,0.1)] relative">
+          
+          {/* 88px Tall Header (Matches the right calendar header perfectly) */}
           <div className="h-[88px] bg-[#6f92c9] text-white p-4 flex items-center shrink-0 border-b border-gray-300">
             <h1 className="text-[22px] font-bold leading-tight">Jadwal<br/>Lapangan</h1>
           </div>
-          <div className="px-4 py-3 border-b border-gray-200 text-[15px] text-gray-700 shrink-0 font-medium bg-white">
-            Director
-          </div>
+
+          {/* THE "DIRECTOR" BLOCK HAS BEEN DELETED FROM HERE */}
 
           <div className="overflow-y-auto flex-1 no-scrollbar bg-white">
             {isLoading && filteredTeams.length === 0 ? (
@@ -551,28 +558,31 @@ export default function TimelinePage() {
           onScroll={handleScroll}
           className="flex-1 flex flex-col overflow-auto relative bg-white"
         >
-          <div className="sticky top-0 z-10 bg-white shrink-0 shadow-sm border-b border-gray-300" style={{ width: `${totalWidth}px` }}>
-            <div className="py-1 border-b border-gray-200 bg-[#f8f9fc]">
+          <div className="sticky top-0 z-10 bg-white shrink-0 shadow-sm border-b border-gray-300 flex flex-col h-[88px] box-border" style={{ width: `${totalWidth}px` }}>
+            {/* Year Row (Exactly 24px) */}
+            <div className="h-[24px] flex items-center justify-center border-b border-gray-200 bg-[#f8f9fc] shrink-0 w-full box-border">
               <div className="sticky left-1/2 -translate-x-1/2 w-fit">
-                <span className="text-[#3b5982] font-semibold text-[15px] whitespace-nowrap">{visibleYear}</span>
+                <span className="text-[#3b5982] font-semibold text-[13px] whitespace-nowrap">{visibleYear}</span>
               </div>
             </div>
             
-            <div className="flex border-b border-gray-200 text-gray-600 text-[15px] bg-[#f8f9fc]" style={{ width: `${totalWidth}px` }}>
+            {/* Month Row (Exactly 31px) */}
+            <div className="flex h-[31px] border-b border-gray-200 text-gray-600 text-[15px] bg-[#f8f9fc] shrink-0 w-full box-border">
               {months.map((m, i) => (
                 <div 
                   key={i} 
-                  className="text-center font-medium border-r border-gray-300 text-[#4a638b] flex-shrink-0 flex items-center justify-center" 
-                  style={{ width: `${m.span * COLUMN_WIDTH}px`, height: '32px' }}
+                  className="flex items-center justify-center font-medium border-r border-gray-300 text-[#4a638b] shrink-0 h-full box-border" 
+                  style={{ width: `${m.span * COLUMN_WIDTH}px` }}
                 >
                   <span className="text-sm">{m.name}</span>
                 </div>
               ))}
             </div>
             
-            <div className="flex h-[32px] bg-[#f8f9fc]" style={{ width: `${totalWidth}px` }}>
+            {/* Day Row (Exactly 32px) */}
+            <div className="flex h-[32px] bg-[#f8f9fc] shrink-0 w-full box-border">
               {days.map((d, i) => (
-                <div key={i} className={`w-[40px] flex-shrink-0 flex items-center justify-center text-[14px] border-r border-gray-200 ${d.isToday ? 'bg-[#356bb3] text-white font-bold rounded-sm my-[3px]' : 'text-gray-700'}`}>
+                <div key={i} className={`w-[40px] shrink-0 h-full flex items-center justify-center text-[14px] border-r border-gray-200 box-border ${d.isToday ? 'bg-[#356bb3] text-white font-bold rounded-sm my-[2px] h-[28px]' : 'text-gray-700'}`}>
                   {d.dayNumber}
                 </div>
               ))}
@@ -877,13 +887,26 @@ export default function TimelinePage() {
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                   onClick={(e) => (e.currentTarget as any).showPicker?.()} 
                 />
+
+                <label className="text-sm font-medium text-gray-700">Tanggal Berakhir (Opsional)</label>
+                  <input 
+                    type="date" 
+                    className="border border-gray-300 rounded p-2 text-black text-sm w-full mt-1"
+                    value={formData.endDate}
+                    min={formData.startDate} // Prevents picking an end date before the start date
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    onClick={(e) => (e.currentTarget as any).showPicker?.()} 
+                  />
+                  <span className="text-[11px] text-gray-400 mt-0.5 block">
+                    Kosongkan jika jadwal berulang tanpa batas waktu.
+                  </span>
               </div>
 
               <div className="mt-6 flex justify-end gap-2 border-t border-gray-100 pt-4">
                 <button 
                   onClick={() => {
                     setIsAssignModalOpen(false);
-                    setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "" });
+                    setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "" });
                   }} 
                   className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm font-medium transition"
                   disabled={isSubmitting}
