@@ -11,7 +11,7 @@ public partial class StaffTeam
 
     public string StaffId { get; set; } = null!;
 
-    public bool FollowsTeamSchedule { get; set; } = true;
+    // public bool FollowsTeamSchedule { get; set; } = true;
 
     public virtual Staff Staff { get; set; } = null!;
 

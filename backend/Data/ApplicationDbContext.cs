@@ -299,9 +299,6 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasColumnName("TEAM_ID");
-            entity.Property(e => e.FollowsTeamSchedule)
-                .HasDefaultValue(true)
-                .HasColumnName("FOLLOWS_TEAM_SCHEDULE");
 
             entity.HasOne(d => d.Staff).WithMany(p => p.StaffTeams)
                 .HasForeignKey(d => d.StaffId)

@@ -57,15 +57,15 @@ public class TimelineRepository : ITimelineRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task SetFollowsTeamScheduleAsync(string staffId, bool followsTeam)
-    {
-        var staffTeams = await _context.StaffTeams.Where(st => st.StaffId == staffId).ToListAsync();
-        foreach (var st in staffTeams)
-        {
-            st.FollowsTeamSchedule = followsTeam;
-        }
-        await _context.SaveChangesAsync();
-    }
+    // public async Task SetFollowsTeamScheduleAsync(string staffId, bool followsTeam)
+    // {
+    //     var staffTeams = await _context.StaffTeams.Where(st => st.StaffId == staffId).ToListAsync();
+    //     foreach (var st in staffTeams)
+    //     {
+    //         st.FollowsTeamSchedule = followsTeam;
+    //     }
+    //     await _context.SaveChangesAsync();
+    // }
 
     public async Task<bool> TeamExistsAsync(string teamId)
     {

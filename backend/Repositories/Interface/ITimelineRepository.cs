@@ -11,7 +11,6 @@ public interface ITimelineRepository
     Task<List<Timeline>> GetTimelinesByTargetAsync(string? teamId, string? staffId);
     Task<Timeline> CreateTimelineAsync(Timeline timeline);
     Task UpdateTimelineAsync(Timeline timeline);
-    Task SetFollowsTeamScheduleAsync(string staffId, bool followsTeam);
     Task<bool> TeamExistsAsync(string teamId);
     Task<bool> StaffExistsAsync(string staffId);
 }

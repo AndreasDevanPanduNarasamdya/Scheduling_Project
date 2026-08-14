@@ -2,7 +2,9 @@ import type {
   TimelineTeam, 
   Team, 
   CreateTimelinePayload, 
-  TokenValidationResult 
+  TokenValidationResult,
+  EndTimelinePayload,
+  TimelineHistoryRecord
 } from "./types";
 
 const API_BASE_URL = "http://localhost:5096/api";

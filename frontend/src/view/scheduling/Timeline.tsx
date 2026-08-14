@@ -324,7 +324,7 @@ const [formData, setFormData] = useState({
         teamId: isTeam ? actualId : null,
         staffId: !isTeam ? actualId : null,
         startDate: formData.startDate,
-        endDate: formData.endDate ? formData.endDate : null,
+        endDate: formData.endDate ? formData.endDate : null, // <-- ADDED THIS
         daysOn: daysOnNum,
         daysOff: daysOffNum,
       });
