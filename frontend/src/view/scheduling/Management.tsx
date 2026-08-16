@@ -212,7 +212,7 @@ export default function ManagementPage() {
 
       {/* 1. Tambah Staff Modal */}
       {isAddStaffOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 sm:p-6 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 sm:p-6">
           <div className="card w-full max-w-md shadow-2xl flex flex-col max-h-[95vh] p-8">
             
             <div className="flex justify-between items-center mb-6">
@@ -353,7 +353,7 @@ export default function ManagementPage() {
 
       {/* 2. Tambah Tim Modal */}
       {isAddTeamOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card w-full max-w-md p-8 shadow-2xl">
             <h2 className="text-xl font-semibold text-center text-black mb-6">Tambah Tim Baru</h2>
             <form onSubmit={handleAddTeamSubmit} className="flex flex-col gap-4">
@@ -383,7 +383,7 @@ export default function ManagementPage() {
 
       {/* 3. Assign / Ubah Anggota Modal */}
       {isAssignStaffOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card w-full max-w-md p-8 shadow-2xl">
             <h2 className="text-xl font-semibold text-center text-black mb-6">Pindah / Assign Anggota</h2>
             <form onSubmit={handleAssignStaffSubmit} className="flex flex-col gap-4">
