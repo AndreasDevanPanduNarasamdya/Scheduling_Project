@@ -5,10 +5,7 @@ import { fetchWithToken } from "../../api";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-
-
 export default function Form() {
-
   const [isTicketOn, setIsTicketOn] = useState(true);
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [startDate, endDate] = dateRange;
@@ -35,7 +32,7 @@ export default function Form() {
       staffId: user?.staff?.staffId,
       startDate: startDate.toISOString().split('T')[0], 
       endDate: endDate.toISOString().split('T')[0],
-      type: isTicketOn ? 1 : 0,
+      type: isTicketOn ? "On" : "Off",
       title: title,
       description: description,
     };
@@ -57,77 +54,66 @@ export default function Form() {
     }
   };
 
-  const inputStyles = "w-full bg-[#eef3fa] border border-[#d2def0] rounded-md px-3 py-2 text-gray-800 outline-none focus:ring-2 focus:ring-[#23538a]/50 transition-all text-[15px]";
-  const lockedInputStyles = "w-full bg-[#dbe4f0] border border-[#cbd6e6] rounded-md px-3 py-2 text-gray-500 cursor-not-allowed outline-none text-[15px] select-none";
-  const labelStyles = "block text-[15px] font-medium text-gray-900 mb-1.5 text-left";
-
   return (
-    <div className="min-h-screen bg-[#e8f2fc] flex items-center justify-center p-6 font-sans">
+    <div className="min-h-screen flex items-center justify-center p-6 w-full bg-brand-bg">
       
-      <div className="bg-white rounded-[24px] shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] p-8 w-[30vw] min-w-[450px]">
+      <div className="card p-8 w-[30vw] min-w-[450px]">
         <div className="ml-5 mr-5">
         
-        <h2 className="text-[22px] font-semibold text-center text-black mb-8">
+        <h2 className="text-[22px] font-semibold text-center mb-8">
           Pengajuan Tiket
         </h2>
 
         <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
           
           <div>
-            <label className={labelStyles}>Nama Lengkap</label>
+            <label className="form-label">Nama Lengkap</label>
             <div className="flex gap-3">
               <input 
                 type="text" 
                 value={user?.staff?.firstName ?? ""} 
                 readOnly
-                className={lockedInputStyles} 
+                className="input-locked" 
               />
               <input 
                 type="text" 
                 value={user?.staff?.lastName ?? ""}
                 readOnly
-                className={lockedInputStyles} 
+                className="input-locked" 
               />
             </div>
           </div>
 
           <div>
-            <label className={labelStyles}>Posisi</label>
+            <label className="form-label">Posisi</label>
             <input 
               type="text" 
               value={user?.staff?.position ?? ""}
               readOnly
-              className={lockedInputStyles} 
+              className="input-locked" 
             />
           </div>
 
           <div>
-            <label className={labelStyles}>Tim Shift</label>
-            <input type="text" defaultValue="Tim A" className={inputStyles} />
+            <label className="form-label">Tim Shift</label>
+            <input type="text" defaultValue="Tim A" className="input-field" />
           </div>
 
           <div>
-            <label className={labelStyles}>Tipe Tiket</label>
+            <label className="form-label">Tipe Tiket</label>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setIsTicketOn(false)}
-                className={`px-3 py-1 rounded text-xs font-bold shadow-sm transition-colors ${
-                  !isTicketOn 
-                    ? 'bg-gray-300 text-gray-600' 
-                    : 'bg-gray-200 text-gray-400 hover:bg-gray-300'
-                }`}
+                className={`btn-toggle ${!isTicketOn ? 'btn-active' : 'btn-inactive'}`}
               >
                 OFF
               </button>
+              
               <button
                 type="button"
                 onClick={() => setIsTicketOn(true)}
-                className={`px-3 py-1 rounded text-xs font-bold shadow-sm transition-colors ${
-                  isTicketOn 
-                    ? 'bg-[#2a66b0] text-white' 
-                    : 'bg-gray-200 text-gray-400 hover:bg-gray-300'
-                }`}
+                className={`btn-toggle ${isTicketOn ? 'btn-active' : 'btn-inactive'}`}
               >
                 ON
               </button>
@@ -135,7 +121,7 @@ export default function Form() {
           </div>
 
           <div>
-            <label className={labelStyles}>Tanggal Pengajuan</label>
+            <label className="form-label">Tanggal Pengajuan</label>
             <div>
               <div className="relative w-full text-left"> 
                 
@@ -148,11 +134,11 @@ export default function Form() {
                   placeholderText="Pilih rentang tanggal"
                   wrapperClassName="w-full" 
                   onKeyDown={(e) => e.preventDefault()}
-                  className={`${inputStyles} w-full pr-10 cursor-pointer`}
+                  className="input-field w-full pr-10 cursor-pointer"
                 />
                 
                 <Calendar 
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 pointer-events-none" 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-black/50 pointer-events-none" 
                   size={18} 
                 />
               </div>
@@ -160,31 +146,31 @@ export default function Form() {
           </div>
 
           <div>
-            <label className={labelStyles}>Judul</label>
+            <label className="form-label">Judul</label>
             <input 
               type="text" 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className={inputStyles} 
+              className="input-field" 
             />
           </div>
 
           <div>
-            <label className={labelStyles}>Alasan Pengajuan</label>
+            <label className="form-label">Alasan Pengajuan</label>
             <textarea 
               rows={2} 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
-              className={`${inputStyles} resize-y min-h-[60px]`} 
+              className="input-field resize-y min-h-[60px]" 
             />
           </div>
 
           <div className="flex justify-end mt-4">
             <button 
               type="submit" 
-              className="flex items-center gap-2 bg-[#2a66b0] hover:bg-[#1e549a] text-white rounded-md px-5 py-2 font-medium shadow-md transition-colors"
+              className="flex items-center gap-2 bg-brand-primary hover:bg-brand-dark text-white rounded-lg px-6 py-2.5 font-medium shadow-md transition-colors"
             >
               Kirim <Send size={18} />
             </button>

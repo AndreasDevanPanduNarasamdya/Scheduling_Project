@@ -6,15 +6,16 @@ import {
   AlertCircle, 
   Calendar as CalendarIcon, 
   CheckCircle2, 
-  Users, 
   Filter,
-  UserPlus
+  UserPlus,
+  Plus,
+  ArrowLeftRight,
+  ChevronDown
 } from "lucide-react";
 import type { 
   TimelineTeam, 
   BarType, 
-  TimelineHistoryRecord, 
-  CreateTimelinePayload 
+  TimelineHistoryRecord 
 } from "../../types";
 import { 
   fetchTimeline, 
@@ -146,10 +147,8 @@ export default function TimelinePage() {
   const [yearRange, setYearRange] = useState({ start: currentYear, end: currentYear });
   const [visibleYear, setVisibleYear] = useState(currentYear);
   
-  // Phase F: Functional Team Filter
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("All");
 
-  // Phase A & C: Inspection Panels & Popovers
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedInspection, setSelectedInspection] = useState<{
     id: string;
@@ -167,7 +166,6 @@ export default function TimelinePage() {
     endDate: string;
   } | null>(null);
 
-  // Phase D: Team Creation & Staff Assignment Modals
   const [isNewTeamModalOpen, setIsNewTeamModalOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [unassignedStaff, setUnassignedStaff] = useState<any[]>([]);
@@ -175,8 +173,7 @@ export default function TimelinePage() {
   const [assigningStaffId, setAssigningStaffId] = useState<string | null>(null);
   const [selectedAssignTeamId, setSelectedAssignTeamId] = useState("");
 
-  // UX Feedback Banner State
-const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({
     targetId: "",
     daysOn: "",
     daysOff: "",
@@ -193,9 +190,6 @@ const [formData, setFormData] = useState({
   const isAddingPast = useRef(false);
   const isExpandingRef = useRef(false);
 
-  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [endDateInput, setEndDateInput] = useState("");
-
   const { days, months } = useMemo(() => {
     return generateTimeline(yearRange.start, yearRange.end);
   }, [yearRange.start, yearRange.end]);
@@ -203,7 +197,6 @@ const [formData, setFormData] = useState({
   const totalWidth = days.length * COLUMN_WIDTH;
   const dayLookup = useDayLookup(teams);
 
-  // Apply Phase F Filter
   const filteredTeams = useMemo(() => {
     if (selectedTeamFilter === "All") return teams;
     return teams.filter(t => t.teamId === selectedTeamFilter);
@@ -277,12 +270,10 @@ const [formData, setFormData] = useState({
     }
   };
 
-  // Phase A: Inspect Target History
   const handleInspectTarget = async (id: string, name: string, type: "team" | "staff", subtitle?: string) => {
     setSelectedInspection({ id, name, type, subtitle });
     setIsLoadingHistory(true);
     setErrorMessage(null);
-    setShowEndDatePicker(false);
     try {
       const history = await fetchTimelineHistory(
         type === "team" ? id : undefined,
@@ -297,7 +288,6 @@ const [formData, setFormData] = useState({
     }
   };
 
-  // Phase B: Save New Schedule Version
   const handleSaveSchedule = async () => {
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -324,7 +314,7 @@ const [formData, setFormData] = useState({
         teamId: isTeam ? actualId : null,
         staffId: !isTeam ? actualId : null,
         startDate: formData.startDate,
-        endDate: formData.endDate ? formData.endDate : null, // <-- ADDED THIS
+        endDate: formData.endDate ? formData.endDate : null,
         daysOn: daysOnNum,
         daysOff: daysOffNum,
       });
@@ -350,7 +340,6 @@ const [formData, setFormData] = useState({
     }
   };
 
-  // Phase B: End Active Schedule
   const handleEndSchedule = async (effectiveDate: string) => {
     if (!selectedInspection) return;
     try {
@@ -372,7 +361,6 @@ const [formData, setFormData] = useState({
     }
   };
 
-  // Phase D: Team Creation Submit
   const handleCreateTeamSubmit = async () => {
     if (!newTeamName.trim()) {
       setErrorMessage("Nama tim tidak boleh kosong.");
@@ -392,7 +380,6 @@ const [formData, setFormData] = useState({
     }
   };
 
-  // Phase D: Open Unassigned Staff Modal
   const handleOpenUnassignedModal = async () => {
     setErrorMessage(null);
     try {
@@ -404,7 +391,6 @@ const [formData, setFormData] = useState({
     }
   };
 
-  // Phase D: Assign Staff Submit
   const handleAssignStaffSubmit = async (staffId: string) => {
     if (!selectedAssignTeamId) {
       setErrorMessage("Pilih tim tujuan.");
@@ -427,21 +413,20 @@ const [formData, setFormData] = useState({
   };
 
   return (
-    <div className="flex-1 w-full h-full flex flex-col bg-white font-sans overflow-hidden min-w-0">
+    <div className="flex-1 w-full h-full flex flex-col bg-brand-bg font-sans overflow-hidden min-w-0">
       
-      {/* TOP NAVBAR (HR WORKSTATION NAVIGATION) */}
-      <div className="bg-[#244376] text-white p-2.5 flex items-center justify-between shrink-0 shadow-sm z-30 relative w-full">
+      {/* TOP NAVBAR (USING THEME COLORS) */}
+      <div className="bg-brand-dark text-white p-2.5 flex items-center justify-between shrink-0 shadow-sm z-30 relative w-full">
         <div className="flex items-center gap-4">
-          <button className="p-1.5 hover:bg-white/20 rounded transition shrink-0">
+          <button className="p-1.5 hover:bg-white/20 rounded transition shrink-0 cursor-pointer">
             <Menu size={22} />
           </button>
           <span className="font-bold tracking-wide text-sm uppercase">HR Scheduling Workstation</span>
         </div>
         
         <div className="flex items-center gap-2 shrink-0">
-          {/* Phase F: Team Filter Dropdown */}
-          <div className="flex items-center gap-1 bg-[#1a325b] px-2 py-1 rounded text-xs">
-            <Filter size={14} className="text-gray-300" />
+          <div className="flex items-center gap-1 bg-brand-primary/80 px-2.5 py-1 rounded-lg text-xs">
+            <Filter size={14} className="text-white/80" />
             <select
               className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
               value={selectedTeamFilter}
@@ -458,31 +443,29 @@ const [formData, setFormData] = useState({
 
           <button 
             onClick={handleOpenUnassignedModal}
-            className="bg-[#1a325b] hover:bg-[#142646] text-white px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5"
+            className="bg-brand-primary hover:bg-brand-dark text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
           >
             <UserPlus size={14} />
             <span>Staf Tanpa Tim</span>
           </button>
 
-          <button 
-            onClick={() => {
-              setErrorMessage(null);
-              setIsAssignModalOpen(true);
-            }}
-            className="bg-[#356bb3] hover:bg-[#2a5691] text-white px-4 py-1.5 rounded-md text-sm font-bold shadow-sm transition"
-          >
-            + Atur Jadwal
-          </button>
-
-          <button 
-            onClick={() => {
-              setErrorMessage(null);
-              setIsNewTeamModalOpen(true);
-            }}
-            className="bg-white text-[#244376] hover:bg-gray-100 px-4 py-1.5 rounded-md text-sm font-bold shadow-sm transition"
-          >
-            + Tim Baru
-          </button>
+          {/* FUSED ACTION GROUP BUTTONS (MATCHING YOUR MOCKUP STYLE) */}
+          <div className="action-group ml-2">
+            <button 
+              type="button" 
+              onClick={() => { setErrorMessage(null); setIsAssignModalOpen(true); }} 
+              className="action-group-btn"
+            >
+              Atur Jadwal <Plus size={15} strokeWidth={2.5} />
+            </button>
+            <button 
+              type="button" 
+              onClick={() => { setErrorMessage(null); setIsNewTeamModalOpen(true); }} 
+              className="action-group-btn"
+            >
+              Tim Baru <Plus size={15} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -493,7 +476,7 @@ const [formData, setFormData] = useState({
             <AlertCircle size={16} />
             <span>{errorMessage}</span>
           </div>
-          <button onClick={() => setErrorMessage(null)} className="hover:opacity-75 font-bold">✕</button>
+          <button onClick={() => setErrorMessage(null)} className="hover:opacity-75 font-bold cursor-pointer">✕</button>
         </div>
       )}
 
@@ -503,46 +486,43 @@ const [formData, setFormData] = useState({
             <CheckCircle2 size={16} />
             <span>{successMessage}</span>
           </div>
-          <button onClick={() => setSuccessMessage(null)} className="hover:opacity-75 font-bold">✕</button>
+          <button onClick={() => setSuccessMessage(null)} className="hover:opacity-75 font-bold cursor-pointer">✕</button>
         </div>
       )}
 
       <div className="flex flex-1 overflow-hidden relative w-full">
         
-        {/* LEFT SIDEBAR (FIXED DIMENSIONS: 41px Header, 42px Row) */}
-        <div className="w-56 flex-shrink-0 border-r border-gray-300 flex flex-col bg-white z-20 shadow-[2px_0_10px_-3px_rgba(0,0,0,0.1)] relative">
+        {/* LEFT SIDEBAR */}
+        <div className="w-56 flex-shrink-0 border-r border-brand-outline flex flex-col bg-white z-20 shadow-[2px_0_10px_-3px_rgba(0,0,0,0.1)] relative">
           
-          {/* 88px Tall Header (Matches the right calendar header perfectly) */}
-          <div className="h-[88px] bg-[#6f92c9] text-white p-4 flex items-center shrink-0 border-b border-gray-300">
+          <div className="h-[88px] bg-brand-light text-white p-4 flex items-center shrink-0 border-b border-brand-outline">
             <h1 className="text-[22px] font-bold leading-tight">Jadwal<br/>Lapangan</h1>
           </div>
 
-          {/* THE "DIRECTOR" BLOCK HAS BEEN DELETED FROM HERE */}
-
           <div className="overflow-y-auto flex-1 no-scrollbar bg-white">
             {isLoading && filteredTeams.length === 0 ? (
-              <div className="p-4 text-sm text-gray-500 text-center">Memuat tim...</div>
+              <div className="p-4 text-sm text-black/50 text-center">Memuat tim...</div>
             ) : (
               filteredTeams.map((team) => (
                 <div key={team.teamId}>
                   <div 
                     onClick={() => handleInspectTarget(team.teamId, team.teamName, "team")}
-                    className="bg-[#f4f7fb] px-4 h-[41px] flex items-center justify-between font-bold text-[14px] text-[#4a638b] border-b border-gray-200 shrink-0 cursor-pointer hover:bg-[#e8f0fe] transition"
+                    className="bg-brand-bg px-4 h-[41px] flex items-center justify-between font-bold text-[14px] text-brand-dark border-b border-brand-outline/50 shrink-0 cursor-pointer hover:bg-brand-outline/20 transition"
                   >
                     <span>{team.teamName}</span>
-                    <span className="text-[10px] bg-[#d2e3fc] px-1.5 py-0.5 rounded text-[#174ea6]">TIM</span>
+                    <span className="badge bg-brand-primary text-white py-0.5 px-2 text-[10px]">TIM</span>
                   </div>
                   {team.members.length === 0 ? (
-                    <div className="px-4 py-2 h-[42px] flex items-center text-xs text-gray-400 italic border-b border-gray-100 shrink-0">Kosong</div>
+                    <div className="px-4 py-2 h-[42px] flex items-center text-xs text-black/40 italic border-b border-gray-100 shrink-0">Kosong</div>
                   ) : (
                     team.members.map((member) => (
                       <div 
                         key={member.staffId} 
                         onClick={() => handleInspectTarget(member.staffId, member.name, "staff", `${member.position} • Tim: ${team.teamName}`)}
-                        className="px-4 py-2 h-[42px] flex items-center justify-between text-[14px] text-gray-700 border-b border-gray-100 shrink-0 cursor-pointer hover:bg-gray-50 transition"
+                        className="px-4 py-2 h-[42px] flex items-center justify-between text-[14px] text-black/80 border-b border-gray-100 shrink-0 cursor-pointer hover:bg-brand-bg/40 transition"
                       >
                         <span className="truncate">{member.name}</span>
-                        <span className="text-[11px] text-gray-400">{member.position}</span>
+                        <span className="text-[11px] text-black/40">{member.position}</span>
                       </div>
                     ))
                   )}
@@ -552,26 +532,24 @@ const [formData, setFormData] = useState({
           </div>
         </div>
 
-        {/* RIGHT SIDE (DYNAMIC CALENDAR GRID: 40px Columns) */}
+        {/* RIGHT SIDE (DYNAMIC CALENDAR GRID) */}
         <div 
           ref={scrollContainerRef} 
           onScroll={handleScroll}
           className="flex-1 flex flex-col overflow-auto relative bg-white"
         >
-          <div className="sticky top-0 z-10 bg-white shrink-0 shadow-sm border-b border-gray-300 flex flex-col h-[88px] box-border" style={{ width: `${totalWidth}px` }}>
-            {/* Year Row (Exactly 24px) */}
-            <div className="h-[24px] flex items-center justify-center border-b border-gray-200 bg-[#f8f9fc] shrink-0 w-full box-border">
+          <div className="sticky top-0 z-10 bg-white shrink-0 shadow-sm border-b border-brand-outline flex flex-col h-[88px] box-border" style={{ width: `${totalWidth}px` }}>
+            <div className="h-[24px] flex items-center justify-center border-b border-brand-outline/40 bg-brand-bg shrink-0 w-full box-border">
               <div className="sticky left-1/2 -translate-x-1/2 w-fit">
-                <span className="text-[#3b5982] font-semibold text-[13px] whitespace-nowrap">{visibleYear}</span>
+                <span className="text-brand-dark font-semibold text-[13px] whitespace-nowrap">{visibleYear}</span>
               </div>
             </div>
             
-            {/* Month Row (Exactly 31px) */}
-            <div className="flex h-[31px] border-b border-gray-200 text-gray-600 text-[15px] bg-[#f8f9fc] shrink-0 w-full box-border">
+            <div className="flex h-[31px] border-b border-brand-outline/40 text-black/70 text-[15px] bg-brand-bg shrink-0 w-full box-border">
               {months.map((m, i) => (
                 <div 
                   key={i} 
-                  className="flex items-center justify-center font-medium border-r border-gray-300 text-[#4a638b] shrink-0 h-full box-border" 
+                  className="flex items-center justify-center font-medium border-r border-brand-outline/40 text-brand-dark shrink-0 h-full box-border" 
                   style={{ width: `${m.span * COLUMN_WIDTH}px` }}
                 >
                   <span className="text-sm">{m.name}</span>
@@ -579,10 +557,9 @@ const [formData, setFormData] = useState({
               ))}
             </div>
             
-            {/* Day Row (Exactly 32px) */}
-            <div className="flex h-[32px] bg-[#f8f9fc] shrink-0 w-full box-border">
+            <div className="flex h-[32px] bg-brand-bg shrink-0 w-full box-border">
               {days.map((d, i) => (
-                <div key={i} className={`w-[40px] shrink-0 h-full flex items-center justify-center text-[14px] border-r border-gray-200 box-border ${d.isToday ? 'bg-[#356bb3] text-white font-bold rounded-sm my-[2px] h-[28px]' : 'text-gray-700'}`}>
+                <div key={i} className={`w-[40px] shrink-0 h-full flex items-center justify-center text-[14px] border-r border-brand-outline/40 box-border ${d.isToday ? 'bg-brand-primary text-white font-bold rounded-md my-[2px] h-[28px]' : 'text-black/70'}`}>
                   {d.dayNumber}
                 </div>
               ))}
@@ -592,8 +569,8 @@ const [formData, setFormData] = useState({
           <div className="relative min-h-full" style={{ width: `${totalWidth}px` }}>
             <div className="absolute inset-0 flex pointer-events-none">
               {days.map((d, i) => (
-                <div key={i} className={`w-[40px] flex-shrink-0 border-r border-[#e8ecef] h-full relative ${d.isWeekend ? 'bg-[#f8fafd]' : 'bg-white'}`}>
-                  {d.isToday && <div className="absolute top-0 bottom-0 w-[2px] bg-[#356bb3] left-1/2 -translate-x-1/2 z-0" />}
+                <div key={i} className={`w-[40px] flex-shrink-0 border-r border-brand-outline/30 h-full relative ${d.isWeekend ? 'bg-brand-bg/30' : 'bg-white'}`}>
+                  {d.isToday && <div className="absolute top-0 bottom-0 w-[2px] bg-brand-primary left-1/2 -translate-x-1/2 z-0" />}
                 </div>
               ))}
             </div>
@@ -601,7 +578,7 @@ const [formData, setFormData] = useState({
             <div className="relative z-10">
               {filteredTeams.map((team) => (
                 <div key={`grid-team-${team.teamId}`}>
-                  <div className="h-[41px] border-b border-gray-200 shrink-0 bg-[#f4f7fb]/30" />
+                  <div className="h-[41px] border-b border-brand-outline/40 shrink-0 bg-brand-bg/20" />
                   {team.members.length === 0 ? (
                     <div className="h-[42px] border-b border-gray-100 shrink-0" />
                   ) : (
@@ -627,7 +604,7 @@ const [formData, setFormData] = useState({
                                   startDate: barStartDate,
                                   endDate: barEndDate
                                 })}
-                                className="absolute h-4 rounded-full bg-yellow-300 z-10 cursor-pointer hover:ring-2 ring-[#356bb3]/50 transition"
+                                className="absolute h-4 rounded-full bg-yellow-300 z-10 cursor-pointer hover:ring-2 ring-brand-primary/50 transition"
                                 style={{ left: seg.startIndex * COLUMN_WIDTH + 8, width: COLUMN_WIDTH - 16 }}
                                 title={seg.label || "Transition"}
                               />
@@ -657,39 +634,39 @@ const [formData, setFormData] = useState({
           </div>
         </div>
 
-        {/* SCHEDULE DETAILS & HISTORY SIDE PANEL (PHASE A & B) */}
+        {/* SIDE PANEL */}
         {selectedInspection && (
-          <div className="w-96 border-l border-gray-300 bg-white shadow-xl flex flex-col z-30 shrink-0 animate-in slide-in-from-right duration-200">
-            <div className="p-4 bg-[#f8f9fc] border-b border-gray-200 flex items-center justify-between">
+          <div className="w-96 border-l border-brand-outline bg-white shadow-xl flex flex-col z-30 shrink-0 animate-in slide-in-from-right duration-200">
+            <div className="p-4 bg-brand-bg border-b border-brand-outline flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-bold tracking-wider text-[#356bb3] uppercase">
+                <span className="text-[11px] font-bold tracking-wider text-brand-primary uppercase">
                   {selectedInspection.type === "team" ? "Inspeksi Rotasi Tim" : "Inspeksi Staf"}
                 </span>
-                <h3 className="text-lg font-bold text-gray-800">{selectedInspection.name}</h3>
+                <h3 className="text-lg font-bold text-black/90">{selectedInspection.name}</h3>
                 {selectedInspection.subtitle && (
-                  <p className="text-xs text-gray-500">{selectedInspection.subtitle}</p>
+                  <p className="text-xs text-black/50">{selectedInspection.subtitle}</p>
                 )}
               </div>
               <button 
                 onClick={() => setSelectedInspection(null)}
-                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-200/50 transition"
+                className="p-1.5 text-black/40 hover:text-black rounded-full hover:bg-black/5 transition cursor-pointer"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <div className="p-4 flex-1 overflow-y-auto flex flex-col gap-4">
+            <div className="p-4 flex-1 overflow-y-auto flex flex-col gap-4 scrollbar-thin">
               {isLoadingHistory ? (
-                <div className="text-center py-8 text-sm text-gray-500">Memuat riwayat jadwal...</div>
+                <div className="text-center py-8 text-sm text-black/50">Memuat riwayat jadwal...</div>
               ) : historyRecords.length === 0 ? (
-                <div className="text-center py-8 text-sm text-gray-400 italic">
+                <div className="text-center py-8 text-sm text-black/40 italic">
                   Belum ada jadwal rotasi yang diatur untuk target ini.
                 </div>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase text-gray-500 tracking-wider">Versi Rotasi</h4>
-                    <span className="text-xs text-gray-400">{historyRecords.length} Rekam</span>
+                    <h4 className="text-xs font-bold uppercase text-black/50 tracking-wider">Versi Rotasi</h4>
+                    <span className="text-xs text-black/40">{historyRecords.length} Rekam</span>
                   </div>
 
                   {historyRecords.map((rec) => {
@@ -698,37 +675,37 @@ const [formData, setFormData] = useState({
                     return (
                       <div 
                         key={rec.timelineId}
-                        className={`p-3 rounded-lg border transition ${
+                        className={`p-3 rounded-xl border transition ${
                           isActive 
-                            ? "border-[#356bb3] bg-[#f4f7fb]/80 shadow-sm" 
+                            ? "border-brand-primary bg-brand-bg/60 shadow-sm" 
                             : isFuture
                             ? "border-amber-300 bg-amber-50/40"
-                            : "border-gray-200 bg-gray-50/50 opacity-75"
+                            : "border-brand-outline/40 bg-gray-50/50 opacity-75"
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded ${
+                          <span className={`badge text-[10px] py-0.5 px-2 ${
                             isActive 
-                              ? "bg-[#356bb3] text-white" 
+                              ? "bg-brand-primary text-white" 
                               : isFuture
                               ? "bg-amber-100 text-amber-800"
                               : "bg-gray-200 text-gray-600"
                           }`}>
                             {isActive ? "AKTIF" : isFuture ? "MENDATANG" : "RIWAYAT"}
                           </span>
-                          <span className="text-xs font-semibold text-gray-700">
+                          <span className="text-xs font-semibold text-black/80">
                             {rec.daysOn} ON / {rec.daysOff} OFF
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-xs text-gray-600 mt-2">
-                          <CalendarIcon size={14} className="text-gray-400" />
-                          <span>Mulai: <strong className="text-gray-800">{rec.startDate}</strong></span>
+                        <div className="flex items-center gap-1.5 text-xs text-black/70 mt-2">
+                          <CalendarIcon size={14} className="text-black/40" />
+                          <span>Mulai: <strong className="text-black/90">{rec.startDate}</strong></span>
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-xs text-gray-600 mt-1">
-                          <Clock size={14} className="text-gray-400" />
-                          <span>Selesai: <strong className="text-gray-800">{rec.endDate || "Sekarang (Tanpa Batas)"}</strong></span>
+                        <div className="flex items-center gap-1.5 text-xs text-black/70 mt-1">
+                          <Clock size={14} className="text-black/40" />
+                          <span>Selesai: <strong className="text-black/90">{rec.endDate || "Sekarang (Tanpa Batas)"}</strong></span>
                         </div>
 
                         {isActive && !rec.endDate && (
@@ -739,7 +716,7 @@ const [formData, setFormData] = useState({
                                 handleEndSchedule(todayStr);
                               }
                             }}
-                            className="mt-3 w-full py-1 text-xs text-red-600 hover:bg-red-50 font-medium rounded border border-red-200 transition"
+                            className="mt-3 w-full py-1 text-xs text-state-error hover:bg-red-50 font-medium rounded-lg border border-red-200 transition cursor-pointer"
                           >
                             Akhiri Jadwal Ini
                           </button>
@@ -751,14 +728,14 @@ const [formData, setFormData] = useState({
               )}
             </div>
 
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <div className="p-4 border-t border-brand-outline bg-brand-bg/30">
               <button
                 onClick={() => {
                   const targetPrefix = selectedInspection.type === "team" ? "team:" : "staff:";
                   setFormData(prev => ({ ...prev, targetId: targetPrefix + selectedInspection.id }));
                   setIsAssignModalOpen(true);
                 }}
-                className="w-full py-2 bg-[#356bb3] hover:bg-[#2a5691] text-white rounded font-bold text-sm transition shadow-sm"
+                className="btn-primary w-full justify-center py-2 text-sm cursor-pointer"
               >
                 + Perbarui / Atur Rotasi Baru
               </button>
@@ -766,41 +743,38 @@ const [formData, setFormData] = useState({
           </div>
         )}
 
-        {/* BAR INSPECTION POPOVER (PHASE C) */}
+        {/* BAR INSPECTION POPOVER */}
         {selectedBarDetail && (
           <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center animate-in fade-in duration-150">
-            <div className="bg-white rounded-lg shadow-xl w-[400px] p-5 text-left border border-gray-200">
-              <div className="flex items-center justify-between mb-3 border-b border-gray-100 pb-2">
+            <div className="card w-[400px] p-6 text-left shadow-2xl">
+              <div className="flex items-center justify-between mb-3 border-b border-brand-outline/40 pb-2">
                 <div>
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Detail Status Lapangan</span>
-                  <h4 className="font-bold text-gray-800 text-base">{selectedBarDetail.staffName}</h4>
+                  <span className="text-[10px] font-bold text-black/40 uppercase tracking-wider">Detail Status Lapangan</span>
+                  <h4 className="font-bold text-black/90 text-base">{selectedBarDetail.staffName}</h4>
                 </div>
-                <button 
-                  onClick={() => setSelectedBarDetail(null)}
-                  className="text-gray-400 hover:text-gray-600 p-1"
-                >
+                <button onClick={() => setSelectedBarDetail(null)} className="text-black/40 hover:text-black cursor-pointer">
                   <X size={16} />
                 </button>
               </div>
 
               <div className="flex flex-col gap-2.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Tipe Status:</span>
-                  <span className="font-bold text-[#244376]">
+                  <span className="text-black/50">Tipe Status:</span>
+                  <span className="font-bold text-brand-dark">
                     {selectedBarDetail.barType === "OffDuty" ? "OFF DUTY (Rotasi Siklus)" : 
                      selectedBarDetail.barType === "Leave" ? "LEAVE (Izin / Tiket Disetujui)" : "TRANSITION"}
                   </span>
                 </div>
 
                 <div className="flex justify-between">
-                  <span className="text-gray-500">Rentang Waktu:</span>
-                  <span className="font-medium text-gray-700">
+                  <span className="text-black/50">Rentang Waktu:</span>
+                  <span className="font-medium text-black/80">
                     {selectedBarDetail.startDate} → {selectedBarDetail.endDate}
                   </span>
                 </div>
 
                 {selectedBarDetail.label && (
-                  <div className="mt-1 p-2.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-900">
+                  <div className="mt-1 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
                     <strong className="block mb-0.5">Alasan / Catatan Tiket:</strong>
                     {selectedBarDetail.label}
                   </div>
@@ -810,7 +784,7 @@ const [formData, setFormData] = useState({
               <div className="mt-4 flex justify-end">
                 <button
                   onClick={() => setSelectedBarDetail(null)}
-                  className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded transition"
+                  className="px-4 py-1.5 bg-brand-bg hover:bg-brand-outline/40 text-black/80 text-xs font-bold rounded-lg transition cursor-pointer"
                 >
                   Tutup
                 </button>
@@ -819,24 +793,24 @@ const [formData, setFormData] = useState({
           </div>
         )}
 
-        {/* UPGRADED SCHEDULE MANAGER MODAL (PHASE B) */}
+        {/* UPGRADED SCHEDULE MANAGER MODAL */}
         {isAssignModalOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150">
-            <div className="bg-white rounded-lg shadow-xl w-[500px] p-6 text-left border border-gray-200">
-              <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-3">
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150 backdrop-blur-sm">
+            <div className="card w-[500px] p-6 text-left shadow-2xl">
+              <div className="flex items-center justify-between mb-4 border-b border-brand-outline/40 pb-3">
                 <div>
-                  <h2 className="text-xl font-bold text-[#244376]">Atur Rotasi Baru</h2>
-                  <p className="text-xs text-gray-500">Menambahkan versi jadwal baru secara otomatis menutup siklus aktif sebelumnya.</p>
+                  <h2 className="text-xl font-bold text-brand-dark">Atur Rotasi Baru</h2>
+                  <p className="text-xs text-black/50">Menambahkan versi jadwal baru secara otomatis menutup siklus aktif sebelumnya.</p>
                 </div>
-                <button onClick={() => setIsAssignModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setIsAssignModalOpen(false)} className="text-black/40 hover:text-black cursor-pointer">
                   <X size={20} />
                 </button>
               </div>
               
               <div className="flex flex-col gap-3">
-                <label className="text-sm font-medium text-gray-700">Pilih Target (Staf / Tim)</label>
+                <label className="form-label">Pilih Target (Staf / Tim)</label>
                 <select 
-                  className="border border-gray-300 rounded p-2 text-black text-sm bg-white"
+                  className="input-field cursor-pointer"
                   value={formData.targetId}
                   onChange={(e) => setFormData({ ...formData, targetId: e.target.value })}
                 >
@@ -853,69 +827,69 @@ const [formData, setFormData] = useState({
                   ))}
                 </select>
                 
-                <label className="text-sm font-medium text-gray-700">Pola Shift (Days On / Days Off)</label>
+                <label className="form-label mt-1">Pola Shift (Days On / Days Off)</label>
                 <div className="flex gap-2">
                   <div className="w-full">
                     <input 
                       type="number" 
                       min="1"
                       placeholder="On (e.g. 5)" 
-                      className="border border-gray-300 rounded p-2 w-full text-black text-sm"
+                      className="input-field"
                       value={formData.daysOn}
                       onChange={(e) => setFormData({ ...formData, daysOn: e.target.value })}
                     />
-                    <span className="text-[11px] text-gray-400 mt-0.5 block">Hari Kerja Aktif</span>
+                    <span className="text-[11px] text-black/40 mt-1 block">Hari Kerja Aktif</span>
                   </div>
                   <div className="w-full">
                     <input 
                       type="number" 
                       min="1"
                       placeholder="Off (e.g. 2)" 
-                      className="border border-gray-300 rounded p-2 w-full text-black text-sm"
+                      className="input-field"
                       value={formData.daysOff}
                       onChange={(e) => setFormData({ ...formData, daysOff: e.target.value })}
                     />
-                    <span className="text-[11px] text-gray-400 mt-0.5 block">Hari Libur Rotasi</span>
+                    <span className="text-[11px] text-black/40 mt-1 block">Hari Libur Rotasi</span>
                   </div>
                 </div>
                 
-                <label className="text-sm font-medium text-gray-700">Tanggal Mulai Berlaku</label>
+                <label className="form-label mt-1">Tanggal Mulai Berlaku</label>
                 <input 
                   type="date" 
-                  className="border border-gray-300 rounded p-2 text-black text-sm w-full"
+                  className="input-field cursor-pointer text-black/80"
                   value={formData.startDate}
                   onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                   onClick={(e) => (e.currentTarget as any).showPicker?.()} 
                 />
 
-                <label className="text-sm font-medium text-gray-700">Tanggal Berakhir (Opsional)</label>
-                  <input 
-                    type="date" 
-                    className="border border-gray-300 rounded p-2 text-black text-sm w-full mt-1"
-                    value={formData.endDate}
-                    min={formData.startDate} // Prevents picking an end date before the start date
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    onClick={(e) => (e.currentTarget as any).showPicker?.()} 
-                  />
-                  <span className="text-[11px] text-gray-400 mt-0.5 block">
-                    Kosongkan jika jadwal berulang tanpa batas waktu.
-                  </span>
+                <label className="form-label mt-1">Tanggal Berakhir (Opsional)</label>
+                <input 
+                  type="date" 
+                  className="input-field cursor-pointer text-black/80"
+                  value={formData.endDate}
+                  min={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  onClick={(e) => (e.currentTarget as any).showPicker?.()} 
+                />
+                <span className="text-[11px] text-black/40 block">
+                  Kosongkan jika jadwal berulang tanpa batas waktu.
+                </span>
               </div>
 
-              <div className="mt-6 flex justify-end gap-2 border-t border-gray-100 pt-4">
+              <div className="mt-6 flex justify-end gap-2 border-t border-brand-outline/40 pt-4">
                 <button 
                   onClick={() => {
                     setIsAssignModalOpen(false);
                     setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "" });
                   }} 
-                  className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded text-sm font-medium transition"
+                  className="px-4 py-2 text-black/60 hover:bg-brand-bg rounded-xl text-sm font-medium transition cursor-pointer"
                   disabled={isSubmitting}
                 >
                   Batal
                 </button>
                 <button 
                   onClick={handleSaveSchedule}
-                  className="px-5 py-2 bg-[#356bb3] hover:bg-[#2a5691] text-white rounded text-sm font-bold transition shadow-sm disabled:opacity-50"
+                  className="btn-primary text-sm cursor-pointer"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Menyimpan..." : "Simpan Versi Jadwal"}
@@ -925,23 +899,23 @@ const [formData, setFormData] = useState({
           </div>
         )}
 
-        {/* NEW TEAM MODAL (PHASE D) */}
+        {/* NEW TEAM MODAL */}
         {isNewTeamModalOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150">
-            <div className="bg-white rounded-lg shadow-xl w-[400px] p-6 text-left border border-gray-200">
-              <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-2">
-                <h3 className="text-lg font-bold text-[#244376]">Buat Tim Lapangan Baru</h3>
-                <button onClick={() => setIsNewTeamModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150 backdrop-blur-sm">
+            <div className="card w-[400px] p-6 text-left shadow-2xl">
+              <div className="flex items-center justify-between mb-4 border-b border-brand-outline/40 pb-2">
+                <h3 className="text-lg font-bold text-brand-dark">Buat Tim Lapangan Baru</h3>
+                <button onClick={() => setIsNewTeamModalOpen(false)} className="text-black/40 hover:text-black cursor-pointer">
                   <X size={18} />
                 </button>
               </div>
 
               <div className="flex flex-col gap-2">
-                <label className="text-sm font-medium text-gray-700">Nama Tim</label>
+                <label className="form-label">Nama Tim</label>
                 <input
                   type="text"
                   placeholder="Contoh: Tim Delta"
-                  className="border border-gray-300 rounded p-2 text-sm w-full text-black"
+                  className="input-field"
                   value={newTeamName}
                   onChange={(e) => setNewTeamName(e.target.value)}
                 />
@@ -950,14 +924,14 @@ const [formData, setFormData] = useState({
               <div className="mt-6 flex justify-end gap-2">
                 <button
                   onClick={() => setIsNewTeamModalOpen(false)}
-                  className="px-4 py-1.5 text-gray-600 hover:bg-gray-100 rounded text-xs font-bold transition"
+                  className="px-4 py-1.5 text-black/60 hover:bg-brand-bg rounded-xl text-xs font-bold transition cursor-pointer"
                   disabled={isSubmitting}
                 >
                   Batal
                 </button>
                 <button
                   onClick={handleCreateTeamSubmit}
-                  className="px-4 py-1.5 bg-[#356bb3] hover:bg-[#2a5691] text-white rounded text-xs font-bold transition shadow-sm disabled:opacity-50"
+                  className="btn-primary text-xs cursor-pointer"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Menyimpan..." : "Buat Tim"}
@@ -967,40 +941,40 @@ const [formData, setFormData] = useState({
           </div>
         )}
 
-        {/* UNASSIGNED STAFF ASSIGNMENT MODAL (PHASE D) */}
+        {/* UNASSIGNED STAFF ASSIGNMENT MODAL */}
         {isUnassignedModalOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150">
-            <div className="bg-white rounded-lg shadow-xl w-[500px] p-6 text-left border border-gray-200 max-h-[80vh] flex flex-col">
-              <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-3 shrink-0">
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150 backdrop-blur-sm">
+            <div className="card w-[500px] p-6 text-left shadow-2xl max-h-[80vh] flex flex-col">
+              <div className="flex items-center justify-between mb-4 border-b border-brand-outline/40 pb-3 shrink-0">
                 <div>
-                  <h3 className="text-lg font-bold text-[#244376]">Staf Tanpa Tim</h3>
-                  <p className="text-xs text-gray-500">Tugaskan staf yang belum memiliki tim ke dalam unit rotasi.</p>
+                  <h3 className="text-lg font-bold text-brand-dark">Staf Tanpa Tim</h3>
+                  <p className="text-xs text-black/50">Tugaskan staf yang belum memiliki tim ke dalam unit rotasi.</p>
                 </div>
-                <button onClick={() => setIsUnassignedModalOpen(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setIsUnassignedModalOpen(false)} className="text-black/40 hover:text-black cursor-pointer">
                   <X size={18} />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto flex flex-col gap-2 py-1">
+              <div className="flex-1 overflow-y-auto flex flex-col gap-2 py-1 scrollbar-thin">
                 {unassignedStaff.length === 0 ? (
-                  <div className="text-center py-8 text-sm text-gray-400 italic">
+                  <div className="text-center py-8 text-sm text-black/40 italic">
                     Semua staf saat ini sudah ditugaskan ke dalam tim.
                   </div>
                 ) : (
                   unassignedStaff.map((staff) => (
                     <div 
                       key={staff.staffId || staff.StaffId}
-                      className="p-3 border border-gray-200 rounded-lg flex items-center justify-between bg-gray-50/50"
+                      className="p-3 border border-brand-outline/40 rounded-xl flex items-center justify-between bg-brand-bg/40"
                     >
                       <div>
-                        <h4 className="font-bold text-sm text-gray-800">{staff.name || staff.Name}</h4>
-                        <span className="text-xs text-gray-500">{staff.position || staff.Position}</span>
+                        <h4 className="font-bold text-sm text-black/90">{staff.name || staff.Name}</h4>
+                        <span className="text-xs text-black/50">{staff.position || staff.Position}</span>
                       </div>
 
                       {assigningStaffId === (staff.staffId || staff.StaffId) ? (
                         <div className="flex items-center gap-1.5">
                           <select
-                            className="border border-gray-300 rounded p-1 text-xs bg-white text-black"
+                            className="input-field text-xs py-1 px-2 cursor-pointer"
                             value={selectedAssignTeamId}
                             onChange={(e) => setSelectedAssignTeamId(e.target.value)}
                           >
@@ -1011,14 +985,14 @@ const [formData, setFormData] = useState({
                           </select>
                           <button
                             onClick={() => handleAssignStaffSubmit(staff.staffId || staff.StaffId)}
-                            className="px-2.5 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-xs font-bold transition"
+                            className="px-2.5 py-1 bg-state-success hover:brightness-95 text-white rounded-lg text-xs font-bold transition cursor-pointer"
                             disabled={isSubmitting}
                           >
                             Simpan
                           </button>
                           <button
                             onClick={() => setAssigningStaffId(null)}
-                            className="px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded text-xs font-bold transition"
+                            className="px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition cursor-pointer"
                           >
                             ✕
                           </button>
@@ -1029,7 +1003,7 @@ const [formData, setFormData] = useState({
                             setAssigningStaffId(staff.staffId || staff.StaffId);
                             setSelectedAssignTeamId("");
                           }}
-                          className="px-3 py-1 bg-[#356bb3] hover:bg-[#2a5691] text-white rounded text-xs font-bold transition shadow-sm"
+                          className="btn-primary text-xs py-1.5 px-3 cursor-pointer"
                         >
                           + Tugaskan ke Tim
                         </button>
@@ -1039,10 +1013,10 @@ const [formData, setFormData] = useState({
                 )}
               </div>
 
-              <div className="mt-4 border-t border-gray-100 pt-3 flex justify-end shrink-0">
+              <div className="mt-4 border-t border-brand-outline/40 pt-3 flex justify-end shrink-0">
                 <button
                   onClick={() => setIsUnassignedModalOpen(false)}
-                  className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded transition"
+                  className="px-4 py-1.5 bg-brand-bg hover:bg-brand-outline/40 text-black/80 text-xs font-bold rounded-lg transition cursor-pointer"
                 >
                   Tutup
                 </button>

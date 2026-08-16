@@ -36,7 +36,7 @@ export default function Dashboard() {
   const displayName = user?.staff?.firstName
     ? `${user.staff.firstName} ${user.staff.lastName ?? ""}`.trim()
     : user?.email ?? "Guest";
-    const displayPosition = user?.staff?.position ?? "Team";
+  const displayPosition = user?.staff?.position ?? "Team";
   const currentHour = currentTime.getHours();
   let greeting = "Welcome";
   
@@ -50,15 +50,14 @@ export default function Dashboard() {
     greeting = "Selamat Malam";
   }
     
-
   return (
-    <div className="p-8 pt-20 flex flex-col font-sans w-full bg-[#e8f1fc]">
+    <div className="p-8 pt-20 flex flex-col font-sans w-full bg-brand-bg">
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 w-full">
         
         <div className="flex flex-col mt-2 ml-10">
           <div className="flex items-baseline gap-3 mb-1">
-            <h1 className="text-[39px] font-bold text-[#1e549a] tracking-tight">
+            <h1 className="text-[39px] font-bold text-brand-dark tracking-tight">
               {greeting}, {displayName}!
             </h1>
           </div>
@@ -68,11 +67,11 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="bg-white rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.08)] px-8 py-5 flex items-center gap-8">
+        <div className="card px-8 py-5 flex items-center gap-8">
           <div className="flex flex-col">
             <span className="text-gray-800 font-medium mb-1 text-left text-lg">Hari ini,</span>
             <div className="flex items-center gap-3">
-              <span className="text-5xl md:text-6xl font-bold text-[#2a66b0] leading-none">{day}</span>
+              <span className="text-5xl md:text-6xl font-bold text-brand-primary leading-none">{day}</span>
               <div className="flex flex-col text-gray-900 font-medium leading-tight text-lg text-left">
                 <span>{month}</span>
                 <span>{year}</span>
@@ -81,7 +80,7 @@ export default function Dashboard() {
           </div>
 
           <div className="flex items-baseline gap-2">
-            <span className="text-6xl md:text-7xl font-bold text-[#7498c4] tracking-tight leading-none">
+            <span className="text-6xl md:text-7xl font-bold text-brand-light tracking-tight leading-none">
               {hours}:{minutes}
             </span>
             <span className="text-gray-900 font-medium text-lg ml-1">{timeZone}</span>
@@ -89,8 +88,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-          <div className="mt-8 bg-white w-full flex-grow rounded-[2rem] shadow-[0_8px_30px_rgba(0,0,0,0.08)] min-h-[50vh] p-8">
-              
+      <div className="card mt-8 w-full flex-grow min-h-[50vh] p-8">
+        
       </div>
 
     </div>

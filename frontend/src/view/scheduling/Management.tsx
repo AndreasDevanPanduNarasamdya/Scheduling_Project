@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, Menu, UserRound, Plus, ArrowLeftRight, Filter } from "lucide-react";
-import type { Team, StaffMember } from "../../types"
+import { ChevronDown, Menu, UserRound, Plus, ArrowLeftRight, Filter, X } from "lucide-react";
+import type { Team, StaffMember } from "../../types";
 import { 
   fetchTeams, 
   createNewHire, 
-  // TODO: You will need to add these 3 functions to your api.ts file!
   fetchUnassignedStaff, 
   createTeam, 
   assignStaffToTeam 
@@ -38,10 +37,9 @@ export default function ManagementPage() {
     setIsLoading(true);
     setError(null);
     try {
-      // Fetch both teams and unassigned staff in parallel
       const [teamsData, unassignedData] = await Promise.all([
         fetchTeams(),
-        fetchUnassignedStaff() // You'll need an endpoint like GET /api/staff/unassigned
+        fetchUnassignedStaff()
       ]);
       setTeams(teamsData);
       setUnassignedStaff(unassignedData);
@@ -85,7 +83,7 @@ export default function ManagementPage() {
       alert(`Staff added to staging successfully! Token: ${result.tokenId}`);
       setIsAddStaffOpen(false);
       setStaffForm({ firstName: "", lastName: "", sex: "P", position: "", email: "", phone: "", dob: "", joinDate: "" });
-      loadData(); // Refresh lists
+      loadData();
     } catch (err: any) {
       alert(err.message || "Failed to add new hire");
     } finally {
@@ -125,7 +123,6 @@ export default function ManagementPage() {
     }
   };
 
-  // Create a mock team object to render unassigned staff using your existing TeamSection UI
   const unassignedTeamObj: Team = {
     teamId: "unassigned",
     teamName: "Belum Masuk Tim (Unassigned)",
@@ -133,7 +130,9 @@ export default function ManagementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#e8f1fc] font-sans">
+    <div className="min-h-screen bg-brand-bg font-sans">
+      
+      {/* Top Left Menu Button */}
       <button
         type="button"
         aria-label="Open menu"
@@ -142,33 +141,37 @@ export default function ManagementPage() {
         <Menu size={22} />
       </button>
 
-      <div className="max-w-5xl mx-auto px-8 pt-20 pb-16">
+      <div className="max-w-6xl mx-auto px-8 pt-20 pb-16">
+        
+        {/* Page Header */}
         <div className="flex items-center gap-3 mb-6">
-          <h1 className="text-3xl font-semibold text-gray-800">Management</h1>
-          <UserRound size={22} className="text-gray-800 mt-1" strokeWidth={2.2} />
+          <h1 className="text-3xl font-semibold text-brand-dark">Management</h1>
+          <UserRound size={22} className="text-brand-dark mt-1" strokeWidth={2.2} />
         </div>
 
-        {/* Action bar */}
-        <div className="flex flex-wrap items-center gap-3 mb-8">
-          <ActionButton icon={<Plus size={15} />} onClick={() => setIsAddStaffOpen(true)}>
-            Tambah Anggota
-          </ActionButton>
-          <ActionButton icon={<Plus size={15} />} onClick={() => setIsAddTeamOpen(true)}>
-            Tambah Tim
-          </ActionButton>
-          <ActionButton icon={<ArrowLeftRight size={15} />} onClick={() => setIsAssignStaffOpen(true)}>
-            Ubah Anggota
-          </ActionButton>
-          <ActionButton icon={<Filter size={14} />} muted>
-            Filter
-          </ActionButton>
+        {/* Fused Action Bar Group - Aligned Left */}
+        <div className="mb-8 flex justify-start">
+          <div className="action-group">
+            <button type="button" onClick={() => setIsAddStaffOpen(true)} className="action-group-btn">
+              Tambah Anggota <Plus size={16} strokeWidth={2.5} />
+            </button>
+            <button type="button" onClick={() => setIsAddTeamOpen(true)} className="action-group-btn">
+              Tambah Tim <Plus size={16} strokeWidth={2.5} />
+            </button>
+            <button type="button" onClick={() => setIsAssignStaffOpen(true)} className="action-group-btn">
+              Ubah Anggota <ArrowLeftRight size={16} strokeWidth={2.5} />
+            </button>
+            <button type="button" className="action-group-btn">
+              Filter <ChevronDown size={16} strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
 
         {/* Content states */}
-        {isLoading && <div className="text-gray-500 text-sm py-12 text-center">Memuat data…</div>}
+        {isLoading && <div className="text-black/50 text-sm py-12 text-center">Memuat data…</div>}
 
         {!isLoading && error && (
-          <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-sm text-red-600">
+          <div className="card p-8 text-center text-sm text-state-error">
             {error}
           </div>
         )}
@@ -177,19 +180,18 @@ export default function ManagementPage() {
         {!isLoading && !error && (
           <div className="flex flex-col gap-8">
             
-            {/* Always show Unassigned Staff at the top if there are any */}
             {unassignedStaff.length > 0 && (
               <TeamSection
                 key="unassigned"
                 team={unassignedTeamObj}
                 collapsed={collapsedTeams.has("unassigned")}
                 onToggle={() => toggleTeam("unassigned")}
-                isUnassigned={true} // Optional flag for styling
+                isUnassigned={true}
               />
             )}
 
             {teams.length === 0 && unassignedStaff.length === 0 ? (
-              <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-sm text-gray-500">
+              <div className="card p-8 text-center text-sm text-black/50">
                 Belum ada data. Gunakan tombol diatas untuk menambahkan.
               </div>
             ) : (
@@ -208,29 +210,28 @@ export default function ManagementPage() {
 
       {/* ================= MODALS ================= */}
 
-{/* 1. Tambah Staff Modal */}
+      {/* 1. Tambah Staff Modal */}
       {isAddStaffOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 sm:p-6">
-          <div className="bg-white rounded-[24px] w-full max-w-md shadow-xl flex flex-col max-h-[95vh]">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 sm:p-6 backdrop-blur-sm">
+          <div className="card w-full max-w-md shadow-2xl flex flex-col max-h-[95vh] p-8">
             
-            {/* Sticky Header */}
-            <h2 className="text-xl font-medium text-center text-gray-800 p-6 pb-2 shrink-0">
-              Tambah Staff
-            </h2>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-black">Tambah Staff</h2>
+              <button onClick={() => setIsAddStaffOpen(false)} className="text-black/40 hover:text-black">
+                <X size={20} />
+              </button>
+            </div>
             
             <form onSubmit={handleAddStaffSubmit} className="flex flex-col min-h-0">
-              
-              {/* Scrollable Content Area */}
-              <div className="overflow-y-auto px-6 py-2 space-y-3 text-left">
+              <div className="overflow-y-auto py-2 space-y-4 text-left scrollbar-thin">
                 
-                {/* Nama Lengkap - Split inputs */}
                 <div>
-                  <label className="block text-sm mb-1 text-gray-800">Nama Lengkap</label>
+                  <label className="form-label">Nama Lengkap</label>
                   <div className="grid grid-cols-2 gap-3">
                     <input 
                       type="text" 
                       placeholder="Staf" 
-                      className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                      className="input-field"
                       value={staffForm.firstName}
                       onChange={e => setStaffForm({...staffForm, firstName: e.target.value})}
                       required
@@ -238,7 +239,7 @@ export default function ManagementPage() {
                     <input 
                       type="text" 
                       placeholder="A" 
-                      className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                      className="input-field"
                       value={staffForm.lastName}
                       onChange={e => setStaffForm({...staffForm, lastName: e.target.value})}
                       required
@@ -246,93 +247,82 @@ export default function ManagementPage() {
                   </div>
                 </div>
 
-                {/* Jenis Kelamin - Toggle Buttons */}
                 <div>
-                  <label className="block text-sm mb-1 text-gray-800">Jenis Kelamin</label>
+                  <label className="form-label">Jenis Kelamin</label>
                   <div className="flex gap-2">
                     <button 
                       type="button"
                       onClick={() => setStaffForm({...staffForm, sex: "P"})}
-                      className={`w-11 h-9 rounded-lg text-sm font-semibold transition-colors
-                        ${staffForm.sex === "P" ? "bg-[#3558a8] text-white" : "bg-white text-gray-700 border border-gray-300"}`}
+                      className={`btn-toggle ${staffForm.sex === "P" ? "btn-active" : "btn-inactive"}`}
                     >
                       P
                     </button>
                     <button 
                       type="button"
                       onClick={() => setStaffForm({...staffForm, sex: "W"})}
-                      className={`w-11 h-9 rounded-lg text-sm font-semibold transition-colors
-                        ${staffForm.sex === "W" ? "bg-[#3558a8] text-white" : "bg-white text-gray-700 border border-gray-300"}`}
+                      className={`btn-toggle ${staffForm.sex === "W" ? "btn-active" : "btn-inactive"}`}
                     >
                       W
                     </button>
                   </div>
                 </div>
 
-                {/* Posisi */}
                 <div>
-                  <label className="block text-sm mb-1 text-gray-800">Posisi</label>
+                  <label className="form-label">Posisi</label>
                   <input 
                     type="text" 
                     placeholder="Senior Engineer" 
-                    className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                    className="input-field"
                     value={staffForm.position}
                     onChange={e => setStaffForm({...staffForm, position: e.target.value})}
                     required
                   />
                 </div>
 
-                {/* Email */}
                 <div>
-                  <label className="block text-sm mb-1 text-gray-800">Email</label>
+                  <label className="form-label">Email</label>
                   <input 
                     type="email" 
                     placeholder="stafa@gmail.com" 
-                    className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                    className="input-field"
                     value={staffForm.email}
                     onChange={e => setStaffForm({...staffForm, email: e.target.value})}
                     required
                   />
                 </div>
 
-                {/* Nomor Telepon */}
                 <div>
-                  <label className="block text-sm mb-1 text-gray-800">Nomor Telepon</label>
+                  <label className="form-label">Nomor Telepon</label>
                   <input 
                     type="tel" 
                     placeholder="+6281223551" 
-                    className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                    className="input-field"
                     value={staffForm.phone}
                     onChange={e => setStaffForm({...staffForm, phone: e.target.value})}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm mb-1 text-gray-800">Tanggal Lahir</label>
+                  <label className="form-label">Tanggal Lahir</label>
                   <input 
                     type="date" 
                     onClick={(e) => {
-                      try {
-                        (e.target as HTMLInputElement).showPicker();
-                      } catch (err) {
-                      }
+                      try { (e.target as HTMLInputElement).showPicker(); } catch (err) {}
                     }}
-                    className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm text-gray-700 cursor-pointer"
+                    className="input-field cursor-pointer text-black/80"
                     value={staffForm.dob}
                     onChange={e => setStaffForm({...staffForm, dob: e.target.value})}
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm mb-1 text-gray-800">Tanggal Bergabung</label>
+                  <label className="form-label">Tanggal Bergabung</label>
                   <input 
                     type="date" 
                     onClick={(e) => {
-                      try {
-                        (e.target as HTMLInputElement).showPicker();
-                      } catch (err) {}
+                      try { (e.target as HTMLInputElement).showPicker(); } catch (err) {}
                     }}
-                    className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm text-gray-700 cursor-pointer"
+                    className="input-field cursor-pointer text-black/80"
                     value={staffForm.joinDate}
                     onChange={e => setStaffForm({...staffForm, joinDate: e.target.value})}
                     required
@@ -340,27 +330,22 @@ export default function ManagementPage() {
                 </div>
               </div>
 
-              {/* Sticky Actions */}
-              <div className="flex justify-end gap-3 p-6 pt-4 shrink-0 bg-white rounded-b-[24px] border-t border-gray-100 mt-2">
+              <div className="flex justify-end gap-3 pt-6 border-t border-brand-outline/40 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsAddStaffOpen(false)}
-                  className="px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition"
+                  className="px-5 py-2 text-sm font-medium text-black/60 hover:bg-brand-bg rounded-xl transition"
                 >
                   Batal
                 </button>
                 <button 
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex items-center gap-2 px-5 py-2 bg-[#6f92c9] hover:bg-[#5a7ab0] text-white rounded-xl text-sm font-medium transition disabled:opacity-50"
+                  className="btn-primary text-sm"
                 >
                   {isSubmitting ? "Memproses..." : "Tambah Staff"}
-                  {!isSubmitting && (
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                  )}
                 </button>
               </div>
-              
             </form>
           </div>
         </div>
@@ -368,26 +353,26 @@ export default function ManagementPage() {
 
       {/* 2. Tambah Tim Modal */}
       {isAddTeamOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[24px] w-full max-w-md shadow-xl p-6">
-            <h2 className="text-xl font-medium text-center text-gray-800 mb-6">Tambah Tim Baru</h2>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="card w-full max-w-md p-8 shadow-2xl">
+            <h2 className="text-xl font-semibold text-center text-black mb-6">Tambah Tim Baru</h2>
             <form onSubmit={handleAddTeamSubmit} className="flex flex-col gap-4">
               <div>
-                <label className="block text-sm mb-1 text-gray-800">Nama Tim</label>
+                <label className="form-label">Nama Tim</label>
                 <input 
                   type="text" 
-                  placeholder="Mi" 
-                  className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                  placeholder="Tim C" 
+                  className="input-field"
                   value={teamName}
                   onChange={e => setTeamName(e.target.value)}
                   required
                 />
               </div>
               <div className="flex justify-end gap-3 mt-4">
-                <button type="button" onClick={() => setIsAddTeamOpen(false)} className="px-5 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl">
+                <button type="button" onClick={() => setIsAddTeamOpen(false)} className="px-5 py-2 text-sm text-black/60 hover:bg-brand-bg rounded-xl">
                   Batal
                 </button>
-                <button type="submit" disabled={isSubmitting} className="px-5 py-2 bg-[#6f92c9] hover:bg-[#5a7ab0] text-white rounded-xl text-sm font-medium">
+                <button type="submit" disabled={isSubmitting} className="btn-primary text-sm">
                   {isSubmitting ? "Memproses..." : "Buat Tim"}
                 </button>
               </div>
@@ -398,30 +383,25 @@ export default function ManagementPage() {
 
       {/* 3. Assign / Ubah Anggota Modal */}
       {isAssignStaffOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[24px] w-full max-w-md shadow-xl p-6">
-            <h2 className="text-xl font-medium text-center text-gray-800 mb-6">Pindah / Assign Anggota</h2>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="card w-full max-w-md p-8 shadow-2xl">
+            <h2 className="text-xl font-semibold text-center text-black mb-6">Pindah / Assign Anggota</h2>
             <form onSubmit={handleAssignStaffSubmit} className="flex flex-col gap-4">
               
-              {/* Select Staff */}
               <div>
-                <label className="block text-sm mb-1 text-gray-800">Pilih Staff</label>
+                <label className="form-label">Pilih Staff</label>
                 <select 
-                  className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                  className="input-field cursor-pointer"
                   value={assignForm.staffId}
                   onChange={e => setAssignForm({...assignForm, staffId: e.target.value})}
                   required
                 >
                   <option value="" disabled>-- Pilih Staff --</option>
-                  
-                  {/* Group unassigned staff */}
                   <optgroup label="Belum Ada Tim">
                     {unassignedStaff.map(s => (
                       <option key={s.staffId} value={s.staffId}>{s.name} ({s.position})</option>
                     ))}
                   </optgroup>
-
-                  {/* Group assigned staff so you can move them between teams */}
                   {teams.map(t => (
                     <optgroup key={t.teamId} label={`Tim: ${t.teamName}`}>
                       {t.members.map(s => (
@@ -432,11 +412,10 @@ export default function ManagementPage() {
                 </select>
               </div>
 
-              {/* Select Team */}
               <div>
-                <label className="block text-sm mb-1 text-gray-800">Pindah ke Tim</label>
+                <label className="form-label">Pindah ke Tim</label>
                 <select 
-                  className="w-full px-4 py-2 bg-[#f0f4fa] border border-[#d6e0f0] rounded-xl outline-none focus:border-[#6f92c9] text-sm"
+                  className="input-field cursor-pointer"
                   value={assignForm.teamId}
                   onChange={e => setAssignForm({...assignForm, teamId: e.target.value})}
                   required
@@ -445,16 +424,15 @@ export default function ManagementPage() {
                   {teams.map(t => (
                      <option key={t.teamId} value={t.teamId}>{t.teamName}</option>
                   ))}
-                  {/* Add option to remove from team completely */}
                   <option value="unassigned">-- Hapus dari Tim (Unassign) --</option>
                 </select>
               </div>
 
               <div className="flex justify-end gap-3 mt-4">
-                <button type="button" onClick={() => setIsAssignStaffOpen(false)} className="px-5 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl">
+                <button type="button" onClick={() => setIsAssignStaffOpen(false)} className="px-5 py-2 text-sm text-black/60 hover:bg-brand-bg rounded-xl">
                   Batal
                 </button>
-                <button type="submit" disabled={isSubmitting} className="px-5 py-2 bg-[#6f92c9] hover:bg-[#5a7ab0] text-white rounded-xl text-sm font-medium">
+                <button type="submit" disabled={isSubmitting} className="btn-primary text-sm">
                   {isSubmitting ? "Memproses..." : "Simpan Perubahan"}
                 </button>
               </div>
@@ -467,7 +445,7 @@ export default function ManagementPage() {
   );
 }
 
-// Notice we removed the ": void" at the end and ensured "return" is there
+// Action Button matching mockup layout (Icon on right or left contextually)
 function ActionButton({ 
   children, 
   icon, 
@@ -483,26 +461,24 @@ function ActionButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium transition
+      className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition cursor-pointer shadow-sm
         ${
           muted
-            ? "bg-[#cfe0f4] text-gray-700 hover:bg-[#c0d6ee]"
-            : "bg-[#6f92c9] text-white hover:bg-[#5f80b8]"
+            ? "bg-brand-bg border border-brand-outline text-black/80 hover:bg-brand-outline/30"
+            : "bg-brand-primary text-white hover:bg-brand-dark"
         }`}
     >
-      {children}
+      <span>{children}</span>
       {icon}
     </button>
   );
 }
 
-// Put this at the bottom of your file, outside of the main ManagementPage component
-
 function TeamSection({
   team,
   collapsed,
   onToggle,
-  isUnassigned = false, // Added this so TypeScript doesn't yell about the new prop
+  isUnassigned = false,
 }: {
   team: Team;
   collapsed: boolean;
@@ -514,20 +490,21 @@ function TeamSection({
       <button
         type="button"
         onClick={onToggle}
-        className="flex items-center gap-2 mb-3 group"
+        className="flex items-center gap-2 mb-3 group cursor-pointer"
       >
-        <h2 className={`text-xl font-bold ${isUnassigned ? "text-gray-500" : "text-gray-800"}`}>
+        <h2 className={`text-xl font-bold ${isUnassigned ? "text-black/50" : "text-brand-dark"}`}>
           {team.teamName}
         </h2>
         <ChevronDown
           size={18}
-          className={`text-gray-700 transition-transform ${collapsed ? "-rotate-90" : ""}`}
+          className={`text-black/70 transition-transform ${collapsed ? "-rotate-90" : ""}`}
         />
       </button>
 
       {!collapsed && (
-        <div className="bg-white rounded-2xl shadow-[0_8px_30px_rgba(0,0,0,0.06)] overflow-hidden">
-          <div className="grid grid-cols-[1.2fr_1.2fr_0.8fr_2fr] px-6 pt-4 pb-2 text-sm text-gray-500 font-medium">
+        <div className="flex flex-col gap-3">
+          {/* Table Header */}
+          <div className="grid grid-cols-[1.2fr_1.2fr_0.8fr_2fr] px-6 pt-2 pb-1 text-sm text-black/50 font-medium">
             <span>Nama</span>
             <span>Posisi</span>
             <span>Status</span>
@@ -535,22 +512,23 @@ function TeamSection({
           </div>
 
           {team.members.length === 0 ? (
-            <div className="px-6 py-6 text-sm text-gray-400">No members in this team yet.</div>
+            <div className="card px-6 py-6 text-sm text-black/40">No members in this team yet.</div>
           ) : (
-            team.members.map((member, i) => (
-              <div
-                key={member.staffId}
-                className={`grid grid-cols-[1.2fr_1.2fr_0.8fr_2fr] items-center px-6 py-3 text-[15px] text-gray-800
-                  ${i !== team.members.length - 1 ? "border-b border-[#eef2f8]" : ""}`}
-              >
-                <span>{member.name}</span>
-                <span>{member.position}</span>
-                <span>
-                  <StatusBadge status={member.status as "ON" | "OFF"} />
-                </span>
-                <span className="text-sm text-gray-500">{member.note ?? ""}</span>
-              </div>
-            ))
+            <div className="card overflow-hidden">
+              {team.members.map((member, i) => (
+                <div
+                  key={member.staffId}
+                  className={`grid grid-cols-[1.2fr_1.2fr_0.8fr_2fr] items-center px-6 py-4 text-[15px] text-black/90 hover:bg-brand-bg/50 transition-colors ${
+                    i !== team.members.length - 1 ? "border-b border-brand-outline/40" : ""
+                  }`}
+                >
+                  <span className="font-medium">{member.name}</span>
+                  <span className="text-black/70">{member.position}</span>
+                  <span><StatusBadge status={member.status as "ON" | "OFF"} /></span>
+                  <span className="text-sm text-black/50">{member.note ?? ""}</span>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -562,8 +540,7 @@ function StatusBadge({ status }: { status: "ON" | "OFF" }) {
   const isOn = status === "ON";
   return (
     <span
-      className={`inline-flex items-center justify-center w-14 py-1 rounded-md text-xs font-bold tracking-wide
-        ${isOn ? "bg-[#2a66b0] text-white" : "bg-gray-200 text-gray-500"}`}
+      className={`badge ${isOn ? "bg-brand-primary text-white" : "bg-gray-200 text-gray-600"}`}
     >
       {status}
     </span>

@@ -37,12 +37,12 @@ export default function Accept({ ticket, onBack, onSuccess }: AcceptProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#f0f4f9] z-50 flex flex-col p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-brand-bg z-50 flex flex-col p-6 animate-in fade-in duration-200">
       <div className="flex justify-between items-center mb-12">
-        <button onClick={onBack} className="text-gray-700 hover:text-gray-900 transition-colors">
+        <button onClick={onBack} className="text-black/60 hover:text-black/90 transition-colors">
           <ArrowLeft size={24} />
         </button>
-        <button onClick={onSuccess} className="text-gray-700 hover:text-gray-900 transition-colors">
+        <button onClick={onSuccess} className="text-black/60 hover:text-black/90 transition-colors">
           <X size={24} />
         </button>
       </div>
@@ -51,10 +51,10 @@ export default function Accept({ ticket, onBack, onSuccess }: AcceptProps) {
       <div className="flex-1 flex items-center justify-center">
         <form 
           onSubmit={handleSubmit}
-          className="bg-white w-full max-w-lg rounded-[32px] p-8 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.08)] border border-gray-100 flex flex-col gap-6"
+          className="card w-full max-w-lg p-8 flex flex-col gap-6"
         >
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2 text-left">
+            <label className="form-label">
               Alasan Diterima
             </label>
             <textarea 
@@ -62,7 +62,7 @@ export default function Accept({ ticket, onBack, onSuccess }: AcceptProps) {
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               placeholder="Masukkan alasan..."
-              className="w-full bg-[#e8eff7] border border-[#cbd6e6] rounded-xl px-4 py-3 text-gray-800 outline-none text-sm resize-none focus:ring-2 focus:ring-emerald-400"
+              className="input-field resize-none"
               required
             />
           </div>
@@ -71,9 +71,9 @@ export default function Accept({ ticket, onBack, onSuccess }: AcceptProps) {
             <button 
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 bg-[#4ade80] hover:bg-[#22c55e] text-white px-8 py-3 rounded-xl font-semibold shadow-md transition-colors text-sm disabled:opacity-50"
+              className="flex items-center gap-2 bg-brand-primary hover:bg-brand-dark text-white px-8 py-3 rounded-xl font-semibold shadow-md transition-colors text-sm disabled:opacity-50 cursor-pointer"
             >
-              {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <>Terima <Check size={18} /></>}
+              {isSubmitting ? <Loader2 className="animate-spin" size={18} /> : <>Terima <Check size={18} strokeWidth={2.5} /></>}
             </button>
           </div>
         </form>

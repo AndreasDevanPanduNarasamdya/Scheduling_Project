@@ -206,7 +206,6 @@ public class TimelineService : ITimelineService
             var ticketEnd = activeTicket.EndDate.Date;
             var label = activeTicket.Reason ?? activeTicket.Title;
 
-            // Apply the same transition rule to ticket-based leave as rotation-based breaks (rule 6)
             if (date == ticketStart || date == ticketEnd)
                 return ("Transition", label, baseState.SourceId, baseState.IsStaffSchedule);
 
