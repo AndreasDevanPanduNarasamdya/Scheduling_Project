@@ -1,170 +1,31 @@
-import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import TimelineComponent from "../components/TimelineComponent";
 import { 
-  Menu, 
-  X, 
-  Clock, 
-  AlertCircle, 
-  Calendar as CalendarIcon, 
-  CheckCircle2, 
-  Filter,
-  UserPlus,
-  Plus,
-  ArrowLeftRight,
-  ChevronDown
+  X, Clock, AlertCircle, Calendar as CalendarIcon, 
+  CheckCircle2, Filter, UserPlus, Plus
 } from "lucide-react";
-import type { 
-  TimelineTeam, 
-  BarType, 
-  TimelineHistoryRecord 
-} from "../../types";
+import type { TimelineTeam, BarType, TimelineHistoryRecord } from "../../types";
 import { 
-  fetchTimeline, 
-  createTimeline, 
-  fetchTimelineHistory, 
-  endActiveTimeline,
-  createTeam,
-  fetchUnassignedStaff,
-  assignStaffToTeam
+  fetchTimeline, createTimeline, fetchTimelineHistory, 
+  endActiveTimeline, createTeam, fetchUnassignedStaff, assignStaffToTeam
 } from "../../api";
-
-const MONTH_NAMES = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
-];
-
-const COLUMN_WIDTH = 40;
-
-const BAR_COLORS: Record<BarType, string> = {
-  None: "",
-  OffDuty: "bg-blue-500 shadow-sm",
-  Leave: "bg-red-500 shadow-sm",
-  Transition: "bg-yellow-400",
-};
-
-function generateTimeline(startYear: number, endYear: number) {
-  const days = [];
-  const months = [];
-  
-  const startDate = new Date(startYear, 0, 1);
-  const endDate = new Date(endYear, 11, 31);
-  
-  let currentMonth = startDate.getMonth();
-  let currentYear = startDate.getFullYear();
-  let span = 0;
-
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    const isToday = new Date().toDateString() === d.toDateString();
-    
-    days.push({
-      date: new Date(d),
-      dayNumber: d.getDate(),
-      isToday,
-      isWeekend: d.getDay() === 0 || d.getDay() === 6
-    });
-
-    if (d.getMonth() === currentMonth) {
-      span++;
-    } else {
-      months.push({ name: MONTH_NAMES[currentMonth], year: currentYear, span });
-      currentMonth = d.getMonth();
-      currentYear = d.getFullYear();
-      span = 1;
-    }
-  }
-  
-  months.push({ name: MONTH_NAMES[currentMonth], year: currentYear, span });
-
-  return { days, months };
-}
-
-function toDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-interface DayInfo {
-  barType: BarType;
-  label?: string;
-}
-
-function useDayLookup(teams: TimelineTeam[]) {
-  return useMemo(() => {
-    const map = new Map<string, Map<string, DayInfo>>();
-    for (const team of teams) {
-      for (const member of team.members) {
-        const dayMap = new Map<string, DayInfo>();
-        for (const day of member.days) {
-          dayMap.set(day.date, { barType: day.barType, label: day.label });
-        }
-        map.set(member.staffId, dayMap);
-      }
-    }
-    return map;
-  }, [teams]);
-}
-
-interface BarSegment {
-  startIndex: number;
-  length: number;
-  barType: BarType;
-  label?: string;
-}
-
-function computeSegments(
-  days: { date: Date }[], 
-  memberDays: Map<string, { barType: BarType; label?: string }> | undefined
-): BarSegment[] {
-  const segments: BarSegment[] = [];
-  let current: BarSegment | null = null;
-
-  days.forEach((d, i) => {
-    const entry = memberDays?.get(toDateKey(d.date));
-    const barType = entry?.barType ?? "None";
-
-    if (barType === "None") {
-      current = null;
-      return;
-    }
-
-    if (current && current.barType === barType && current.label === entry?.label) {
-      current.length++;
-    } else {
-      current = { startIndex: i, length: 1, barType, label: entry?.label };
-      segments.push(current);
-    }
-  });
-
-  return segments;
-}
 
 export default function TimelinePage() {
   const [teams, setTeams] = useState<TimelineTeam[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   const currentYear = new Date().getFullYear();
-  const [yearRange, setYearRange] = useState({ start: currentYear, end: currentYear });
-  const [visibleYear, setVisibleYear] = useState(currentYear);
+  // We supply a 2-year wide view automatically, eliminating the need for infinite scroll jumps
+  const startDate = new Date(currentYear, 0, 1);
+  const endDate = new Date(currentYear + 1, 11, 31);
   
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("All");
 
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [selectedInspection, setSelectedInspection] = useState<{
-    id: string;
-    name: string;
-    type: "team" | "staff";
-    subtitle?: string;
-  } | null>(null);
-  const [historyRecords, setHistoryRecords] = useState<TimelineHistoryRecord[]>([]);
+  const [selectedInspection, setSelectedInspection] = useState<{ id: string; name: string; type: "team" | "staff"; subtitle?: string; } | null>(null);
+  const [historyRecords, setHistoryRecords] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [selectedBarDetail, setSelectedBarDetail] = useState<{
-    barType: BarType;
-    label?: string;
-    staffName: string;
-    startDate: string;
-    endDate: string;
-  } | null>(null);
+  const [selectedBarDetail, setSelectedBarDetail] = useState<{ barType: BarType; label?: string; staffName: string; startDate: string; endDate: string; } | null>(null);
 
   const [isNewTeamModalOpen, setIsNewTeamModalOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
@@ -173,29 +34,10 @@ export default function TimelinePage() {
   const [assigningStaffId, setAssigningStaffId] = useState<string | null>(null);
   const [selectedAssignTeamId, setSelectedAssignTeamId] = useState("");
 
-  const [formData, setFormData] = useState({
-    targetId: "",
-    daysOn: "",
-    daysOff: "",
-    startDate: "",
-    endDate: "" 
-  });
+  const [formData, setFormData] = useState({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const previousScrollState = useRef({ width: 0, left: 0 });
-  const hasInitialScrolled = useRef(false);
-  const isAddingPast = useRef(false);
-  const isExpandingRef = useRef(false);
-
-  const { days, months } = useMemo(() => {
-    return generateTimeline(yearRange.start, yearRange.end);
-  }, [yearRange.start, yearRange.end]);
-
-  const totalWidth = days.length * COLUMN_WIDTH;
-  const dayLookup = useDayLookup(teams);
 
   const filteredTeams = useMemo(() => {
     if (selectedTeamFilter === "All") return teams;
@@ -205,83 +47,100 @@ export default function TimelinePage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const startDate = `${yearRange.start}-01-01`;
-      const endDate = `${yearRange.end}-12-31`;
-      const data = await fetchTimeline(startDate, endDate);
+      const data = await fetchTimeline(`${currentYear}-01-01`, `${currentYear + 1}-12-31`);
       setTeams(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch timeline:", err);
       setErrorMessage("Gagal memuat jadwal lapangan dari server.");
     } finally {
       setIsLoading(false);
-      isExpandingRef.current = false;
     }
   };
 
-  useEffect(() => {
-    loadData();
-  }, [yearRange.start, yearRange.end]);
-
-  useLayoutEffect(() => {
-    if (!hasInitialScrolled.current && scrollContainerRef.current && days.length > 0) {
-      const todayIndex = days.findIndex(d => d.isToday);
-      if (todayIndex !== -1) {
-        const container = scrollContainerRef.current;
-        container.scrollLeft = (todayIndex * COLUMN_WIDTH) - (container.clientWidth / 2);
-        hasInitialScrolled.current = true;
-      }
-    }
-  }, [days]);
-
-  useLayoutEffect(() => {
-    const container = scrollContainerRef.current;
-    if (container && previousScrollState.current.width > 0 && isAddingPast.current) {
-      const widthDifference = container.scrollWidth - previousScrollState.current.width;
-      if (widthDifference > 0) {
-        container.scrollLeft = previousScrollState.current.left + widthDifference;
-      }
-      isAddingPast.current = false;
-      previousScrollState.current = { width: 0, left: 0 };
-    }
-  }, [days.length]);
-
-  const handleScroll = () => {
-    const container = scrollContainerRef.current;
-    if (!container || isAddingPast.current || isExpandingRef.current || isLoading) return;
-
-    const { scrollLeft, scrollWidth, clientWidth } = container;
-
-    const centerDayIndex = Math.floor((scrollLeft + clientWidth / 2) / COLUMN_WIDTH);
-    const centerDate = days[centerDayIndex]?.date;
-    if (centerDate && centerDate.getFullYear() !== visibleYear) {
-      setVisibleYear(centerDate.getFullYear());
-    }
-
-    if (scrollLeft < 300) {
-      isAddingPast.current = true;
-      isExpandingRef.current = true;
-      previousScrollState.current = { width: scrollWidth, left: scrollLeft };
-      setYearRange(prev => ({ ...prev, start: prev.start - 1 }));
-    } else if (scrollWidth - (scrollLeft + clientWidth) < 300) {
-      if (centerDate && centerDate.getFullYear() === yearRange.end) {
-        isExpandingRef.current = true;
-        setYearRange(prev => ({ ...prev, end: prev.end + 1 }));
-      }
-    }
-  };
+  useEffect(() => { loadData(); }, []);
 
   const handleInspectTarget = async (id: string, name: string, type: "team" | "staff", subtitle?: string) => {
     setSelectedInspection({ id, name, type, subtitle });
     setIsLoadingHistory(true);
     setErrorMessage(null);
     try {
-      const history = await fetchTimelineHistory(
-        type === "team" ? id : undefined,
-        type === "staff" ? id : undefined
-      );
-      setHistoryRecords(history);
+      let finalRecords: any[] = [];
+
+      if (type === "team") {
+        const res = await fetchTimelineHistory(id, undefined);
+        finalRecords = res.map((r: any) => ({ ...r, _source: "Jadwal Tim" }));
+      } else {
+        // 1. Find which team this staff belongs to
+        const staffTeam = teams.find(t => t.members.some(m => m.staffId === id));
+        const staffMember = staffTeam?.members.find(m => m.staffId === id);
+        
+        // 2. Fetch BOTH personal schedules and their team's schedule simultaneously
+        const [staffSchedules, teamSchedules] = await Promise.all([
+          fetchTimelineHistory(undefined, id).catch(() => []),
+          staffTeam ? fetchTimelineHistory(staffTeam.teamId, undefined).catch(() => []) : Promise.resolve([])
+        ]);
+
+        // 3. Tag them so we know where they came from
+        const mappedTeamSchedules = teamSchedules.map((r: any) => ({ ...r, _source: `Tim: ${staffTeam?.teamName}` }));
+        const mappedStaffSchedules = staffSchedules.map((r: any) => ({ ...r, _source: "Personal" }));
+
+// 4. 🔥 EXTRACT ACTIVE TICKETS DIRECTLY FROM TIMELINE DATA! 🔥
+        const activeTickets: any[] = [];
+        if (staffMember) {
+          let currentTicket: any = null;
+          // Sort days chronologically just in case
+          const sortedDays = [...staffMember.days].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          
+          sortedDays.forEach(day => {
+            // Catch it if it's a Leave (Red) OR if it has a custom label attached!
+            if (day.barType === "Leave" || (day.label && day.label.trim() !== "")) {
+              
+              const dayReason = day.label || (day.barType === "Leave" ? "Izin / Cuti" : "Manual Override");
+
+              // 🔥 FIX: We removed the strict barType check! 
+              // Now, if the text note matches exactly, it merges into ONE ticket.
+              if (!currentTicket || currentTicket.reason !== dayReason) {
+                if (currentTicket) activeTickets.push(currentTicket);
+                currentTicket = {
+                  timelineId: `ticket-${day.date}`,
+                  _source: "Tiket / Override",
+                  isTicket: true,
+                  barType: day.barType, // Saves the initial type (e.g. Leave) so it stays RED
+                  reason: dayReason,
+                  startDate: day.date,
+                  endDate: day.date,
+                };
+              } else {
+                currentTicket.endDate = day.date; // Extend the current ticket smoothly!
+              }
+            } else {
+              if (currentTicket) {
+                activeTickets.push(currentTicket);
+                currentTicket = null;
+              }
+            }
+          });
+          if (currentTicket) activeTickets.push(currentTicket);
+        }
+
+        // Evaluate Ticket status (Active vs Future) based on today's date
+        const today = new Date().toISOString().split("T")[0];
+        const processedTickets = activeTickets
+          .filter(t => t.endDate >= today) // Only keep ongoing or future tickets
+          .map(t => ({
+            ...t,
+            status: t.startDate > today ? "Future" : "Active"
+          }));
+
+        // Merge Tickets, Team Schedules, and Personal Schedules together!
+        finalRecords = [...processedTickets, ...mappedTeamSchedules, ...mappedStaffSchedules];
+      }
+
+      // 5. STRICT FILTER: Only show Ongoing (Active) or Future schedules/tickets!
+      finalRecords = finalRecords.filter(r => r.status === "Active" || r.status === "Future");
+
+      setHistoryRecords(finalRecords);
     } catch (error: any) {
-      console.error(error);
       setErrorMessage(error.message || "Gagal memuat riwayat jadwal.");
     } finally {
       setIsLoadingHistory(false);
@@ -289,22 +148,9 @@ export default function TimelinePage() {
   };
 
   const handleSaveSchedule = async () => {
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
     if (!formData.targetId || !formData.daysOn || !formData.daysOff || !formData.startDate) {
-      setErrorMessage("Harap isi semua kolom wajib!");
-      return;
+      setErrorMessage("Harap isi semua kolom wajib!"); return;
     }
-
-    const daysOnNum = parseInt(formData.daysOn, 10);
-    const daysOffNum = parseInt(formData.daysOff, 10);
-
-    if (isNaN(daysOnNum) || daysOnNum < 1 || isNaN(daysOffNum) || daysOffNum < 1) {
-      setErrorMessage("Days On dan Days Off harus bernilai integer minimal 1.");
-      return;
-    }
-
     setIsSubmitting(true);
     try {
       const isTeam = formData.targetId.startsWith("team:");
@@ -315,29 +161,18 @@ export default function TimelinePage() {
         staffId: !isTeam ? actualId : null,
         startDate: formData.startDate,
         endDate: formData.endDate ? formData.endDate : null,
-        daysOn: daysOnNum,
-        daysOff: daysOffNum,
+        daysOn: parseInt(formData.daysOn, 10),
+        daysOff: parseInt(formData.daysOff, 10),
       });
 
       setSuccessMessage("Versi jadwal baru berhasil disimpan dan diberlakukan!");
       setIsAssignModalOpen(false);
       setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "" });
-      
       await loadData();
-      if (selectedInspection) {
-        await handleInspectTarget(
-          selectedInspection.id, 
-          selectedInspection.name, 
-          selectedInspection.type, 
-          selectedInspection.subtitle
-        );
-      }
+      if (selectedInspection) handleInspectTarget(selectedInspection.id, selectedInspection.name, selectedInspection.type, selectedInspection.subtitle);
     } catch (error: any) {
-      console.error(error);
       setErrorMessage(error.message || "Terjadi kesalahan saat menyimpan jadwal.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    } finally { setIsSubmitting(false); }
   };
 
   const handleEndSchedule = async (effectiveDate: string) => {
@@ -350,78 +185,45 @@ export default function TimelinePage() {
       });
       setSuccessMessage("Jadwal aktif berhasil diakhiri.");
       await loadData();
-      await handleInspectTarget(
-        selectedInspection.id, 
-        selectedInspection.name, 
-        selectedInspection.type, 
-        selectedInspection.subtitle
-      );
-    } catch (error: any) {
-      alert(error.message || "Gagal mengakhiri jadwal.");
-    }
+      await handleInspectTarget(selectedInspection.id, selectedInspection.name, selectedInspection.type, selectedInspection.subtitle);
+    } catch (error: any) { alert(error.message || "Gagal mengakhiri jadwal."); }
   };
 
   const handleCreateTeamSubmit = async () => {
-    if (!newTeamName.trim()) {
-      setErrorMessage("Nama tim tidak boleh kosong.");
-      return;
-    }
+    if (!newTeamName.trim()) { setErrorMessage("Nama tim tidak boleh kosong."); return; }
     setIsSubmitting(true);
     try {
       await createTeam({ teamName: newTeamName });
       setSuccessMessage(`Tim "${newTeamName}" berhasil dibuat!`);
-      setIsNewTeamModalOpen(false);
-      setNewTeamName("");
-      await loadData();
-    } catch (err: any) {
-      setErrorMessage(err.message || "Gagal membuat tim baru.");
-    } finally {
-      setIsSubmitting(false);
-    }
+      setIsNewTeamModalOpen(false); setNewTeamName(""); await loadData();
+    } catch (err: any) { setErrorMessage(err.message || "Gagal membuat tim baru."); } finally { setIsSubmitting(false); }
   };
 
   const handleOpenUnassignedModal = async () => {
     setErrorMessage(null);
     try {
       const data = await fetchUnassignedStaff();
-      setUnassignedStaff(data);
-      setIsUnassignedModalOpen(true);
-    } catch (err: any) {
-      setErrorMessage(err.message || "Gagal memuat staf tanpa tim.");
-    }
+      setUnassignedStaff(data); setIsUnassignedModalOpen(true);
+    } catch (err: any) { setErrorMessage(err.message || "Gagal memuat staf tanpa tim."); }
   };
 
   const handleAssignStaffSubmit = async (staffId: string) => {
-    if (!selectedAssignTeamId) {
-      setErrorMessage("Pilih tim tujuan.");
-      return;
-    }
+    if (!selectedAssignTeamId) { setErrorMessage("Pilih tim tujuan."); return; }
     setIsSubmitting(true);
     try {
       await assignStaffToTeam(staffId, selectedAssignTeamId);
       setSuccessMessage("Staf berhasil ditugaskan ke tim!");
-      setAssigningStaffId(null);
-      setSelectedAssignTeamId("");
-      const unassigned = await fetchUnassignedStaff();
-      setUnassignedStaff(unassigned);
-      await loadData();
-    } catch (err: any) {
-      setErrorMessage(err.message || "Gagal menugaskan staf.");
-    } finally {
-      setIsSubmitting(false);
-    }
+      setAssigningStaffId(null); setSelectedAssignTeamId("");
+      setUnassignedStaff(await fetchUnassignedStaff()); await loadData();
+    } catch (err: any) { setErrorMessage(err.message || "Gagal menugaskan staf."); } finally { setIsSubmitting(false); }
   };
 
   return (
     <div className="flex-1 w-full h-full flex flex-col bg-brand-bg font-sans overflow-hidden min-w-0">
-      
-      {/* TOP NAVBAR (USING THEME COLORS) */}
+      {/* TOP NAVBAR */}
       <div className="bg-brand-dark text-white p-2.5 flex items-center justify-between shrink-0 shadow-sm z-30 relative w-full">
         <div className="flex items-center gap-4">
-          <button className="p-1.5 hover:bg-white/20 rounded transition shrink-0 cursor-pointer">
-            <Menu size={22} />
-          </button>
-          <span className="font-bold tracking-wide text-sm uppercase">HR Scheduling Workstation</span>
+          <span className="font-bold tracking-wide text-sm uppercase pl-12">Timeline Jadwal</span>
         </div>
         
         <div className="flex items-center gap-2 shrink-0">
@@ -434,223 +236,72 @@ export default function TimelinePage() {
             >
               <option value="All" className="text-black">Semua Tim</option>
               {teams.map((t) => (
-                <option key={t.teamId} value={t.teamId} className="text-black">
-                  {t.teamName}
-                </option>
+                <option key={t.teamId} value={t.teamId} className="text-black">{t.teamName}</option>
               ))}
             </select>
           </div>
 
-          <button 
-            onClick={handleOpenUnassignedModal}
-            className="bg-brand-primary hover:bg-brand-dark text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
-          >
-            <UserPlus size={14} />
-            <span>Staf Tanpa Tim</span>
+          <button onClick={handleOpenUnassignedModal} className="bg-brand-primary hover:bg-brand-dark text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+            <UserPlus size={14} /><span>Staf Tanpa Tim</span>
           </button>
 
-          {/* FUSED ACTION GROUP BUTTONS (MATCHING YOUR MOCKUP STYLE) */}
           <div className="action-group ml-2">
-            <button 
-              type="button" 
-              onClick={() => { setErrorMessage(null); setIsAssignModalOpen(true); }} 
-              className="action-group-btn"
-            >
+            <button type="button" onClick={() => { setErrorMessage(null); setIsAssignModalOpen(true); }} className="action-group-btn">
               Atur Jadwal <Plus size={15} strokeWidth={2.5} />
             </button>
-            <button 
-              type="button" 
-              onClick={() => { setErrorMessage(null); setIsNewTeamModalOpen(true); }} 
-              className="action-group-btn"
-            >
+            <button type="button" onClick={() => { setErrorMessage(null); setIsNewTeamModalOpen(true); }} className="action-group-btn">
               Tim Baru <Plus size={15} strokeWidth={2.5} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* FEEDBACK BANNERS */}
       {errorMessage && (
         <div className="bg-red-50 border-b border-red-200 px-4 py-2 flex items-center justify-between text-red-700 text-sm z-30">
-          <div className="flex items-center gap-2">
-            <AlertCircle size={16} />
-            <span>{errorMessage}</span>
-          </div>
+          <div className="flex items-center gap-2"><AlertCircle size={16} /><span>{errorMessage}</span></div>
           <button onClick={() => setErrorMessage(null)} className="hover:opacity-75 font-bold cursor-pointer">✕</button>
         </div>
       )}
 
       {successMessage && (
         <div className="bg-green-50 border-b border-green-200 px-4 py-2 flex items-center justify-between text-green-700 text-sm z-30">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} />
-            <span>{successMessage}</span>
-          </div>
+          <div className="flex items-center gap-2"><CheckCircle2 size={16} /><span>{successMessage}</span></div>
           <button onClick={() => setSuccessMessage(null)} className="hover:opacity-75 font-bold cursor-pointer">✕</button>
         </div>
       )}
 
+      {/* MAIN CONTENT AREA */}
       <div className="flex flex-1 overflow-hidden relative w-full">
         
-        {/* LEFT SIDEBAR */}
-        <div className="w-56 flex-shrink-0 border-r border-brand-outline flex flex-col bg-white z-20 shadow-[2px_0_10px_-3px_rgba(0,0,0,0.1)] relative">
-          
-          <div className="h-[88px] bg-brand-light text-white p-4 flex items-center shrink-0 border-b border-brand-outline">
-            <h1 className="text-[22px] font-bold leading-tight">Jadwal<br/>Lapangan</h1>
-          </div>
-
-          <div className="overflow-y-auto flex-1 no-scrollbar bg-white">
-            {isLoading && filteredTeams.length === 0 ? (
-              <div className="p-4 text-sm text-black/50 text-center">Memuat tim...</div>
-            ) : (
-              filteredTeams.map((team) => (
-                <div key={team.teamId}>
-                  <div 
-                    onClick={() => handleInspectTarget(team.teamId, team.teamName, "team")}
-                    className="bg-brand-bg px-4 h-[41px] flex items-center justify-between font-bold text-[14px] text-brand-dark border-b border-brand-outline/50 shrink-0 cursor-pointer hover:bg-brand-outline/20 transition"
-                  >
-                    <span>{team.teamName}</span>
-                    <span className="badge bg-brand-primary text-white py-0.5 px-2 text-[10px]">TIM</span>
-                  </div>
-                  {team.members.length === 0 ? (
-                    <div className="px-4 py-2 h-[42px] flex items-center text-xs text-black/40 italic border-b border-gray-100 shrink-0">Kosong</div>
-                  ) : (
-                    team.members.map((member) => (
-                      <div 
-                        key={member.staffId} 
-                        onClick={() => handleInspectTarget(member.staffId, member.name, "staff", `${member.position} • Tim: ${team.teamName}`)}
-                        className="px-4 py-2 h-[42px] flex items-center justify-between text-[14px] text-black/80 border-b border-gray-100 shrink-0 cursor-pointer hover:bg-brand-bg/40 transition"
-                      >
-                        <span className="truncate">{member.name}</span>
-                        <span className="text-[11px] text-black/40">{member.position}</span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+        {/* CENTER CALENDAR WRAPPER DELEGATING TO COMPONENT */}
+        <div className="flex-1 overflow-auto bg-brand-bg relative flex">
+          <TimelineComponent 
+            teams={filteredTeams}
+            isLoading={isLoading}
+            startDate={startDate}
+            endDate={endDate}
+            compact={false}
+            onBarClick={(detail) => setSelectedBarDetail(detail)}
+            onInspectTarget={handleInspectTarget}
+          />
         </div>
 
-        {/* RIGHT SIDE (DYNAMIC CALENDAR GRID) */}
+        {/* RIGHT SIDE INSPECTION PANEL (SMOOTH SQUASH ANIMATION) */}
         <div 
-          ref={scrollContainerRef} 
-          onScroll={handleScroll}
-          className="flex-1 flex flex-col overflow-auto relative bg-white"
+          className={`shrink-0 overflow-hidden transition-[width] duration-300 ease-in-out flex flex-col bg-white z-30 shadow-xl ${
+            selectedInspection ? "w-96 border-l border-brand-outline" : "w-0 border-transparent"
+          }`}
         >
-          <div className="sticky top-0 z-10 bg-white shrink-0 shadow-sm border-b border-brand-outline flex flex-col h-[88px] box-border" style={{ width: `${totalWidth}px` }}>
-            <div className="h-[24px] flex items-center justify-center border-b border-brand-outline/40 bg-brand-bg shrink-0 w-full box-border">
-              <div className="sticky left-1/2 -translate-x-1/2 w-fit">
-                <span className="text-brand-dark font-semibold text-[13px] whitespace-nowrap">{visibleYear}</span>
-              </div>
-            </div>
-            
-            <div className="flex h-[31px] border-b border-brand-outline/40 text-black/70 text-[15px] bg-brand-bg shrink-0 w-full box-border">
-              {months.map((m, i) => (
-                <div 
-                  key={i} 
-                  className="flex items-center justify-center font-medium border-r border-brand-outline/40 text-brand-dark shrink-0 h-full box-border" 
-                  style={{ width: `${m.span * COLUMN_WIDTH}px` }}
-                >
-                  <span className="text-sm">{m.name}</span>
-                </div>
-              ))}
-            </div>
-            
-            <div className="flex h-[32px] bg-brand-bg shrink-0 w-full box-border">
-              {days.map((d, i) => (
-                <div key={i} className={`w-[40px] shrink-0 h-full flex items-center justify-center text-[14px] border-r border-brand-outline/40 box-border ${d.isToday ? 'bg-brand-primary text-white font-bold rounded-md my-[2px] h-[28px]' : 'text-black/70'}`}>
-                  {d.dayNumber}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative min-h-full" style={{ width: `${totalWidth}px` }}>
-            <div className="absolute inset-0 flex pointer-events-none">
-              {days.map((d, i) => (
-                <div key={i} className={`w-[40px] flex-shrink-0 border-r border-brand-outline/30 h-full relative ${d.isWeekend ? 'bg-brand-bg/30' : 'bg-white'}`}>
-                  {d.isToday && <div className="absolute top-0 bottom-0 w-[2px] bg-brand-primary left-1/2 -translate-x-1/2 z-0" />}
-                </div>
-              ))}
-            </div>
-
-            <div className="relative z-10">
-              {filteredTeams.map((team) => (
-                <div key={`grid-team-${team.teamId}`}>
-                  <div className="h-[41px] border-b border-brand-outline/40 shrink-0 bg-brand-bg/20" />
-                  {team.members.length === 0 ? (
-                    <div className="h-[42px] border-b border-gray-100 shrink-0" />
-                  ) : (
-                    team.members.map((member) => {
-                      const memberDays = dayLookup.get(member.staffId);
-                      const segments = computeSegments(days, memberDays);
-                      return (
-                        <div
-                          key={`grid-staff-${member.staffId}`}
-                          className="h-[42px] border-b border-gray-100 relative flex items-center shrink-0"
-                        >
-                          {segments.map((seg, idx) => {
-                            const barStartDate = toDateKey(days[seg.startIndex].date);
-                            const barEndDate = toDateKey(days[seg.startIndex + seg.length - 1].date);
-                            
-                            return seg.barType === "Transition" ? (
-                              <div
-                                key={idx}
-                                onClick={() => setSelectedBarDetail({
-                                  barType: seg.barType,
-                                  label: seg.label,
-                                  staffName: member.name,
-                                  startDate: barStartDate,
-                                  endDate: barEndDate
-                                })}
-                                className="absolute h-4 rounded-full bg-yellow-300 z-10 cursor-pointer hover:ring-2 ring-brand-primary/50 transition"
-                                style={{ left: seg.startIndex * COLUMN_WIDTH + 8, width: COLUMN_WIDTH - 16 }}
-                                title={seg.label || "Transition"}
-                              />
-                            ) : (
-                              <div
-                                key={idx}
-                                onClick={() => setSelectedBarDetail({
-                                  barType: seg.barType,
-                                  label: seg.label,
-                                  staffName: member.name,
-                                  startDate: barStartDate,
-                                  endDate: barEndDate
-                                })}
-                                className={`absolute h-4 rounded-md ${BAR_COLORS[seg.barType]} cursor-pointer hover:brightness-95 transition`}
-                                style={{ left: seg.startIndex * COLUMN_WIDTH + 4, width: seg.length * COLUMN_WIDTH - 8 }}
-                                title={seg.label || seg.barType}
-                              />
-                            );
-                          })}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* SIDE PANEL */}
-        {selectedInspection && (
-          <div className="w-96 border-l border-brand-outline bg-white shadow-xl flex flex-col z-30 shrink-0 animate-in slide-in-from-right duration-200">
-            <div className="p-4 bg-brand-bg border-b border-brand-outline flex items-center justify-between">
+          <div className="w-96 h-full flex flex-col">
+            <div className="p-4 bg-brand-bg border-b border-brand-outline flex items-center justify-between shrink-0">
               <div>
                 <span className="text-[11px] font-bold tracking-wider text-brand-primary uppercase">
-                  {selectedInspection.type === "team" ? "Inspeksi Rotasi Tim" : "Inspeksi Staf"}
+                  {selectedInspection?.type === "team" ? "Inspeksi Rotasi Tim" : "Inspeksi Staf"}
                 </span>
-                <h3 className="text-lg font-bold text-black/90">{selectedInspection.name}</h3>
-                {selectedInspection.subtitle && (
-                  <p className="text-xs text-black/50">{selectedInspection.subtitle}</p>
-                )}
+                <h3 className="text-lg font-bold text-black/90">{selectedInspection?.name}</h3>
+                {selectedInspection?.subtitle && <p className="text-xs text-black/50">{selectedInspection.subtitle}</p>}
               </div>
-              <button 
-                onClick={() => setSelectedInspection(null)}
-                className="p-1.5 text-black/40 hover:text-black rounded-full hover:bg-black/5 transition cursor-pointer"
-              >
+              <button onClick={() => setSelectedInspection(null)} className="p-1.5 text-black/40 hover:text-black rounded-full hover:bg-black/5 transition cursor-pointer">
                 <X size={18} />
               </button>
             </div>
@@ -659,9 +310,7 @@ export default function TimelinePage() {
               {isLoadingHistory ? (
                 <div className="text-center py-8 text-sm text-black/50">Memuat riwayat jadwal...</div>
               ) : historyRecords.length === 0 ? (
-                <div className="text-center py-8 text-sm text-black/40 italic">
-                  Belum ada jadwal rotasi yang diatur untuk target ini.
-                </div>
+                <div className="text-center py-8 text-sm text-black/40 italic">Belum ada jadwal rotasi yang diatur untuk target ini.</div>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
@@ -669,55 +318,68 @@ export default function TimelinePage() {
                     <span className="text-xs text-black/40">{historyRecords.length} Rekam</span>
                   </div>
 
-                  {historyRecords.map((rec) => {
+                  {historyRecords.map((rec, index) => {
                     const isActive = rec.status === "Active";
-                    const isFuture = rec.status === "Future";
+                    const isTicket = rec.isTicket;
+                    const isLeave = rec.barType === "Leave"; // Check if it's an OFF ticket
+                    
+                    // 🎨 Style adjustments for Tickets (Red for OFF, Green for ON) vs Schedules (Blue)
+                    const cardBorder = isTicket 
+                      ? (isLeave 
+                          ? (isActive ? "border-red-500 bg-red-50/50" : "border-red-300 bg-red-50/30")
+                          : (isActive ? "border-emerald-500 bg-emerald-50/50" : "border-emerald-300 bg-emerald-50/30")) 
+                      : (isActive ? "border-brand-primary bg-brand-bg/60 shadow-sm" : "border-amber-300 bg-amber-50/40");
+                      
+                    const badgeClass = isTicket
+                      ? (isLeave 
+                          ? (isActive ? "bg-red-500 text-white" : "bg-red-100 text-red-800")
+                          : (isActive ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-800"))
+                      : (isActive ? "bg-brand-primary text-white" : "bg-amber-100 text-amber-800");
+
                     return (
-                      <div 
-                        key={rec.timelineId}
-                        className={`p-3 rounded-xl border transition ${
-                          isActive 
-                            ? "border-brand-primary bg-brand-bg/60 shadow-sm" 
-                            : isFuture
-                            ? "border-amber-300 bg-amber-50/40"
-                            : "border-brand-outline/40 bg-gray-50/50 opacity-75"
-                        }`}
-                      >
+                      <div key={`${rec.timelineId}-${index}`} className={`p-3 rounded-xl border transition ${cardBorder}`}>
+                        
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className={`badge text-[10px] py-0.5 px-2 ${
-                            isActive 
-                              ? "bg-brand-primary text-white" 
-                              : isFuture
-                              ? "bg-amber-100 text-amber-800"
-                              : "bg-gray-200 text-gray-600"
-                          }`}>
-                            {isActive ? "AKTIF" : isFuture ? "MENDATANG" : "RIWAYAT"}
-                          </span>
-                          <span className="text-xs font-semibold text-black/80">
-                            {rec.daysOn} ON / {rec.daysOff} OFF
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className={`badge text-[10px] py-0.5 px-2 ${badgeClass}`}>
+                              {isActive ? "AKTIF" : "MENDATANG"}
+                            </span>
+                            
+                            {/* Shows if this schedule belongs to the Team, Person, or is a Ticket */}
+                            {rec._source && (
+                              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm border ${isTicket ? 'text-red-700 bg-white border-red-200' : 'text-brand-dark bg-white border-brand-outline/60'}`}>
+                                {rec._source}
+                              </span>
+                            )}
+                          </div>
+                          
+                          {/* If Ticket, show LEAVE, else show Days ON/OFF */}
+                          {isTicket ? (
+                            <span className={`text-xs font-bold uppercase tracking-wide ${isLeave ? 'text-red-600' : 'text-emerald-600'}`}>
+                              {isLeave ? "LEAVE (OFF)" : "TICKET (OFF)"}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-semibold text-black/80">{rec.daysOn} ON / {rec.daysOff} OFF</span>
+                          )}
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-xs text-black/70 mt-2">
-                          <CalendarIcon size={14} className="text-black/40" />
-                          <span>Mulai: <strong className="text-black/90">{rec.startDate}</strong></span>
-                        </div>
+                        <div className="flex items-center gap-1.5 text-xs text-black/70 mt-2"><CalendarIcon size={14} className="text-black/40" /><span>Mulai: <strong className="text-black/90">{rec.startDate}</strong></span></div>
+                        <div className="flex items-center gap-1.5 text-xs text-black/70 mt-1"><Clock size={14} className="text-black/40" /><span>Selesai: <strong className="text-black/90">{rec.endDate || "Sekarang (Tanpa Batas)"}</strong></span></div>
+                        
+                        {/* Display ticket reason if it exists */}
+                        {isTicket && rec.reason && (
+                           <div className="mt-2.5 p-2 bg-white border border-red-100 rounded-lg text-xs text-red-900 font-medium shadow-sm">
+                             <strong className="block text-red-400 mb-0.5 text-[10px] uppercase tracking-wider">Catatan Tiket:</strong>
+                             {rec.reason}
+                           </div>
+                        )}
 
-                        <div className="flex items-center gap-1.5 text-xs text-black/70 mt-1">
-                          <Clock size={14} className="text-black/40" />
-                          <span>Selesai: <strong className="text-black/90">{rec.endDate || "Sekarang (Tanpa Batas)"}</strong></span>
-                        </div>
-
-                        {isActive && !rec.endDate && (
-                          <button
-                            onClick={() => {
-                              const todayStr = new Date().toISOString().split("T")[0];
-                              if (confirm("Akhiri siklus rotasi aktif ini mulai hari ini?")) {
-                                handleEndSchedule(todayStr);
-                              }
-                            }}
-                            className="mt-3 w-full py-1 text-xs text-state-error hover:bg-red-50 font-medium rounded-lg border border-red-200 transition cursor-pointer"
-                          >
+                        {/* Only allow ending the schedule if it is Personal, OR if you are inspecting the Team itself */}
+                        {!isTicket && isActive && !rec.endDate && (rec._source === "Personal" || rec._source === "Jadwal Tim") && (
+                          <button onClick={() => {
+                            const todayStr = new Date().toISOString().split("T")[0];
+                            if (confirm("Akhiri siklus rotasi aktif ini mulai hari ini?")) handleEndSchedule(todayStr);
+                          }} className="mt-3 w-full py-1 text-xs text-state-error hover:bg-red-50 font-medium rounded-lg border border-red-200 transition cursor-pointer">
                             Akhiri Jadwal Ini
                           </button>
                         )}
@@ -728,304 +390,143 @@ export default function TimelinePage() {
               )}
             </div>
 
-            <div className="p-4 border-t border-brand-outline bg-brand-bg/30">
-              <button
-                onClick={() => {
-                  const targetPrefix = selectedInspection.type === "team" ? "team:" : "staff:";
-                  setFormData(prev => ({ ...prev, targetId: targetPrefix + selectedInspection.id }));
-                  setIsAssignModalOpen(true);
-                }}
-                className="btn-primary w-full justify-center py-2 text-sm cursor-pointer"
-              >
+            <div className="p-4 border-t border-brand-outline bg-brand-bg/30 shrink-0">
+              <button onClick={() => {
+                if (!selectedInspection) return;
+                const targetPrefix = selectedInspection.type === "team" ? "team:" : "staff:";
+                setFormData(prev => ({ ...prev, targetId: targetPrefix + selectedInspection.id }));
+                setIsAssignModalOpen(true);
+              }} className="btn-primary w-full justify-center py-2 text-sm cursor-pointer">
                 + Perbarui / Atur Rotasi Baru
               </button>
             </div>
           </div>
-        )}
-
-        {/* BAR INSPECTION POPOVER */}
-        {selectedBarDetail && (
-          <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center animate-in fade-in duration-150">
-            <div className="card w-[400px] p-6 text-left shadow-2xl">
-              <div className="flex items-center justify-between mb-3 border-b border-brand-outline/40 pb-2">
-                <div>
-                  <span className="text-[10px] font-bold text-black/40 uppercase tracking-wider">Detail Status Lapangan</span>
-                  <h4 className="font-bold text-black/90 text-base">{selectedBarDetail.staffName}</h4>
-                </div>
-                <button onClick={() => setSelectedBarDetail(null)} className="text-black/40 hover:text-black cursor-pointer">
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-2.5 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-black/50">Tipe Status:</span>
-                  <span className="font-bold text-brand-dark">
-                    {selectedBarDetail.barType === "OffDuty" ? "OFF DUTY (Rotasi Siklus)" : 
-                     selectedBarDetail.barType === "Leave" ? "LEAVE (Izin / Tiket Disetujui)" : "TRANSITION"}
-                  </span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span className="text-black/50">Rentang Waktu:</span>
-                  <span className="font-medium text-black/80">
-                    {selectedBarDetail.startDate} → {selectedBarDetail.endDate}
-                  </span>
-                </div>
-
-                {selectedBarDetail.label && (
-                  <div className="mt-1 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900">
-                    <strong className="block mb-0.5">Alasan / Catatan Tiket:</strong>
-                    {selectedBarDetail.label}
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={() => setSelectedBarDetail(null)}
-                  className="px-4 py-1.5 bg-brand-bg hover:bg-brand-outline/40 text-black/80 text-xs font-bold rounded-lg transition cursor-pointer"
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* UPGRADED SCHEDULE MANAGER MODAL */}
-        {isAssignModalOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150 backdrop-blur-sm">
-            <div className="card w-[500px] p-6 text-left shadow-2xl">
-              <div className="flex items-center justify-between mb-4 border-b border-brand-outline/40 pb-3">
-                <div>
-                  <h2 className="text-xl font-bold text-brand-dark">Atur Rotasi Baru</h2>
-                  <p className="text-xs text-black/50">Menambahkan versi jadwal baru secara otomatis menutup siklus aktif sebelumnya.</p>
-                </div>
-                <button onClick={() => setIsAssignModalOpen(false)} className="text-black/40 hover:text-black cursor-pointer">
-                  <X size={20} />
-                </button>
-              </div>
-              
-              <div className="flex flex-col gap-3">
-                <label className="form-label">Pilih Target (Staf / Tim)</label>
-                <select 
-                  className="input-field cursor-pointer"
-                  value={formData.targetId}
-                  onChange={(e) => setFormData({ ...formData, targetId: e.target.value })}
-                >
-                  <option value="">-- Pilih Tim atau Staf --</option>
-                  {teams.map((team) => (
-                    <optgroup key={team.teamId} label={`Tim: ${team.teamName}`}>
-                      <option value={`team:${team.teamId}`}>Seluruh Tim: {team.teamName}</option>
-                      {team.members.map((member) => (
-                        <option key={member.staffId} value={`staff:${member.staffId}`}>
-                          &nbsp;&nbsp;&nbsp;↳ Staf: {member.name} ({member.position})
-                        </option>
-                      ))}
-                    </optgroup>
-                  ))}
-                </select>
-                
-                <label className="form-label mt-1">Pola Shift (Days On / Days Off)</label>
-                <div className="flex gap-2">
-                  <div className="w-full">
-                    <input 
-                      type="number" 
-                      min="1"
-                      placeholder="On (e.g. 5)" 
-                      className="input-field"
-                      value={formData.daysOn}
-                      onChange={(e) => setFormData({ ...formData, daysOn: e.target.value })}
-                    />
-                    <span className="text-[11px] text-black/40 mt-1 block">Hari Kerja Aktif</span>
-                  </div>
-                  <div className="w-full">
-                    <input 
-                      type="number" 
-                      min="1"
-                      placeholder="Off (e.g. 2)" 
-                      className="input-field"
-                      value={formData.daysOff}
-                      onChange={(e) => setFormData({ ...formData, daysOff: e.target.value })}
-                    />
-                    <span className="text-[11px] text-black/40 mt-1 block">Hari Libur Rotasi</span>
-                  </div>
-                </div>
-                
-                <label className="form-label mt-1">Tanggal Mulai Berlaku</label>
-                <input 
-                  type="date" 
-                  className="input-field cursor-pointer text-black/80"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                  onClick={(e) => (e.currentTarget as any).showPicker?.()} 
-                />
-
-                <label className="form-label mt-1">Tanggal Berakhir (Opsional)</label>
-                <input 
-                  type="date" 
-                  className="input-field cursor-pointer text-black/80"
-                  value={formData.endDate}
-                  min={formData.startDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  onClick={(e) => (e.currentTarget as any).showPicker?.()} 
-                />
-                <span className="text-[11px] text-black/40 block">
-                  Kosongkan jika jadwal berulang tanpa batas waktu.
-                </span>
-              </div>
-
-              <div className="mt-6 flex justify-end gap-2 border-t border-brand-outline/40 pt-4">
-                <button 
-                  onClick={() => {
-                    setIsAssignModalOpen(false);
-                    setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "" });
-                  }} 
-                  className="px-4 py-2 text-black/60 hover:bg-brand-bg rounded-xl text-sm font-medium transition cursor-pointer"
-                  disabled={isSubmitting}
-                >
-                  Batal
-                </button>
-                <button 
-                  onClick={handleSaveSchedule}
-                  className="btn-primary text-sm cursor-pointer"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Menyimpan..." : "Simpan Versi Jadwal"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* NEW TEAM MODAL */}
-        {isNewTeamModalOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150 backdrop-blur-sm">
-            <div className="card w-[400px] p-6 text-left shadow-2xl">
-              <div className="flex items-center justify-between mb-4 border-b border-brand-outline/40 pb-2">
-                <h3 className="text-lg font-bold text-brand-dark">Buat Tim Lapangan Baru</h3>
-                <button onClick={() => setIsNewTeamModalOpen(false)} className="text-black/40 hover:text-black cursor-pointer">
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                <label className="form-label">Nama Tim</label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Tim Delta"
-                  className="input-field"
-                  value={newTeamName}
-                  onChange={(e) => setNewTeamName(e.target.value)}
-                />
-              </div>
-
-              <div className="mt-6 flex justify-end gap-2">
-                <button
-                  onClick={() => setIsNewTeamModalOpen(false)}
-                  className="px-4 py-1.5 text-black/60 hover:bg-brand-bg rounded-xl text-xs font-bold transition cursor-pointer"
-                  disabled={isSubmitting}
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={handleCreateTeamSubmit}
-                  className="btn-primary text-xs cursor-pointer"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Menyimpan..." : "Buat Tim"}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* UNASSIGNED STAFF ASSIGNMENT MODAL */}
-        {isUnassignedModalOpen && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150 backdrop-blur-sm">
-            <div className="card w-[500px] p-6 text-left shadow-2xl max-h-[80vh] flex flex-col">
-              <div className="flex items-center justify-between mb-4 border-b border-brand-outline/40 pb-3 shrink-0">
-                <div>
-                  <h3 className="text-lg font-bold text-brand-dark">Staf Tanpa Tim</h3>
-                  <p className="text-xs text-black/50">Tugaskan staf yang belum memiliki tim ke dalam unit rotasi.</p>
-                </div>
-                <button onClick={() => setIsUnassignedModalOpen(false)} className="text-black/40 hover:text-black cursor-pointer">
-                  <X size={18} />
-                </button>
-              </div>
-
-              <div className="flex-1 overflow-y-auto flex flex-col gap-2 py-1 scrollbar-thin">
-                {unassignedStaff.length === 0 ? (
-                  <div className="text-center py-8 text-sm text-black/40 italic">
-                    Semua staf saat ini sudah ditugaskan ke dalam tim.
-                  </div>
-                ) : (
-                  unassignedStaff.map((staff) => (
-                    <div 
-                      key={staff.staffId || staff.StaffId}
-                      className="p-3 border border-brand-outline/40 rounded-xl flex items-center justify-between bg-brand-bg/40"
-                    >
-                      <div>
-                        <h4 className="font-bold text-sm text-black/90">{staff.name || staff.Name}</h4>
-                        <span className="text-xs text-black/50">{staff.position || staff.Position}</span>
-                      </div>
-
-                      {assigningStaffId === (staff.staffId || staff.StaffId) ? (
-                        <div className="flex items-center gap-1.5">
-                          <select
-                            className="input-field text-xs py-1 px-2 cursor-pointer"
-                            value={selectedAssignTeamId}
-                            onChange={(e) => setSelectedAssignTeamId(e.target.value)}
-                          >
-                            <option value="">Pilih Tim...</option>
-                            {teams.map((t) => (
-                              <option key={t.teamId} value={t.teamId}>{t.teamName}</option>
-                            ))}
-                          </select>
-                          <button
-                            onClick={() => handleAssignStaffSubmit(staff.staffId || staff.StaffId)}
-                            className="px-2.5 py-1 bg-state-success hover:brightness-95 text-white rounded-lg text-xs font-bold transition cursor-pointer"
-                            disabled={isSubmitting}
-                          >
-                            Simpan
-                          </button>
-                          <button
-                            onClick={() => setAssigningStaffId(null)}
-                            className="px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition cursor-pointer"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setAssigningStaffId(staff.staffId || staff.StaffId);
-                            setSelectedAssignTeamId("");
-                          }}
-                          className="btn-primary text-xs py-1.5 px-3 cursor-pointer"
-                        >
-                          + Tugaskan ke Tim
-                        </button>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="mt-4 border-t border-brand-outline/40 pt-3 flex justify-end shrink-0">
-                <button
-                  onClick={() => setIsUnassignedModalOpen(false)}
-                  className="px-4 py-1.5 bg-brand-bg hover:bg-brand-outline/40 text-black/80 text-xs font-bold rounded-lg transition cursor-pointer"
-                >
-                  Tutup
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
+        </div>
       </div>
+
+      {/* ALL MODALS REMAIN UNCHANGED BELOW */}
+      
+      {/* BAR INSPECTION POPOVER */}
+      {selectedBarDetail && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center animate-in fade-in duration-150">
+          <div className="card w-[400px] p-6 text-left shadow-2xl">
+            <div className="flex items-center justify-between mb-3 border-b border-brand-outline/40 pb-2">
+              <div>
+                <span className="text-[10px] font-bold text-black/40 uppercase tracking-wider">Detail Status Lapangan</span>
+                <h4 className="font-bold text-black/90 text-base">{selectedBarDetail.staffName}</h4>
+              </div>
+              <button onClick={() => setSelectedBarDetail(null)} className="text-black/40 hover:text-black cursor-pointer"><X size={16} /></button>
+            </div>
+            <div className="flex flex-col gap-2.5 text-sm">
+              <div className="flex justify-between"><span className="text-black/50">Tipe Status:</span><span className="font-bold text-brand-dark">{selectedBarDetail.barType === "OffDuty" ? "OFF DUTY (Rotasi Siklus)" : selectedBarDetail.barType === "Leave" ? "LEAVE (Izin / Tiket Disetujui)" : "TRANSITION"}</span></div>
+              <div className="flex justify-between"><span className="text-black/50">Rentang Waktu:</span><span className="font-medium text-black/80">{selectedBarDetail.startDate} → {selectedBarDetail.endDate}</span></div>
+              {selectedBarDetail.label && (
+                <div className="mt-1 p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900"><strong className="block mb-0.5">Alasan / Catatan Tiket:</strong>{selectedBarDetail.label}</div>
+              )}
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setSelectedBarDetail(null)} className="px-4 py-1.5 bg-brand-bg hover:bg-brand-outline/40 text-black/80 text-xs font-bold rounded-lg transition cursor-pointer">Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UPGRADED SCHEDULE MANAGER MODAL */}
+      {isAssignModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150 backdrop-blur-sm">
+          <div className="card w-[500px] p-6 text-left shadow-2xl">
+            <div className="flex items-center justify-between mb-4 border-b border-brand-outline/40 pb-3">
+              <div><h2 className="text-xl font-bold text-brand-dark">Atur Rotasi Baru</h2><p className="text-xs text-black/50">Menambahkan versi jadwal baru secara otomatis menutup siklus aktif sebelumnya.</p></div>
+              <button onClick={() => setIsAssignModalOpen(false)} className="text-black/40 hover:text-black cursor-pointer"><X size={20} /></button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <label className="form-label">Pilih Target (Staf / Tim)</label>
+              <select className="input-field cursor-pointer" value={formData.targetId} onChange={(e) => setFormData({ ...formData, targetId: e.target.value })}>
+                <option value="">-- Pilih Tim atau Staf --</option>
+                {teams.map((team) => (
+                  <optgroup key={team.teamId} label={`Tim: ${team.teamName}`}>
+                    <option value={`team:${team.teamId}`}>Seluruh Tim: {team.teamName}</option>
+                    {team.members.map((member) => <option key={member.staffId} value={`staff:${member.staffId}`}>&nbsp;&nbsp;&nbsp;↳ Staf: {member.name} ({member.position})</option>)}
+                  </optgroup>
+                ))}
+              </select>
+              <label className="form-label mt-1">Pola Shift (Days On / Days Off)</label>
+              <div className="flex gap-2">
+                <div className="w-full"><input type="number" min="1" placeholder="On (e.g. 5)" className="input-field" value={formData.daysOn} onChange={(e) => setFormData({ ...formData, daysOn: e.target.value })}/><span className="text-[11px] text-black/40 mt-1 block">Hari Kerja Aktif</span></div>
+                <div className="w-full"><input type="number" min="1" placeholder="Off (e.g. 2)" className="input-field" value={formData.daysOff} onChange={(e) => setFormData({ ...formData, daysOff: e.target.value })}/><span className="text-[11px] text-black/40 mt-1 block">Hari Libur Rotasi</span></div>
+              </div>
+              <label className="form-label mt-1">Tanggal Mulai Berlaku</label>
+              <input type="date" className="input-field cursor-pointer text-black/80" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} onClick={(e) => (e.currentTarget as any).showPicker?.()} />
+              <label className="form-label mt-1">Tanggal Berakhir (Opsional)</label>
+              <input type="date" className="input-field cursor-pointer text-black/80" value={formData.endDate} min={formData.startDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} onClick={(e) => (e.currentTarget as any).showPicker?.()} />
+              <span className="text-[11px] text-black/40 block">Kosongkan jika jadwal berulang tanpa batas waktu.</span>
+            </div>
+            <div className="mt-6 flex justify-end gap-2 border-t border-brand-outline/40 pt-4">
+              <button onClick={() => { setIsAssignModalOpen(false); setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "" }); }} className="px-4 py-2 text-black/60 hover:bg-brand-bg rounded-xl text-sm font-medium transition cursor-pointer" disabled={isSubmitting}>Batal</button>
+              <button onClick={handleSaveSchedule} className="btn-primary text-sm cursor-pointer" disabled={isSubmitting}>{isSubmitting ? "Menyimpan..." : "Simpan Versi Jadwal"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* NEW TEAM MODAL */}
+      {isNewTeamModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150 backdrop-blur-sm">
+          <div className="card w-[400px] p-6 text-left shadow-2xl">
+            <div className="flex items-center justify-between mb-4 border-b border-brand-outline/40 pb-2">
+              <h3 className="text-lg font-bold text-brand-dark">Buat Tim Lapangan Baru</h3>
+              <button onClick={() => setIsNewTeamModalOpen(false)} className="text-black/40 hover:text-black cursor-pointer"><X size={18} /></button>
+            </div>
+            <div className="flex flex-col gap-2">
+              <label className="form-label">Nama Tim</label>
+              <input type="text" placeholder="Contoh: Tim Delta" className="input-field" value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} />
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button onClick={() => setIsNewTeamModalOpen(false)} className="px-4 py-1.5 text-black/60 hover:bg-brand-bg rounded-xl text-xs font-bold transition cursor-pointer" disabled={isSubmitting}>Batal</button>
+              <button onClick={handleCreateTeamSubmit} className="btn-primary text-xs cursor-pointer" disabled={isSubmitting}>{isSubmitting ? "Menyimpan..." : "Buat Tim"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UNASSIGNED STAFF ASSIGNMENT MODAL */}
+      {isUnassignedModalOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150 backdrop-blur-sm">
+          <div className="card w-[500px] p-6 text-left shadow-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between mb-4 border-b border-brand-outline/40 pb-3 shrink-0">
+              <div><h3 className="text-lg font-bold text-brand-dark">Staf Tanpa Tim</h3><p className="text-xs text-black/50">Tugaskan staf yang belum memiliki tim ke dalam unit rotasi.</p></div>
+              <button onClick={() => setIsUnassignedModalOpen(false)} className="text-black/40 hover:text-black cursor-pointer"><X size={18} /></button>
+            </div>
+            <div className="flex-1 overflow-y-auto flex flex-col gap-2 py-1 scrollbar-thin">
+              {unassignedStaff.length === 0 ? (
+                <div className="text-center py-8 text-sm text-black/40 italic">Semua staf saat ini sudah ditugaskan ke dalam tim.</div>
+              ) : (
+                unassignedStaff.map((staff) => (
+                  <div key={staff.staffId || staff.StaffId} className="p-3 border border-brand-outline/40 rounded-xl flex items-center justify-between bg-brand-bg/40">
+                    <div><h4 className="font-bold text-sm text-black/90">{staff.name || staff.Name}</h4><span className="text-xs text-black/50">{staff.position || staff.Position}</span></div>
+                    {assigningStaffId === (staff.staffId || staff.StaffId) ? (
+                      <div className="flex items-center gap-1.5">
+                        <select className="input-field text-xs py-1 px-2 cursor-pointer" value={selectedAssignTeamId} onChange={(e) => setSelectedAssignTeamId(e.target.value)}>
+                          <option value="">Pilih Tim...</option>
+                          {teams.map((t) => <option key={t.teamId} value={t.teamId}>{t.teamName}</option>)}
+                        </select>
+                        <button onClick={() => handleAssignStaffSubmit(staff.staffId || staff.StaffId)} className="px-2.5 py-1 bg-state-success hover:brightness-95 text-white rounded-lg text-xs font-bold transition cursor-pointer" disabled={isSubmitting}>Simpan</button>
+                        <button onClick={() => setAssigningStaffId(null)} className="px-2 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-xs font-bold transition cursor-pointer">✕</button>
+                      </div>
+                    ) : (
+                      <button onClick={() => { setAssigningStaffId(staff.staffId || staff.StaffId); setSelectedAssignTeamId(""); }} className="btn-primary text-xs py-1.5 px-3 cursor-pointer">+ Tugaskan ke Tim</button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-4 border-t border-brand-outline/40 pt-3 flex justify-end shrink-0">
+              <button onClick={() => setIsUnassignedModalOpen(false)} className="px-4 py-1.5 bg-brand-bg hover:bg-brand-outline/40 text-black/80 text-xs font-bold rounded-lg transition cursor-pointer">Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

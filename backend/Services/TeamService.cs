@@ -51,4 +51,11 @@ public class TeamService : ITeamService
             Members = new List<TeamMemberResponse>() // Empty list for a brand new team
         };
     }
+    public async Task DeleteTeamAsync(string teamId)
+    {
+        if (string.IsNullOrEmpty(teamId))
+            throw new ArgumentException("Team ID is required.");
+
+        await _repository.DeleteTeamAsync(teamId);
+    }
 }

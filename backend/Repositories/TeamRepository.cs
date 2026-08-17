@@ -27,4 +27,29 @@ public class TeamRepository : ITeamRepository
         _context.Teams.Add(team);
         await _context.SaveChangesAsync();
     }
+    public async Task DeleteTeamAsync(string teamId)
+    {
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var team = await _context.Teams.FirstOrDefaultAsync(t => t.TeamId == teamId);
+            if (team == null) return;
+
+            var staffTeams = _context.StaffTeams.Where(st => st.TeamId == teamId);
+            _context.StaffTeams.RemoveRange(staffTeams);
+
+            var teamTimelines = _context.Timelines.Where(t => t.TeamId == teamId);
+            _context.Timelines.RemoveRange(teamTimelines);
+
+            _context.Teams.Remove(team);
+            await _context.SaveChangesAsync();
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
 }

@@ -65,4 +65,45 @@ public class StaffRepository : IStaffRepository
 
         await _dbContext.SaveChangesAsync();
     }
+
+    public async Task DeleteStaffAsync(string staffId)
+    {
+        using var transaction = await _dbContext.Database.BeginTransactionAsync();
+        try
+        {
+            var staff = await _dbContext.Staff.FirstOrDefaultAsync(s => s.StaffId == staffId);
+            if (staff == null) return;
+
+            var tickets = _dbContext.Tickets.Where(t => t.StaffId == staffId);
+            _dbContext.Tickets.RemoveRange(tickets);
+
+            var personalTimelines = _dbContext.Timelines.Where(t => t.StaffId == staffId);
+            _dbContext.Timelines.RemoveRange(personalTimelines);
+
+            var staffTeams = _dbContext.StaffTeams.Where(st => st.StaffId == staffId);
+            _dbContext.StaffTeams.RemoveRange(staffTeams);
+
+            var userId = staff.UserId;
+
+            _dbContext.Staff.Remove(staff);
+            await _dbContext.SaveChangesAsync();
+
+            if (!string.IsNullOrEmpty(userId))
+            {
+                var user = await _dbContext.Users.FirstOrDefaultAsync(u => u.UserId == userId);
+                if (user != null)
+                {
+                    _dbContext.Users.Remove(user);
+                    await _dbContext.SaveChangesAsync();
+                }
+            }
+
+            await transaction.CommitAsync();
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
 }

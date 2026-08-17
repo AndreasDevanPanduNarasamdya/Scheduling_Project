@@ -18,10 +18,14 @@ public class TimelineService : ITimelineService
 
     public async Task<List<TimelineTeamResponse>> GetTimelineDataAsync(TimelineRequest request)
     {
+        // 🔥 SAFETY NET: Fallback if dates are uninitialized or default
+        var startDate = request.StartDate == default ? new DateTime(DateTime.UtcNow.Year, 1, 1) : request.StartDate;
+        var endDate = request.EndDate == default ? new DateTime(DateTime.UtcNow.Year, 12, 31) : request.EndDate;
+
         var teamsData = await _repository.GetTeamsWithStaffAndTicketsAsync();
         var activeTimelines = await _repository.GetActiveTimelinesAsync(
-            request.StartDate.AddDays(-5),
-            request.EndDate.AddDays(5)
+            startDate.AddDays(-5),
+            endDate.AddDays(5)
         );
 
         var response = new List<TimelineTeamResponse>();
@@ -45,7 +49,7 @@ public class TimelineService : ITimelineService
                     StaffId = staff.StaffId,
                     Name = $"{staff.FirstName} {staff.LastName}".Trim(),
                     Position = staff.Position ?? "Staff",
-                    Days = BuildTimelineDayResponses(staff, team, activeTimelines, request.StartDate, request.EndDate)
+                    Days = BuildTimelineDayResponses(staff, team, activeTimelines, startDate, endDate)
                 };
 
                 teamDto.Members.Add(staffDto);

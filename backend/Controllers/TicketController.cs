@@ -6,6 +6,8 @@ using SchedulingMeruap.Api.DTO.Requests;
 using SchedulingMeruap.Api.DTO.Responses;
 using SchedulingMeruap.Api.Data;
 
+namespace SchedulingMeruap.Api.Controllers;
+
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]

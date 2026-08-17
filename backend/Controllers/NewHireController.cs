@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchedulingMeruap.Api.Models;
 using SchedulingMeruap.Api.Data;
@@ -5,6 +6,9 @@ using SchedulingMeruap.Api.DTO.Requests;
 using SchedulingMeruap.Api.Services.Interfaces;
 using System;
 using System.Threading.Tasks;
+using SchedulingMeruap.Api.DTO.Responses;
+
+namespace SchedulingMeruap.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -56,16 +60,21 @@ public class NewHireController : ControllerBase
             tokenId = generatedToken // Returning this just for testing purposes!
         });
     }
+
+    [AllowAnonymous]
     [HttpGet("activate/validate")]
     public async Task<IActionResult> ValidateActivationToken([FromQuery] string token)
     {
         if (string.IsNullOrWhiteSpace(token))
-            return Ok(new { status = "invalid" });
+            return Ok(new NewHireResponse { Status = "invalid" });
 
-        var status = await _newHireService.ValidateTokenAsync(token);
-        return Ok(new { status });
+        var response = await _newHireService.ValidateTokenAsync(token);
+
+        // This will send back JSON like: { "status": "valid", "name": "Andreas Devan" }
+        return Ok(response);
     }
 
+    [AllowAnonymous]
     [HttpPost("activate")]
     public async Task<IActionResult> ActivateAccount([FromBody] ActivateAccountRequest request)
     {

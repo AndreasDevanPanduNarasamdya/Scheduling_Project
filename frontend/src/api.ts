@@ -4,43 +4,38 @@ import type {
   CreateTimelinePayload, 
   TokenValidationResult,
   EndTimelinePayload,
-  TimelineHistoryRecord
+  TimelineHistoryRecord,
+  ActivityLogResponse
 } from "./types";
 
 const API_BASE_URL = "http://localhost:5096/api";
 
-export const fetchWithToken = async (url: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem("jwt_token");
-
+export async function fetchWithToken(url: string, options: RequestInit = {}) {
+  const token = localStorage.getItem("token");
+  
   const headers = {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    'Content-Type': 'application/json',
     ...options.headers,
+    'Authorization': `Bearer ${token}` 
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const response = await fetch(url, { ...options, headers });
 
   if (response.status === 401) {
-    console.warn("Token expired or invalid. Logging out...");
-    localStorage.removeItem("jwt_token");
+    localStorage.removeItem("token");
     localStorage.removeItem("user_info");
-    window.location.href = "/"; 
-    return response; 
+    window.location.href = "/";
+    throw new Error("Session expired. Please log in again.");
   }
 
   return response;
-};
+}
 
-export async function fetchTimeline(startDate: string, endDate: string): Promise<TimelineTeam[]> {
-  const url = `${API_BASE_URL}/timeline?StartDate=${encodeURIComponent(startDate)}&EndDate=${encodeURIComponent(endDate)}`;
-  const response = await fetchWithToken(url);
+export async function fetchTimeline(startDate: string, endDate: string) {
+  //FIXED: Now uses API_BASE_URL instead of hardcoding localhost
+  const response = await fetchWithToken(`${API_BASE_URL}/timeline?start=${startDate}&end=${endDate}`);
   
-  if (!response.ok) {
-    throw new Error("Failed to fetch timeline");
-  }
+  if (!response.ok) throw new Error("Failed to fetch timeline");
   return response.json();
 }
 
@@ -80,11 +75,12 @@ export async function fetchUnassignedStaff() {
   return response.json();
 }
 
-export async function createTeam(payload: { teamName: string }) {
+export async function createTeam(payload: any) {
   const response = await fetchWithToken(`${API_BASE_URL}/teams`, {
-    method: "POST",
+    method: 'POST',
     body: JSON.stringify(payload)
   });
+  
   if (!response.ok) throw new Error("Failed to create team");
   return response.json();
 }
@@ -111,13 +107,13 @@ export async function createNewHire(payload: any) {
   return response.json();
 }
 
-export async function validateActivationToken(token: string): Promise<TokenValidationResult> {
-  const response = await fetch(
-    `${API_BASE_URL}/newhire/activate/validate?token=${encodeURIComponent(token)}`
-  );
+export async function validateActivationToken(token: string): Promise<{ status: any; name?: string }> {
+  const response = await fetch(`${API_BASE_URL}/newhire/activate/validate?token=${encodeURIComponent(token)}`);
+  
   if (!response.ok) {
-    return { status: "invalid" };
+    throw new Error("Failed to validate token");
   }
+
   return response.json();
 }
 
@@ -163,4 +159,42 @@ export async function endActiveTimeline(payload: EndTimelinePayload): Promise<vo
     const errorText = await response.text();
     throw new Error(errorText || "Gagal mengakhiri jadwal aktif");
   }
+}
+
+export async function deleteStaff(staffId: string) {
+  const response = await fetchWithToken(`http://localhost:5096/api/staff/${staffId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) throw new Error("Failed to delete staff");
+  return response.json();
+}
+
+export async function deleteTeam(teamId: string) {
+  const response = await fetchWithToken(`http://localhost:5096/api/teams/${teamId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) throw new Error("Failed to delete team");
+  return response.json();
+}
+
+export async function fetchActivityLogs(params: {
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string;   // YYYY-MM-DD
+  staffId?: string;
+  teamId?: string;
+} = {}): Promise<ActivityLogResponse[]> {
+  const query = new URLSearchParams();
+  if (params.startDate) query.append("startDate", params.startDate);
+  if (params.endDate) query.append("endDate", params.endDate);
+  if (params.staffId) query.append("staffId", params.staffId);
+  if (params.teamId) query.append("teamId", params.teamId);
+
+  const response = await fetchWithToken(`${API_BASE_URL}/activitylog?${query.toString()}`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Failed to fetch activity log");
+  }
+
+  return response.json();
 }

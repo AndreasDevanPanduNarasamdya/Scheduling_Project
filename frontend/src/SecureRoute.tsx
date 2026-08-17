@@ -1,7 +1,6 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 
 const isTokenExpired = (token: string | null) => {
   if (!token) return true;
@@ -14,7 +13,6 @@ const isTokenExpired = (token: string | null) => {
     );
     
     const payload = JSON.parse(jsonPayload);
-    
     const expirationTime = payload.exp * 1000; 
     
     return Date.now() > expirationTime;
@@ -24,19 +22,25 @@ const isTokenExpired = (token: string | null) => {
 };
 
 export default function ProtectedRoute() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth(); // Assuming you have a logout method to clear state
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user === null) {
+    //FIX: Now we actually grab the token and check it!
+    const token = localStorage.getItem("token"); // Or sessionStorage, wherever you store it
+
+    if (user === null || isTokenExpired(token)) {
+      if (isTokenExpired(token)) {
+        // Optional: clear the stale user/token from state if expired
+        logout?.(); 
+      }
       navigate("/");
     }
-  }, [user, navigate]);
+  }, [user, navigate, logout]);
 
   if (!user) {
-    return null; // Or a loading spinner while checking auth
+    return null; 
   }
 
-  // Outlet renders whatever nested route matches (e.g. /dashboard, /management)
   return <Outlet />;
 }

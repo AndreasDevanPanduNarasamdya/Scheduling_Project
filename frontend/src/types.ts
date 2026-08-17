@@ -80,3 +80,21 @@ export interface Team {
 export type TokenValidationResult = {
   status: "valid" | "expired" | "used" | "invalid";
 };
+
+/* ================= ACTIVITY LOG / HISTORY ================= */
+
+export type DutyStatus = "OnDuty" | "OffDuty";
+export type LogSourceType = "TeamSchedule" | "PersonalSchedule" | "FromTicket";
+
+export interface ActivityLogResponse {
+  logId: string;
+  timestamp: string; // ISO datetime, e.g. "2026-08-17T08:00:00"
+  staffName?: string | null;
+  position?: string | null;
+  teamName?: string | null;
+  dutyStatus: DutyStatus;
+  reason?: string | null;
+  description?: string | null;
+  sourceType: LogSourceType;
+  sourceDetail?: string | null;
+}

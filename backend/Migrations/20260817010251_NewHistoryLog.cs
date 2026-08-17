@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SchedulingMeruap.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class NewTimeline : Migration
+    public partial class NewHistoryLog : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,14 +16,19 @@ namespace SchedulingMeruap.Api.Migrations
                 columns: table => new
                 {
                     LOG_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
-                    ScheduleId = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    FIRST_NAME = table.Column<string>(type: "varchar(30)", unicode: false, maxLength: 30, nullable: false),
-                    LAST_NAME = table.Column<string>(type: "varchar(30)", unicode: false, maxLength: 30, nullable: false),
-                    POSITION = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false),
-                    TEAM = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false),
-                    TYPE = table.Column<string>(type: "varchar(1)", unicode: false, maxLength: 1, nullable: false),
-                    DESCRIPTION = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: false),
-                    DOCUMENT = table.Column<string>(type: "varchar(70)", unicode: false, maxLength: 70, nullable: false)
+                    TIMESTAMP = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    SUBJECT_STAFF_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: true),
+                    SUBJECT_TEAM_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: true),
+                    SNAPSHOT_NAME = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    SNAPSHOT_POSITION = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    SNAPSHOT_TEAM_NAME = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    DUTY_STATUS = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false),
+                    REASON = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    DESCRIPTION = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    SOURCE_TYPE = table.Column<string>(type: "varchar(30)", unicode: false, maxLength: 30, nullable: false),
+                    SOURCE_DETAIL = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
+                    ACTION_TYPE = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    ACTOR_STAFF_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: true)
                 },
                 constraints: table =>
                 {

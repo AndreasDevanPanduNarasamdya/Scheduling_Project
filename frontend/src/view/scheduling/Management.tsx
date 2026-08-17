@@ -6,14 +6,17 @@ import {
   createNewHire, 
   fetchUnassignedStaff, 
   createTeam, 
-  assignStaffToTeam 
+  assignStaffToTeam,
+  deleteStaff,
+  deleteTeam
 } from "../../api"; 
+import { Trash2 } from "lucide-react";
 
 export default function ManagementPage() {
   // --- STAFF FORM STATE ---
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [staffForm, setStaffForm] = useState({
-    firstName: "", lastName: "", sex: "P", position: "", 
+    firstName: "", lastName: "", sex: "P", position: "",
     email: "", phone: "", dob: "", joinDate: ""
   });
 
@@ -24,6 +27,10 @@ export default function ManagementPage() {
   // --- ASSIGN STAFF STATE ---
   const [isAssignStaffOpen, setIsAssignStaffOpen] = useState(false);
   const [assignForm, setAssignForm] = useState({ staffId: "", teamId: "" });
+
+  // --- DELETE STATE ---
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "staff" | "team"; id: string; name: string } | null>(null);
 
   // --- DATA STATE ---
   const [teams, setTeams] = useState<Team[]>([]);
@@ -123,6 +130,25 @@ export default function ManagementPage() {
     }
   };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    setIsSubmitting(true);
+    try {
+      if (deleteTarget.type === "staff") {
+        await deleteStaff(deleteTarget.id);
+      } else {
+        await deleteTeam(deleteTarget.id);
+      }
+      setIsDeleteOpen(false);
+      setDeleteTarget(null);
+      loadData();
+    } catch (err: any) {
+      alert(err.message || "Gagal menghapus");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const unassignedTeamObj: Team = {
     teamId: "unassigned",
     teamName: "Belum Masuk Tim (Unassigned)",
@@ -130,26 +156,16 @@ export default function ManagementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-brand-bg font-sans">
-      
-      {/* Top Left Menu Button */}
-      <button
-        type="button"
-        aria-label="Open menu"
-        className="fixed top-0 left-0 m-0 flex items-center justify-center w-14 h-14 bg-gradient-to-br from-[#4c3fd6] to-[#7b5ff0] text-white rounded-br-2xl shadow-md hover:brightness-110 transition z-40"
-      >
-        <Menu size={22} />
-      </button>
-
+    <div className="min-h-screen w-full bg-brand-bg font-sans overflow-y-auto">
       <div className="max-w-6xl mx-auto px-8 pt-20 pb-16">
-        
+
         {/* Page Header */}
         <div className="flex items-center gap-3 mb-6">
           <h1 className="text-3xl font-semibold text-brand-dark">Management</h1>
           <UserRound size={22} className="text-brand-dark mt-1" strokeWidth={2.2} />
         </div>
 
-        {/* Fused Action Bar Group - Aligned Left */}
+        {/* Fused Action Bar Group - all actions grouped together at the top */}
         <div className="mb-8 flex justify-start">
           <div className="action-group">
             <button type="button" onClick={() => setIsAddStaffOpen(true)} className="action-group-btn">
@@ -161,8 +177,8 @@ export default function ManagementPage() {
             <button type="button" onClick={() => setIsAssignStaffOpen(true)} className="action-group-btn">
               Ubah Anggota <ArrowLeftRight size={16} strokeWidth={2.5} />
             </button>
-            <button type="button" className="action-group-btn">
-              Filter <ChevronDown size={16} strokeWidth={2.5} />
+            <button type="button" onClick={() => setIsDeleteOpen(true)} className="action-group-btn">
+              Hapus <Trash2 size={16} strokeWidth={2.5} />
             </button>
           </div>
         </div>
@@ -179,7 +195,7 @@ export default function ManagementPage() {
         {/* Render Teams & Unassigned Staff */}
         {!isLoading && !error && (
           <div className="flex flex-col gap-8">
-            
+
             {unassignedStaff.length > 0 && (
               <TeamSection
                 key="unassigned"
@@ -214,34 +230,34 @@ export default function ManagementPage() {
       {isAddStaffOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 sm:p-6">
           <div className="card w-full max-w-md shadow-2xl flex flex-col max-h-[95vh] p-8">
-            
+
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-black">Tambah Staff</h2>
               <button onClick={() => setIsAddStaffOpen(false)} className="text-black/40 hover:text-black">
                 <X size={20} />
               </button>
             </div>
-            
+
             <form onSubmit={handleAddStaffSubmit} className="flex flex-col min-h-0">
               <div className="overflow-y-auto py-2 space-y-4 text-left scrollbar-thin">
-                
+
                 <div>
                   <label className="form-label">Nama Lengkap</label>
                   <div className="grid grid-cols-2 gap-3">
-                    <input 
-                      type="text" 
-                      placeholder="Staf" 
+                    <input
+                      type="text"
+                      placeholder="Staf"
                       className="input-field"
                       value={staffForm.firstName}
-                      onChange={e => setStaffForm({...staffForm, firstName: e.target.value})}
+                      onChange={e => setStaffForm({ ...staffForm, firstName: e.target.value })}
                       required
                     />
-                    <input 
-                      type="text" 
-                      placeholder="A" 
+                    <input
+                      type="text"
+                      placeholder="A"
                       className="input-field"
                       value={staffForm.lastName}
-                      onChange={e => setStaffForm({...staffForm, lastName: e.target.value})}
+                      onChange={e => setStaffForm({ ...staffForm, lastName: e.target.value })}
                       required
                     />
                   </div>
@@ -250,16 +266,16 @@ export default function ManagementPage() {
                 <div>
                   <label className="form-label">Jenis Kelamin</label>
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       type="button"
-                      onClick={() => setStaffForm({...staffForm, sex: "P"})}
+                      onClick={() => setStaffForm({ ...staffForm, sex: "P" })}
                       className={`btn-toggle ${staffForm.sex === "P" ? "btn-active" : "btn-inactive"}`}
                     >
                       P
                     </button>
-                    <button 
+                    <button
                       type="button"
-                      onClick={() => setStaffForm({...staffForm, sex: "W"})}
+                      onClick={() => setStaffForm({ ...staffForm, sex: "W" })}
                       className={`btn-toggle ${staffForm.sex === "W" ? "btn-active" : "btn-inactive"}`}
                     >
                       W
@@ -269,62 +285,62 @@ export default function ManagementPage() {
 
                 <div>
                   <label className="form-label">Posisi</label>
-                  <input 
-                    type="text" 
-                    placeholder="Senior Engineer" 
+                  <input
+                    type="text"
+                    placeholder="Senior Engineer"
                     className="input-field"
                     value={staffForm.position}
-                    onChange={e => setStaffForm({...staffForm, position: e.target.value})}
+                    onChange={e => setStaffForm({ ...staffForm, position: e.target.value })}
                     required
                   />
                 </div>
 
                 <div>
                   <label className="form-label">Email</label>
-                  <input 
-                    type="email" 
-                    placeholder="stafa@gmail.com" 
+                  <input
+                    type="email"
+                    placeholder="stafa@gmail.com"
                     className="input-field"
                     value={staffForm.email}
-                    onChange={e => setStaffForm({...staffForm, email: e.target.value})}
+                    onChange={e => setStaffForm({ ...staffForm, email: e.target.value })}
                     required
                   />
                 </div>
 
                 <div>
                   <label className="form-label">Nomor Telepon</label>
-                  <input 
-                    type="tel" 
-                    placeholder="+6281223551" 
+                  <input
+                    type="tel"
+                    placeholder="+6281223551"
                     className="input-field"
                     value={staffForm.phone}
-                    onChange={e => setStaffForm({...staffForm, phone: e.target.value})}
+                    onChange={e => setStaffForm({ ...staffForm, phone: e.target.value })}
                     required
                   />
                 </div>
                 <div>
                   <label className="form-label">Tanggal Lahir</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     onClick={(e) => {
                       try { (e.target as HTMLInputElement).showPicker(); } catch (err) {}
                     }}
                     className="input-field cursor-pointer text-black/80"
                     value={staffForm.dob}
-                    onChange={e => setStaffForm({...staffForm, dob: e.target.value})}
+                    onChange={e => setStaffForm({ ...staffForm, dob: e.target.value })}
                     required
                   />
                 </div>
                 <div>
                   <label className="form-label">Tanggal Bergabung</label>
-                  <input 
-                    type="date" 
+                  <input
+                    type="date"
                     onClick={(e) => {
                       try { (e.target as HTMLInputElement).showPicker(); } catch (err) {}
                     }}
                     className="input-field cursor-pointer text-black/80"
                     value={staffForm.joinDate}
-                    onChange={e => setStaffForm({...staffForm, joinDate: e.target.value})}
+                    onChange={e => setStaffForm({ ...staffForm, joinDate: e.target.value })}
                     required
                   />
                 </div>
@@ -338,7 +354,7 @@ export default function ManagementPage() {
                 >
                   Batal
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={isSubmitting}
                   className="btn-primary text-sm"
@@ -359,9 +375,9 @@ export default function ManagementPage() {
             <form onSubmit={handleAddTeamSubmit} className="flex flex-col gap-4">
               <div>
                 <label className="form-label">Nama Tim</label>
-                <input 
-                  type="text" 
-                  placeholder="Tim C" 
+                <input
+                  type="text"
+                  placeholder="Tim C"
                   className="input-field"
                   value={teamName}
                   onChange={e => setTeamName(e.target.value)}
@@ -387,13 +403,13 @@ export default function ManagementPage() {
           <div className="card w-full max-w-md p-8 shadow-2xl">
             <h2 className="text-xl font-semibold text-center text-black mb-6">Pindah / Assign Anggota</h2>
             <form onSubmit={handleAssignStaffSubmit} className="flex flex-col gap-4">
-              
+
               <div>
                 <label className="form-label">Pilih Staff</label>
-                <select 
+                <select
                   className="input-field cursor-pointer"
                   value={assignForm.staffId}
-                  onChange={e => setAssignForm({...assignForm, staffId: e.target.value})}
+                  onChange={e => setAssignForm({ ...assignForm, staffId: e.target.value })}
                   required
                 >
                   <option value="" disabled>-- Pilih Staff --</option>
@@ -414,15 +430,15 @@ export default function ManagementPage() {
 
               <div>
                 <label className="form-label">Pindah ke Tim</label>
-                <select 
+                <select
                   className="input-field cursor-pointer"
                   value={assignForm.teamId}
-                  onChange={e => setAssignForm({...assignForm, teamId: e.target.value})}
+                  onChange={e => setAssignForm({ ...assignForm, teamId: e.target.value })}
                   required
                 >
                   <option value="" disabled>-- Pilih Tim --</option>
                   {teams.map(t => (
-                     <option key={t.teamId} value={t.teamId}>{t.teamName}</option>
+                    <option key={t.teamId} value={t.teamId}>{t.teamName}</option>
                   ))}
                   <option value="unassigned">-- Hapus dari Tim (Unassign) --</option>
                 </select>
@@ -441,36 +457,81 @@ export default function ManagementPage() {
         </div>
       )}
 
-    </div>
-  );
-}
+      {/* 4. Hapus Modal */}
+      {isDeleteOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-md p-8 shadow-2xl">
+            <h2 className="text-xl font-semibold text-center text-black mb-6">Hapus Staff / Tim</h2>
 
-// Action Button matching mockup layout (Icon on right or left contextually)
-function ActionButton({ 
-  children, 
-  icon, 
-  muted = false, 
-  onClick 
-}: { 
-  children: React.ReactNode; 
-  icon: React.ReactNode; 
-  muted?: boolean; 
-  onClick?: () => void; 
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition cursor-pointer shadow-sm
-        ${
-          muted
-            ? "bg-brand-bg border border-brand-outline text-black/80 hover:bg-brand-outline/30"
-            : "bg-brand-primary text-white hover:bg-brand-dark"
-        }`}
-    >
-      <span>{children}</span>
-      {icon}
-    </button>
+            <div className="flex flex-col gap-4">
+              <div>
+                <label className="form-label">Pilih yang ingin dihapus</label>
+                <select
+                  className="input-field cursor-pointer"
+                  value={deleteTarget ? `${deleteTarget.type}:${deleteTarget.id}` : ""}
+                  onChange={(e) => {
+                    const [type, id] = e.target.value.split(":");
+                    let name = "";
+                    if (type === "staff") {
+                      name = [...unassignedStaff, ...teams.flatMap(t => t.members)].find(m => m.staffId === id)?.name ?? "";
+                    } else {
+                      name = teams.find(t => t.teamId === id)?.teamName ?? "";
+                    }
+                    setDeleteTarget({ type: type as "staff" | "team", id, name });
+                  }}
+                >
+                  <option value="" disabled>-- Pilih Staff atau Tim --</option>
+                  <optgroup label="Tim">
+                    {teams.map(t => (
+                      <option key={t.teamId} value={`team:${t.teamId}`}>{t.teamName}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Belum Ada Tim">
+                    {unassignedStaff.map(s => (
+                      <option key={s.staffId} value={`staff:${s.staffId}`}>{s.name} ({s.position})</option>
+                    ))}
+                  </optgroup>
+                  {teams.map(t => (
+                    <optgroup key={t.teamId} label={`Tim: ${t.teamName}`}>
+                      {t.members.map(s => (
+                        <option key={s.staffId} value={`staff:${s.staffId}`}>{s.name} ({s.position})</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+              </div>
+
+              {deleteTarget && (
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-3">
+                  {deleteTarget.type === "staff"
+                    ? `Semua tiket dan jadwal pribadi "${deleteTarget.name}" akan terhapus permanen.`
+                    : `Anggota tim "${deleteTarget.name}" akan menjadi unassigned. Jadwal tim akan terhapus.`}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => { setIsDeleteOpen(false); setDeleteTarget(null); }}
+                className="px-5 py-2 text-sm text-black/60 hover:bg-brand-bg rounded-xl transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={!deleteTarget || isSubmitting}
+                className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl text-sm font-medium shadow-sm transition disabled:opacity-50 cursor-pointer"
+              >
+                {isSubmitting ? "Menghapus..." : "Hapus"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
   );
 }
 

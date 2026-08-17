@@ -1,31 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from "../../context/AuthContext";
-import { fetchWithToken } from "../../api";
+import { fetchTimeline } from "../../api";
+import TimelineComponent from "../components/TimelineComponent";
+import type { TimelineTeam } from "../../types";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [data, setData] = useState(null);
+  const [teams, setTeams] = useState<TimelineTeam[]>([]);
+  const [isTimelineLoading, setIsTimelineLoading] = useState(true);
+
+  const timelineStartDate = useMemo(() => new Date(new Date().getFullYear(), 0, 1), []);
+  const timelineEndDate = useMemo(() => new Date(new Date().getFullYear() + 1, 11, 31), []);
 
   useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    
-    const fetchSecureData = async () => {
-      try {
-        const response = await fetchWithToken("http://localhost:5096/api/dashboard");
-        
-        if (response.ok) {
-          const result = await response.json();
-          setData(result);
-        }
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      }
-    };
-    
-    fetchSecureData();
-    return () => clearInterval(timer);
-  }, []);
+  const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+
+  const year = new Date().getFullYear();
+  fetchTimeline(`${year}-01-01`, `${year + 1}-12-31`)
+    .then((data) => setTeams(Array.isArray(data) ? data : []))
+    .catch((err) => console.error("Failed to fetch timeline:", err))
+    .finally(() => setIsTimelineLoading(false));
+
+  return () => clearInterval(timer);
+}, []);
     
   const day = currentTime.getDate();
   const month = currentTime.toLocaleString("default", { month: "long" });
@@ -88,10 +86,15 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="card mt-8 w-full flex-grow min-h-[50vh] p-8">
-        
+      <div className="card mt-8 w-full overflow-hidden flex flex-col mb-8 border-[#ABB3C1]">
+        <TimelineComponent 
+          teams={teams} 
+          isLoading={isTimelineLoading} 
+          startDate={timelineStartDate} 
+          endDate={timelineEndDate} 
+          compact 
+        />
       </div>
-
     </div>
   );
 }

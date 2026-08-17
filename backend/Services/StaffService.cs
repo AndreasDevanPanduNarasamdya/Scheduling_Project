@@ -71,4 +71,11 @@ public class StaffService : IStaffService
         await _staffRepository.AssignStaffToTeamAsync(dto.StaffId, dto.TeamId);
         return true;
     }
+    public async Task DeleteStaffAsync(string staffId)
+    {
+        if (string.IsNullOrEmpty(staffId))
+            throw new ArgumentException("Staff ID is required.");
+
+        await _staffRepository.DeleteStaffAsync(staffId);
+    }
 }

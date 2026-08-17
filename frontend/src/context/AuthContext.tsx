@@ -17,7 +17,7 @@ interface AuthUser {
 
 interface AuthContextType {
   user: AuthUser | null;
-  login: (user: AuthUser) => void;
+  login: (user: AuthUser, rawToken?: string) => void;
   logout: () => void;
 }
 
@@ -26,17 +26,33 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
     const savedUser = localStorage.getItem("user_info");
+
+    // console.log("AUTH INIT");
+    // console.log("user_info:", savedUser);
+
     return savedUser ? JSON.parse(savedUser) : null;
-  });
+});
   const navigate = useNavigate();
 
-  const login = (userData: AuthUser) => {
+  const login = (userData: AuthUser, rawToken?: string) => {
+    // console.log("LOGIN CALLED");
+    // console.log("USER:", userData);
+    // console.log("TOKEN EXISTS:", !!rawToken);
+
     setUser(userData);
-    localStorage.setItem("user_info", JSON.stringify(userData));
-  };
+
+    localStorage.setItem(
+        "user_info",
+        JSON.stringify(userData)
+    );
+
+    if (rawToken) {
+        localStorage.setItem("token", rawToken);
+    }
+};
 
   const logout = () => {
-    localStorage.removeItem("jwt_token");
+    localStorage.removeItem("token");
     localStorage.removeItem("user_info");
     setUser(null);
     navigate("/");

@@ -47,4 +47,18 @@ public class StaffController : ControllerBase
 
         return Ok(new { message = "Staff assigned successfully!" });
     }
+
+    [HttpDelete("{staffId}")]
+    public async Task<IActionResult> DeleteStaff(string staffId)
+    {
+        try
+        {
+            await _staffService.DeleteStaffAsync(staffId);
+            return Ok(new { message = "Staff deleted successfully" });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

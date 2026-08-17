@@ -12,7 +12,10 @@ export default function Activation() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  
   const [tokenStatus, setTokenStatus] = useState<TokenStatus>("checking");
+  const [staffName, setStaffName] = useState<string>(""); // Added state for dynamic name
+  
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
 
@@ -28,7 +31,16 @@ export default function Activation() {
       try {
         const result = await validateActivationToken(token);
         if (cancelled) return;
-        setTokenStatus(result.status); // "valid" | "expired" | "used" | "invalid"
+        
+        // Fix: Safely grab the data whether C# sends "status" or "Status"
+        const actualStatus = result.status;
+        const actualName = result.name;
+        
+        setTokenStatus(actualStatus); 
+        
+        if (actualStatus === "valid" && actualName) {
+          setStaffName(actualName);
+        }
       } catch {
         if (!cancelled) setTokenStatus("invalid");
       }
@@ -86,16 +98,16 @@ export default function Activation() {
   };
 
   const handleGoToLogin = () => {
-    window.location.href = "/login";
+    window.location.href = "/";
   };
 
   // ---- Token gate: still checking with the backend ----
   if (tokenStatus === "checking") {
     return (
-      <div className="min-h-screen bg-[#edf2fa] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-sm p-8 w-full max-w-md flex flex-col items-center text-center gap-3">
-          <Loader2 className="animate-spin text-[#7595c8]" size={28} />
-          <p className="text-gray-600 text-sm">Memeriksa link aktivasi...</p>
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
+        <div className="card p-8 w-full max-w-md flex flex-col items-center text-center gap-3">
+          <Loader2 className="animate-spin text-brand-primary" size={28} />
+          <p className="text-black/60 text-sm">Memeriksa link aktivasi...</p>
         </div>
       </div>
     );
@@ -120,14 +132,14 @@ export default function Activation() {
     const { title, body } = messages[tokenStatus as Exclude<TokenStatus, "checking" | "valid">];
 
     return (
-      <div className="min-h-screen bg-[#f0f4fa] flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-sm p-8 w-full max-w-md text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-2">{title}</h2>
-          <p className="text-gray-600">{body}</p>
+      <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
+        <div className="card p-8 w-full max-w-md text-center">
+          <h2 className="text-2xl font-bold text-state-error mb-2">{title}</h2>
+          <p className="text-black/60">{body}</p>
           {tokenStatus === "used" && (
             <button
               onClick={handleGoToLogin}
-              className="mt-6 px-6 py-2.5 bg-[#7595c8] hover:bg-[#6282b5] text-white text-[15px] font-medium rounded-lg shadow-sm transition-colors"
+              className="btn-primary mt-6 justify-center w-full"
             >
               Pergi ke Login
             </button>
@@ -139,24 +151,27 @@ export default function Activation() {
 
   // ---- Token is valid: normal 3-step flow ----
   return (
-    <div className="min-h-screen bg-[#edf2fa] font-sans flex items-center justify-center relative p-4">
-      <div className="absolute top-8 left-8 text-white">
+    <div className="min-h-screen bg-brand-bg font-sans flex items-center justify-center relative p-4">
+      
+      {/* Top Left Menu Icon */}
+      <div className="absolute top-8 left-8 text-brand-dark">
         <Menu size={28} />
       </div>
 
-      <div className="bg-white rounded-[32px] p-10 sm:p-14 w-full max-w-[500px] shadow-[0_10px_40px_rgba(0,0,0,0.08)] flex flex-col items-center text-center">
+      <div className="card p-10 sm:p-14 w-full max-w-[500px] flex flex-col items-center text-center">
+        
         {/* ================= STEP 1: AKTIVASI ================= */}
         {step === 1 && (
           <div className="w-full animation-fade-in">
-            <h2 className="text-[28px] font-medium text-gray-900 mb-6">
+            <h2 className="text-[28px] font-medium text-brand-dark mb-6">
               Aktivasi Akun
             </h2>
-            <p className="text-[15px] text-gray-800 leading-relaxed mb-10 max-w-sm mx-auto">
-              Halo Staf A! Klik tombol dibawah ini untuk mengaktifkan akun Anda
+            <p className="text-[15px] text-black/80 leading-relaxed mb-10 max-w-sm mx-auto">
+              Halo <strong className="font-semibold">{staffName || "Staf"}</strong>! Klik tombol dibawah ini untuk mengaktifkan akun Anda
             </p>
             <button
               onClick={handleActivateClick}
-              className="px-6 py-2.5 bg-[#7595c8] hover:bg-[#6282b5] text-white text-[15px] font-medium rounded-lg shadow-sm transition-colors"
+              className="btn-primary justify-center w-full"
             >
               Aktivasi akun sekarang
             </button>
@@ -166,16 +181,16 @@ export default function Activation() {
         {/* ================= STEP 2: PASSWORD ================= */}
         {step === 2 && (
           <div className="w-full animation-fade-in">
-            <h2 className="text-[28px] font-medium text-gray-900 mb-6">
+            <h2 className="text-[28px] font-medium text-brand-dark mb-6">
               Buat Password
             </h2>
-            <p className="text-[15px] text-gray-800 mb-8">
+            <p className="text-[15px] text-black/80 mb-8">
               Buat password baru untuk akun anda
             </p>
 
             <form onSubmit={handlePasswordSubmit} className="flex flex-col items-center w-full">
-              <div className="w-full max-w-[260px] text-left mb-4">
-                <label className="block text-sm text-gray-800 mb-2">Password</label>
+              <div className="w-full max-w-[280px] text-left mb-4">
+                <label className="form-label">Password</label>
                 <div className="relative">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -183,12 +198,12 @@ export default function Activation() {
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-4 py-2.5 pr-10 bg-[#f4f7fc] border border-[#d2dceb] rounded-xl outline-none focus:border-[#7595c8] text-gray-700 placeholder-gray-400"
+                    className="input-field pr-10"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black/60 cursor-pointer"
                     aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -196,29 +211,29 @@ export default function Activation() {
                 </div>
               </div>
 
-              <div className="w-full max-w-[260px] text-left mb-3">
-                <label className="block text-sm text-gray-800 mb-2">Konfirmasi Password</label>
+              <div className="w-full max-w-[280px] text-left mb-3">
+                <label className="form-label">Konfirmasi Password</label>
                 <input
                   type={showPassword ? "text" : "password"}
                   placeholder="Ulangi password"
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-[#f4f7fc] border border-[#d2dceb] rounded-xl outline-none focus:border-[#7595c8] text-gray-700 placeholder-gray-400"
+                  className="input-field"
                 />
               </div>
 
               {formError && (
-                <p className="w-full max-w-[260px] text-left text-sm text-red-600 mb-5">
+                <p className="w-full max-w-[280px] text-left text-sm text-state-error mb-5">
                   {formError}
                 </p>
               )}
 
-              <div className={`w-full max-w-[260px] flex justify-end ${formError ? "" : "mt-5"}`}>
+              <div className={`w-full max-w-[280px] flex justify-end ${formError ? "" : "mt-5"}`}>
                 <button
                   type="submit"
                   disabled={isSubmitting || password.length < 8 || confirmPassword.length < 8}
-                  className="px-6 py-2 bg-[#7595c8] hover:bg-[#6282b5] text-white text-[14px] font-medium rounded-lg shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                 >
                   {isSubmitting ? "Memproses..." : "Buat Password"}
                 </button>
@@ -230,15 +245,15 @@ export default function Activation() {
         {/* ================= STEP 3: SUCCESS ================= */}
         {step === 3 && (
           <div className="w-full animation-fade-in">
-            <h2 className="text-[28px] font-medium text-gray-900 mb-6">
+            <h2 className="text-[28px] font-medium text-brand-dark mb-6">
               Akun Diaktifkan
             </h2>
-            <p className="text-[15px] text-gray-800 mb-10">
+            <p className="text-[15px] text-black/80 mb-10">
               Akun telah berhasil diaktifkan
             </p>
             <button
               onClick={handleGoToLogin}
-              className="px-8 py-2.5 bg-[#7595c8] hover:bg-[#6282b5] text-white text-[15px] font-medium rounded-lg shadow-sm transition-colors"
+              className="btn-primary justify-center w-full"
             >
               Pergi ke Login
             </button>

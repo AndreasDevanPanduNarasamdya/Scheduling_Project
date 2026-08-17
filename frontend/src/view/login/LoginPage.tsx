@@ -23,11 +23,16 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("http://localhost:5096/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
+      const response = await fetch(
+        "http://localhost:5096/api/auth/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Email atau password salah");
@@ -35,22 +40,30 @@ export default function LoginPage() {
 
       const data = await response.json();
 
-      localStorage.setItem("jwt_token", data.token);
+      // console.log("LOGIN RESPONSE:", data);
+      // console.log("TOKEN RECEIVED:", !!data.token);
 
-      login({
-        userId: data.userId,
-        email: data.email,
-        staff: {
-          staffId: data.staffId,
-          firstName: data.firstName,
-          lastName: data.lastName,
-          position: data.position,
+      login(
+        {
+          userId: data.userId,
+          email: data.email,
+          staff: {
+            staffId: data.staffId,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            position: data.position,
+          },
         },
-      });
+        data.token
+      );
 
       navigate("/dashboard");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Login failed"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -96,7 +109,7 @@ export default function LoginPage() {
         </h2>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="email" className="text-sm font-medium text-left text-black/90">
+          <label htmlFor="email" className="form-label">
             Email:
           </label>
           <input
@@ -106,14 +119,12 @@ export default function LoginPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Masukan email Anda"
-            className="rounded-lg bg-[#d9d9d9] border border-gray-300 px-4 py-2.5
-             text-black placeholder-gray-400 outline-none
-             focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            className="input-field"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <label htmlFor="password" className="text-sm text-left font-medium text-black/90">
+          <label htmlFor="password" className="form-label">
             Password:
           </label>
           <input
@@ -123,9 +134,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Masukan password Anda"
-            className="rounded-lg bg-[#d9d9d9] border border-gray-300 px-4 py-2.5
-             text-black placeholder-gray-400 outline-none
-             focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+            className="input-field"
           />
         </div>
 

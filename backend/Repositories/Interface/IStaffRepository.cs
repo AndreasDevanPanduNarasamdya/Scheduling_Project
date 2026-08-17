@@ -10,4 +10,5 @@ public interface IStaffRepository
     Task UpdateAsync(Staff staff);
     Task<List<Staff>> GetUnassignedStaffAsync();
     Task AssignStaffToTeamAsync(string staffId, string teamId);
+    Task DeleteStaffAsync(string staffId);
 }

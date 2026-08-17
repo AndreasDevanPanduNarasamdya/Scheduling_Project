@@ -11,4 +11,5 @@ public interface IStaffService
     Task<List<StaffResponse>> GetAllAsync();
     Task<List<TeamMemberResponse>> GetUnassignedStaffAsync();
     Task<bool> AssignStaffAsync(StaffRequest dto);
+    Task DeleteStaffAsync(string staffId);
 }

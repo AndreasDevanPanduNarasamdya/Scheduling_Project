@@ -29,6 +29,16 @@ namespace SchedulingMeruap.Api.Controllers
                 return BadRequest(ModelState);
             }
 
+            // 🔥 BACKEND CONTROLLER SAFETY NET: Fallback to current year if dates are missing
+            if (request.StartDate == default)
+            {
+                request.StartDate = new DateTime(DateTime.UtcNow.Year, 1, 1);
+            }
+            if (request.EndDate == default)
+            {
+                request.EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31);
+            }
+
             var data = await _timelineService.GetTimelineDataAsync(request);
             return Ok(data);
         }

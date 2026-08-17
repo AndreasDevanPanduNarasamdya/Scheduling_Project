@@ -10,6 +10,7 @@ import Management from "./view/scheduling/Management";
 import InboxList from "./view/inbox/InboxList";
 import Timeline from "./view/scheduling/Timeline";
 import ActivationPage from "./view/activation/Activation";
+import History from "./view/scheduling/History";
 
 export default function App() {
   const { user } = useAuth();
@@ -49,6 +50,11 @@ export default function App() {
         <Route 
           path="/timeline" 
           element={user ? <MainLayout><Timeline /></MainLayout> : <Navigate to="/" />} 
+        />
+
+        <Route 
+          path="/history" 
+          element={user ? <MainLayout><History /></MainLayout> : <Navigate to="/" />} 
         />
       </Route>
     </Routes>

@@ -6,22 +6,22 @@ namespace SchedulingMeruap.Api.Models;
 public partial class ActivityLog
 {
     public string LogId { get; set; } = null!;
+    public DateTime Timestamp { get; set; }
 
-    public string ScheduleId { get; set; } = null!;
+    public string? SubjectStaffId { get; set; }
+    public string? SubjectTeamId { get; set; }
 
-    public string FirstName { get; set; } = null!;
+    public string? SnapshotName { get; set; }
+    public string? SnapshotPosition { get; set; }
+    public string? SnapshotTeamName { get; set; }
 
-    public string LastName { get; set; } = null!;
+    public string DutyStatus { get; set; } = null!;
+    public string? Reason { get; set; }
+    public string? Description { get; set; }
 
-    public string Position { get; set; } = null!;
+    public string SourceType { get; set; } = null!;
+    public string? SourceDetail { get; set; }
 
-    public string Team { get; set; } = null!;
-
-    public string Type { get; set; } = null!;
-
-    public string Description { get; set; } = null!;
-
-    public string Document { get; set; } = null!;
-
-    // public virtual Schedule Schedule { get; set; } = null!;
+    public string? ActionType { get; set; }
+    public string? ActorStaffId { get; set; }
 }

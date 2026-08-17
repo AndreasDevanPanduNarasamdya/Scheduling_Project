@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using SchedulingMeruap.Api.Models;
+using SchedulingMeruap.Api.DTO.Responses;
 using SchedulingMeruap.Api.Data;
 using SchedulingMeruap.Api.Repositories.Interfaces;
 using SchedulingMeruap.Api.Services.Interfaces;
@@ -73,21 +74,26 @@ public class NewHireService : INewHireService
             throw;
         }
     }
-    public async Task<string> ValidateTokenAsync(string token)
+
+    public async Task<NewHireResponse> ValidateTokenAsync(string token)
     {
         var newHire = await _newHireRepository.GetByTokenAsync(token);
 
         if (newHire == null)
         {
-            // Either never existed, or already activated (row was deleted on activation).
-            return "invalid";
+            return new NewHireResponse { Status = "invalid" };
         }
 
         if (newHire.TokenExpiry < DateTime.Now)
         {
-            return "expired";
+            return new NewHireResponse { Status = "expired" };
         }
 
-        return "valid";
+        // Token is valid! Grab the name and send it back.
+        return new NewHireResponse
+        {
+            Status = "valid",
+            Name = $"{newHire.FirstName} {newHire.LastName}".Trim()
+        };
     }
 }
