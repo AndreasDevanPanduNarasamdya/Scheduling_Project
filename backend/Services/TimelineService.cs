@@ -18,7 +18,6 @@ public class TimelineService : ITimelineService
 
     public async Task<List<TimelineTeamResponse>> GetTimelineDataAsync(TimelineRequest request)
     {
-        // 🔥 SAFETY NET: Fallback if dates are uninitialized or default
         var startDate = request.StartDate == default ? new DateTime(DateTime.UtcNow.Year, 1, 1) : request.StartDate;
         var endDate = request.EndDate == default ? new DateTime(DateTime.UtcNow.Year, 12, 31) : request.EndDate;
 
@@ -257,14 +256,15 @@ public class TimelineService : ITimelineService
 
         var existingTimelines = await _repository.GetTimelinesByTargetAsync(request.TeamId, request.StaffId);
         var openTimeline = existingTimelines.FirstOrDefault(t => t.EndDate == null);
+        var overlappingSchedule = existingTimelines.FirstOrDefault(t =>
+                    t.StartDate.Date <= (request.EndDate?.Date ?? DateTime.MaxValue.Date) &&
+                    (t.EndDate?.Date ?? DateTime.MaxValue.Date) >= request.StartDate.Date
+                );
 
-        if (openTimeline != null)
+        if (overlappingSchedule != null)
         {
-            if (request.StartDate.Date <= openTimeline.StartDate.Date)
-                throw new ArgumentException("New timeline StartDate must be chronologically after the current schedule's StartDate.");
-
-            openTimeline.EndDate = request.StartDate.Date.AddDays(-1);
-            await _repository.UpdateTimelineAsync(openTimeline);
+            // Block the duplicate and tell the frontend exactly why
+            throw new ArgumentException($"Jadwal bertabrakan! Sudah ada jadwal aktif dari {overlappingSchedule.StartDate:yyyy-MM-dd}. Akhiri atau hapus jadwal lama terlebih dahulu.");
         }
 
         var newTimeline = new Timeline
