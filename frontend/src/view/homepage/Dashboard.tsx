@@ -49,7 +49,7 @@ export default function Dashboard() {
   }
     
   return (
-    <div className="p-8 pt-20 flex flex-col font-sans w-full bg-brand-bg">
+    <div className="p-8 pt-20 flex flex-col font-sans w-full flex-1 overflow-y-auto bg-brand-bg">
       
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 w-full">
         

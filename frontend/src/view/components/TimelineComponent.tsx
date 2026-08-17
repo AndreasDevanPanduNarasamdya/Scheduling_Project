@@ -126,7 +126,7 @@ export default function TimelineComponent({
   const [currentRange, setCurrentRange] = useState({ start: startDate, end: endDate });
   const [visibleYear, setVisibleYear] = useState(startDate.getFullYear());
 
-// 2. ONLY sync if timestamps actually change (Prevents the Dashboard live clock from resetting your scroll!)
+  // 2. ONLY sync if timestamps actually change (Prevents the Dashboard live clock from resetting your scroll!)
   useEffect(() => {
     setCurrentRange(prev => {
       // If the dates are mathematically the same, do nothing.
@@ -142,6 +142,7 @@ export default function TimelineComponent({
   const dayLookup = useDayLookup(teams);
 
   // Styling Adjustments based on Compact mode
+  const NAME_WIDTH_PX = compact ? 256 : 288; // matches w-64 / w-72
   const nameWidth = compact ? "w-64" : "w-72";
   const headerHeight = compact ? "h-[80px]" : "h-[88px]";
   const teamRowHeight = compact ? "h-[48px]" : "h-[54px]";
@@ -157,7 +158,7 @@ export default function TimelineComponent({
     }
   }, [days, isLoading]);
 
-  // Handle Infinite Scrolling
+  // Handle Infinite Scrolling (this container now handles BOTH x and y scroll)
   const handleScroll = () => {
     const container = scrollContainerRef.current;
     if (!container || isAddingPast.current || isLoading) return;
@@ -206,17 +207,27 @@ export default function TimelineComponent({
   }, [days.length]);
 
   return (
-    <div className="flex w-full h-full bg-transparent">
-      
-      {/* LEFT FIXED SIDEBAR */}
-      <div className={`${nameWidth} flex-shrink-0 border-r border-brand-outline flex flex-col bg-white z-20 ${compact ? '' : 'shadow-[2px_0_10px_-3px_rgba(0,0,0,0.1)]'} relative`}>
-        <div className={`${headerHeight} flex items-center shrink-0 border-b border-brand-outline ${compact ? 'bg-brand-bg/50 px-4' : 'bg-brand-light text-white p-4'}`}>
-          <h1 className={`${compact ? 'text-[18px] text-brand-dark' : 'text-[22px]'} font-bold leading-tight`}>
-            Jadwal<br/>Lapangan
-          </h1>
-        </div>
+    // SINGLE scroll container for the whole grid (both X and Y).
+    // The name column is a sticky-left child inside THIS same container,
+    // so its vertical scroll position can never drift from the bars.
+    <div
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      className="w-full h-full overflow-auto relative bg-white scrollbar-thin"
+    >
+      <div className="flex" style={{ minWidth: `${totalWidth + NAME_WIDTH_PX}px` }}>
 
-        <div className="overflow-y-auto flex-1 scrollbar-thin bg-white">
+        {/* STICKY LEFT NAME COLUMN (sticky left, scrolls vertically with everything else) */}
+        <div
+          className={`${nameWidth} flex-shrink-0 sticky left-0 z-20 border-r border-brand-outline flex flex-col bg-white ${compact ? '' : 'shadow-[2px_0_10px_-3px_rgba(0,0,0,0.1)]'}`}
+        >
+          {/* Sticky-top header, stacked with sticky-left => stays pinned to top-left corner */}
+          <div className={`${headerHeight} sticky top-0 z-30 flex items-center shrink-0 border-b border-brand-outline ${compact ? 'bg-brand-bg/50 px-4' : 'bg-brand-light text-white p-4'}`}>
+            <h1 className={`${compact ? 'text-[18px] text-brand-dark' : 'text-[22px]'} font-bold leading-tight`}>
+              Jadwal<br/>Lapangan
+            </h1>
+          </div>
+
           {isLoading && teams.length === 0 ? (
             <div className="p-4 text-sm text-black/50 text-center">Memuat jadwal...</div>
           ) : (
@@ -247,91 +258,85 @@ export default function TimelineComponent({
             ))
           )}
         </div>
-      </div>
 
-      {/* CENTER CALENDAR GRID */}
-      <div 
-        ref={scrollContainerRef} 
-        onScroll={handleScroll} /* ADDED: Attach the scroll listener */
-        className="flex-1 flex flex-col overflow-auto relative bg-white scrollbar-thin"
-      >
-        <div className={`sticky top-0 z-10 bg-white shrink-0 shadow-sm border-b border-brand-outline flex flex-col box-border ${headerHeight}`} style={{ width: `${totalWidth}px` }}>
-          
-          <div className={`${compact ? 'hidden' : 'h-[24px] flex'} items-center justify-center border-b border-brand-outline/40 bg-brand-bg shrink-0 w-full box-border`}>
-            <div className="sticky left-1/2 -translate-x-1/2 w-fit">
-              {/* UPDATED: Use visibleYear so it changes when scrolling across Jan 1st! */}
-              <span className="text-brand-dark font-semibold text-[13px] whitespace-nowrap">{visibleYear}</span>
+        {/* CALENDAR GRID (scrolls together with the name column since they share the same parent scroller) */}
+        <div className="flex flex-col flex-1" style={{ width: `${totalWidth}px` }}>
+
+          <div className={`sticky top-0 z-20 bg-white shrink-0 shadow-sm border-b border-brand-outline flex flex-col box-border ${headerHeight}`}>
+            
+            <div className={`${compact ? 'hidden' : 'h-[24px] flex'} items-center justify-center border-b border-brand-outline/40 bg-brand-bg shrink-0 w-full box-border`}>
+              <div className="sticky left-1/2 -translate-x-1/2 w-fit">
+                <span className="text-brand-dark font-semibold text-[13px] whitespace-nowrap">{visibleYear}</span>
+              </div>
+            </div>
+            
+            <div className={`flex ${compact ? 'h-[38px]' : 'h-[31px]'} border-b border-brand-outline/40 text-black/70 bg-brand-bg shrink-0 w-full box-border`}>
+              {months.map((m, i) => (
+                <div key={i} className={`flex items-center justify-center font-medium border-r border-brand-outline/40 text-brand-dark shrink-0 h-full box-border ${compact ? 'text-[14px]' : 'text-[15px]'}`} style={{ width: `${m.span * COLUMN_WIDTH}px` }}>
+                  {m.name} {compact && m.year}
+                </div>
+              ))}
+            </div>
+            
+            <div className={`flex ${compact ? 'h-[36px]' : 'h-[32px]'} bg-brand-bg shrink-0 w-full box-border`}>
+              {days.map((d, i) => (
+                <div key={i} className={`w-[40px] shrink-0 h-full flex items-center justify-center ${compact ? 'text-[14px]' : 'text-[15px]'} border-r border-brand-outline/40 box-border ${d.isToday ? 'bg-brand-primary text-white font-bold rounded-md my-[2px] h-[28px]' : 'text-black/70'}`}>
+                  {d.dayNumber}
+                </div>
+              ))}
             </div>
           </div>
-          
-          <div className={`flex ${compact ? 'h-[38px]' : 'h-[31px]'} border-b border-brand-outline/40 text-black/70 bg-brand-bg shrink-0 w-full box-border`}>
-            {months.map((m, i) => (
-              <div key={i} className={`flex items-center justify-center font-medium border-r border-brand-outline/40 text-brand-dark shrink-0 h-full box-border ${compact ? 'text-[14px]' : 'text-[15px]'}`} style={{ width: `${m.span * COLUMN_WIDTH}px` }}>
-                {m.name} {compact && m.year}
-              </div>
-            ))}
-          </div>
-          
-          <div className={`flex ${compact ? 'h-[36px]' : 'h-[32px]'} bg-brand-bg shrink-0 w-full box-border`}>
-            {days.map((d, i) => (
-              <div key={i} className={`w-[40px] shrink-0 h-full flex items-center justify-center ${compact ? 'text-[14px]' : 'text-[15px]'} border-r border-brand-outline/40 box-border ${d.isToday ? 'bg-brand-primary text-white font-bold rounded-md my-[2px] h-[28px]' : 'text-black/70'}`}>
-                {d.dayNumber}
-              </div>
-            ))}
-          </div>
-        </div>
 
-        <div className="relative min-h-full" style={{ width: `${totalWidth}px` }}>
-          <div className="absolute inset-0 flex pointer-events-none">
-            {days.map((d, i) => (
-              <div key={i} className={`w-[40px] flex-shrink-0 border-r border-brand-outline/30 h-full relative ${d.isWeekend ? 'bg-brand-bg/30' : 'bg-white'}`}>
-                {d.isToday && <div className="absolute top-0 bottom-0 w-[2px] bg-brand-primary left-1/2 -translate-x-1/2 z-0" />}
-              </div>
-            ))}
-          </div>
+          <div className="relative flex-1">
+            <div className="absolute inset-0 flex pointer-events-none">
+              {days.map((d, i) => (
+                <div key={i} className={`w-[40px] flex-shrink-0 border-r border-brand-outline/30 h-full relative ${d.isWeekend ? 'bg-brand-bg/30' : 'bg-white'}`}>
+                  {d.isToday && <div className="absolute top-0 bottom-0 w-[2px] bg-brand-primary left-1/2 -translate-x-1/2 z-0" />}
+                </div>
+              ))}
+            </div>
 
-          <div className="relative z-10">
-            {teams.map((team) => (
-              <div key={`grid-team-${team.teamId}`}>
-                <div className={`${teamRowHeight} border-b border-brand-outline/40 shrink-0 bg-brand-bg/20`} />
-                {team.members.length === 0 ? (
-                  <div className={`${staffRowHeight} border-b border-gray-100 shrink-0`} />
-                ) : (
-                  team.members.map((member) => {
-                    const memberDays = dayLookup.get(member.staffId);
-                    const segments = computeSegments(days, memberDays);
-                    return (
-                      <div key={`grid-staff-${member.staffId}`} className={`${staffRowHeight} border-b border-gray-100 relative flex items-center shrink-0`}>
-                        {segments.map((seg, idx) => {
-                          const barStartDate = toDateKey(days[seg.startIndex].date);
-                          const barEndDate = toDateKey(days[seg.startIndex + seg.length - 1].date);
-                          
-                          return seg.barType === "Transition" ? (
-                            <div
-                              key={idx}
-                              onClick={() => !compact && onBarClick?.({ barType: seg.barType, label: seg.label, staffName: member.name, startDate: barStartDate, endDate: barEndDate })}
-                              // ADDED: top-1/2 -translate-y-1/2
-                              className={`absolute top-1/2 -translate-y-1/2 ${compact ? 'h-6' : 'h-4'} rounded-full bg-yellow-300 border-2 border-yellow-500 shadow-sm z-10 ${!compact ? 'cursor-pointer hover:ring-2 ring-brand-primary/50 transition' : ''}`}
-                              style={{ left: seg.startIndex * COLUMN_WIDTH + 8, width: COLUMN_WIDTH - 16 }}
-                              title={seg.label || "Transition"}
-                            />
-                          ) : (
-                            <div
-                              key={idx}
-                              onClick={() => !compact && onBarClick?.({ barType: seg.barType, label: seg.label, staffName: member.name, startDate: barStartDate, endDate: barEndDate })}
-                              // ADDED: top-1/2 -translate-y-1/2
-                              className={`absolute top-1/2 -translate-y-1/2 ${compact ? 'h-6' : 'h-4'} rounded-md ${BAR_COLORS[seg.barType]} ${!compact ? 'cursor-pointer hover:brightness-95 transition' : ''}`}
-                              style={{ left: seg.startIndex * COLUMN_WIDTH + 4, width: seg.length * COLUMN_WIDTH - 8 }}
-                              title={seg.label || seg.barType}
-                            />
-                          );
-                        })}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            ))}
+            <div className="relative z-10">
+              {teams.map((team) => (
+                <div key={`grid-team-${team.teamId}`}>
+                  <div className={`${teamRowHeight} border-b border-brand-outline/40 shrink-0 bg-brand-bg/20`} />
+                  {team.members.length === 0 ? (
+                    <div className={`${staffRowHeight} border-b border-gray-100 shrink-0`} />
+                  ) : (
+                    team.members.map((member) => {
+                      const memberDays = dayLookup.get(member.staffId);
+                      const segments = computeSegments(days, memberDays);
+                      return (
+                        <div key={`grid-staff-${member.staffId}`} className={`${staffRowHeight} border-b border-gray-100 relative flex items-center shrink-0 overflow-hidden`}>
+                          {segments.map((seg, idx) => {
+                            const barStartDate = toDateKey(days[seg.startIndex].date);
+                            const barEndDate = toDateKey(days[seg.startIndex + seg.length - 1].date);
+                            
+                            return seg.barType === "Transition" ? (
+                              <div
+                                key={idx}
+                                onClick={() => !compact && onBarClick?.({ barType: seg.barType, label: seg.label, staffName: member.name, startDate: barStartDate, endDate: barEndDate })}
+                                className={`absolute top-1/2 -translate-y-1/2 ${compact ? 'h-6' : 'h-4'} rounded-full bg-yellow-300 border-2 border-yellow-500 shadow-sm z-10 ${!compact ? 'cursor-pointer hover:ring-2 ring-brand-primary/50 transition' : ''}`}
+                                style={{ left: seg.startIndex * COLUMN_WIDTH + 8, width: COLUMN_WIDTH - 16 }}
+                                title={seg.label || "Transition"}
+                              />
+                            ) : (
+                              <div
+                                key={idx}
+                                onClick={() => !compact && onBarClick?.({ barType: seg.barType, label: seg.label, staffName: member.name, startDate: barStartDate, endDate: barEndDate })}
+                                className={`absolute top-1/2 -translate-y-1/2 ${compact ? 'h-6' : 'h-4'} rounded-md ${BAR_COLORS[seg.barType]} ${!compact ? 'cursor-pointer hover:brightness-95 transition' : ''}`}
+                                style={{ left: seg.startIndex * COLUMN_WIDTH + 4, width: seg.length * COLUMN_WIDTH - 8 }}
+                                title={seg.label || seg.barType}
+                              />
+                            );
+                          })}
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
