@@ -10,10 +10,20 @@ namespace SchedulingMeruap.Api.Services;
 public class TimelineService : ITimelineService
 {
     private readonly ITimelineRepository _repository;
+    private readonly IActivityLogService _activityLogService;
+    private readonly ITeamRepository _teamRepository;
+    private readonly IStaffRepository _staffRepository;
 
-    public TimelineService(ITimelineRepository repository)
+    public TimelineService(
+        ITimelineRepository repository,
+        IActivityLogService activityLogService,
+        ITeamRepository teamRepository,
+        IStaffRepository staffRepository)
     {
         _repository = repository;
+        _activityLogService = activityLogService;
+        _teamRepository = teamRepository;
+        _staffRepository = staffRepository;
     }
 
     public async Task<List<TimelineTeamResponse>> GetTimelineDataAsync(TimelineRequest request)
@@ -64,7 +74,6 @@ public class TimelineService : ITimelineService
         var queryStart = startDate.AddDays(-5);
         var queryEnd = endDate.AddDays(5);
 
-        // STAGE 1: Calculate pure base states (Tracking IsStaffSchedule to apply personal transition rules)
         var baseStates = new Dictionary<DateTime, (string State, string? SourceId, bool IsStaffSchedule)>();
 
         for (var date = queryStart; date <= queryEnd; date = date.AddDays(1))
@@ -72,17 +81,14 @@ public class TimelineService : ITimelineService
             baseStates[date] = ResolveBaseRotationState(date, staff.StaffId, team.TeamId, activeTimelines);
         }
 
-        // STAGE 2: Apply Transition rules BEFORE tickets
         ApplyTransitionRules(baseStates);
 
-        // STAGE 3: Apply Tickets and map to final UI response
         var days = new List<TimelineDayResponse>();
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
         {
             var dayData = baseStates[date];
             var finalState = ApplyTicketOverride(date, dayData, staff.Tickets);
 
-            // Omit Work and untreated NoSchedule from the final UI payload
             if (finalState.State != "Work" && finalState.State != "NoSchedule")
             {
                 days.Add(new TimelineDayResponse
@@ -99,7 +105,6 @@ public class TimelineService : ITimelineService
 
     private (string State, string? SourceId, bool IsStaffSchedule) ResolveBaseRotationState(DateTime date, string staffId, string teamId, List<Timeline> timelines)
     {
-        // 1. Check for an applicable Staff schedule
         Timeline? staffRotation = GetApplicableTimeline(timelines, staffId, isTeam: false, date);
         if (staffRotation != null && date >= staffRotation.StartDate.Date)
         {
@@ -109,7 +114,6 @@ public class TimelineService : ITimelineService
             return ("Work", staffRotation.TimelineId, true);
         }
 
-        // 2. Fallback to Team schedule
         Timeline? teamRotation = GetApplicableTimeline(timelines, teamId, isTeam: true, date);
         if (teamRotation != null && date >= teamRotation.StartDate.Date)
         {
@@ -119,7 +123,6 @@ public class TimelineService : ITimelineService
             return ("Work", teamRotation.TimelineId, false);
         }
 
-        // 3. No schedule exists
         return ("NoSchedule", null, false);
     }
 
@@ -133,8 +136,6 @@ public class TimelineService : ITimelineService
             var currentState = baseStates[dates[i]].State;
             var currentIsStaff = baseStates[dates[i]].IsStaffSchedule;
 
-            // Target 1: Empty boundary gaps (NoSchedule)
-            // Target 2: Normal OffDuty blocks belonging specifically to Staff schedules
             if (currentState == "NoSchedule" || currentState == "OffDuty")
             {
                 int startIdx = i;
@@ -158,7 +159,6 @@ public class TimelineService : ITimelineService
                 }
                 else if (currentState == "OffDuty")
                 {
-                    // Applies to ANY off period — team-sourced or staff-sourced alike (rule 5/6)
                     applyTransitions = true;
                 }
 
@@ -166,16 +166,14 @@ public class TimelineService : ITimelineService
                 {
                     if (gapLength == 1)
                     {
-                        // A single-day break is entirely a transition (start and end collapse into one day)
                         UpdateDayState(baseStates, dates[startIdx], "Transition");
                     }
                     else if (gapLength == 2)
                     {
-                        // Both days become transition — no room for a "true" middle off day
                         UpdateDayState(baseStates, dates[startIdx], "Transition");
                         UpdateDayState(baseStates, dates[endIdx], "Transition");
                     }
-                    else // gapLength >= 3
+                    else
                     {
                         UpdateDayState(baseStates, dates[startIdx], "Transition");
                         UpdateDayState(baseStates, dates[endIdx], "Transition");
@@ -233,7 +231,7 @@ public class TimelineService : ITimelineService
             .FirstOrDefault();
     }
 
-    public async Task<Timeline> CreateTimelineAsync(CreateTimelineRequest request)
+    public async Task<Timeline> CreateTimelineAsync(CreateTimelineRequest request, string? actorStaffId)
     {
         bool hasTeam = !string.IsNullOrEmpty(request.TeamId);
         bool hasStaff = !string.IsNullOrEmpty(request.StaffId);
@@ -249,22 +247,22 @@ public class TimelineService : ITimelineService
         if (request.DaysOn < 1 || request.DaysOff < 1)
             throw new ArgumentException("DaysOn and DaysOff must be greater than or equal to 1.");
 
-        if (hasTeam && !await _repository.TeamExistsAsync(request.TeamId!))
-            throw new ArgumentException($"Team with ID '{request.TeamId}' does not exist.");
-        if (hasStaff && !await _repository.StaffExistsAsync(request.StaffId!))
-            throw new ArgumentException($"Staff with ID '{request.StaffId}' does not exist.");
-
         var existingTimelines = await _repository.GetTimelinesByTargetAsync(request.TeamId, request.StaffId);
-        var openTimeline = existingTimelines.FirstOrDefault(t => t.EndDate == null);
         var overlappingSchedule = existingTimelines.FirstOrDefault(t =>
-                    t.StartDate.Date <= (request.EndDate?.Date ?? DateTime.MaxValue.Date) &&
-                    (t.EndDate?.Date ?? DateTime.MaxValue.Date) >= request.StartDate.Date
-                );
+            t.StartDate.Date <= (request.EndDate?.Date ?? DateTime.MaxValue.Date) &&
+            (t.EndDate?.Date ?? DateTime.MaxValue.Date) >= request.StartDate.Date
+        );
 
         if (overlappingSchedule != null)
         {
-            // Block the duplicate and tell the frontend exactly why
             throw new ArgumentException($"Jadwal bertabrakan! Sudah ada jadwal aktif dari {overlappingSchedule.StartDate:yyyy-MM-dd}. Akhiri atau hapus jadwal lama terlebih dahulu.");
+        }
+
+        var openTimeline = existingTimelines.FirstOrDefault(t => t.EndDate == null);
+        if (openTimeline != null && request.StartDate.Date > openTimeline.StartDate.Date)
+        {
+            openTimeline.EndDate = request.StartDate.Date.AddDays(-1);
+            await _repository.UpdateTimelineAsync(openTimeline);
         }
 
         var newTimeline = new Timeline
@@ -278,7 +276,13 @@ public class TimelineService : ITimelineService
             EndDate = request.EndDate?.Date
         };
 
-        return await _repository.CreateTimelineAsync(newTimeline);
+        var created = await _repository.CreateTimelineAsync(newTimeline);
+
+        var staff = hasStaff ? await _staffRepository.GetByIdAsync(request.StaffId!) : null;
+        var team = hasTeam ? await _teamRepository.GetByIdAsync(request.TeamId!) : null;
+        await _activityLogService.LogScheduleCreatedAsync(created, staff, team, actorStaffId);
+
+        return created;
     }
 
     public async Task<List<TimelineHistoryResponse>> GetTimelineHistoryAsync(string? teamId, string? staffId)
@@ -313,7 +317,7 @@ public class TimelineService : ITimelineService
         }).ToList();
     }
 
-    public async Task EndActiveTimelineAsync(EndTimelineRequest request)
+    public async Task EndActiveTimelineAsync(EndTimelineRequest request, string? actorStaffId)
     {
         bool hasTeam = !string.IsNullOrEmpty(request.TeamId);
         bool hasStaff = !string.IsNullOrEmpty(request.StaffId);
@@ -334,5 +338,9 @@ public class TimelineService : ITimelineService
 
         openTimeline.EndDate = request.EffectiveEndDate.Date;
         await _repository.UpdateTimelineAsync(openTimeline);
+
+        var staff = !string.IsNullOrEmpty(request.StaffId) ? await _staffRepository.GetByIdAsync(request.StaffId) : null;
+        var team = !string.IsNullOrEmpty(request.TeamId) ? await _teamRepository.GetByIdAsync(request.TeamId) : null;
+        await _activityLogService.LogScheduleChangedAsync(openTimeline, staff, team, actorStaffId, $"Ended active schedule effective {request.EffectiveEndDate:yyyy-MM-dd}");
     }
 }

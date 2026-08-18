@@ -5,6 +5,7 @@ using SchedulingMeruap.Api.Services.Interfaces;
 using SchedulingMeruap.Api.DTO.Requests;
 using SchedulingMeruap.Api.DTO.Responses;
 using SchedulingMeruap.Api.Data;
+using System.Security.Claims;
 
 namespace SchedulingMeruap.Api.Controllers;
 
@@ -18,6 +19,12 @@ public class TicketController : ControllerBase
     public TicketController(ITicketService ticketService)
     {
         _ticketService = ticketService;
+    }
+
+    // Helper to get the logged-in user from the JWT token
+    private string? GetCurrentActorId()
+    {
+        return User.FindFirstValue(ClaimTypes.NameIdentifier);
     }
 
     [HttpGet]
@@ -60,7 +67,8 @@ public class TicketController : ControllerBase
 
         try
         {
-            var ticket = await _ticketService.SubmitTicketAsync(request, userId);
+            var actorId = GetCurrentActorId();
+            var ticket = await _ticketService.SubmitTicketAsync(request, userId, actorId);
 
             return Ok(new
             {

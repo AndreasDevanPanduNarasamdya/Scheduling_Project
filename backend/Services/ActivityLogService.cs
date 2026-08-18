@@ -10,12 +10,10 @@ namespace SchedulingMeruap.Api.Services;
 public class ActivityLogService : IActivityLogService
 {
     private readonly IActivityLogRepository _activityLogRepository;
-    private readonly ITimelineRepository _timelineRepository;
 
-    public ActivityLogService(IActivityLogRepository activityLogRepository, ITimelineRepository timelineRepository)
+    public ActivityLogService(IActivityLogRepository activityLogRepository)
     {
         _activityLogRepository = activityLogRepository;
-        _timelineRepository = timelineRepository;
     }
 
     public async Task<List<ActivityLogResponse>> GetLogsAsync(DateTime? startDate, DateTime? endDate, string? staffId, string? teamId)
@@ -26,87 +24,91 @@ public class ActivityLogService : IActivityLogService
         {
             LogId = l.LogId,
             Timestamp = l.Timestamp,
+            ActionType = l.ActionType,
             StaffName = l.SnapshotName,
             Position = l.SnapshotPosition,
             TeamName = l.SnapshotTeamName,
-            DutyStatus = l.DutyStatus,
-            Reason = l.Reason,
-            Description = l.Description,
-            SourceType = l.SourceType,
-            SourceDetail = l.SourceDetail
+            Description = l.Description
         }).ToList();
     }
 
-    public async Task GenerateDailyLogsAsync(DateTime forDate)
+    public async Task LogScheduleCreatedAsync(Timeline timeline, Staff? staff, Team? team, string? actorStaffId)
     {
-        var date = forDate.Date;
-        var teams = await _timelineRepository.GetTeamsWithStaffAndTicketsAsync();
-        var timelines = await _timelineRepository.GetActiveTimelinesAsync(date, date);
+        var subjectName = staff != null ? $"{staff.FirstName} {staff.LastName}".Trim() : team?.TeamName;
+        var description = staff != null
+            ? $"Created rotation ({timeline.DaysOn} on / {timeline.DaysOff} off) for staff {subjectName}, starting {timeline.StartDate:yyyy-MM-dd}"
+            : $"Created rotation ({timeline.DaysOn} on / {timeline.DaysOff} off) for team {team?.TeamName}, starting {timeline.StartDate:yyyy-MM-dd}";
 
-        var logsToInsert = new List<ActivityLog>();
-
-        foreach (var team in teams)
+        await _activityLogRepository.AddAsync(new ActivityLog
         {
-            foreach (var staffTeam in team.StaffTeams)
-            {
-                var staff = staffTeam.Staff;
-                if (staff == null) continue;
-
-                var (dutyStatus, reason, description, sourceType, sourceDetail) =
-                    ResolveDailyStatus(staff, team, date, timelines);
-
-                logsToInsert.Add(new ActivityLog
-                {
-                    LogId = Guid.NewGuid().ToString(),
-                    Timestamp = date,
-                    SubjectStaffId = staff.StaffId,
-                    SubjectTeamId = team.TeamId,
-                    SnapshotName = $"{staff.FirstName} {staff.LastName}".Trim(),
-                    SnapshotPosition = staff.Position,
-                    SnapshotTeamName = team.TeamName,
-                    DutyStatus = dutyStatus,
-                    Reason = reason,
-                    Description = description,
-                    SourceType = sourceType,
-                    SourceDetail = sourceDetail
-                });
-            }
-        }
-
-        await _activityLogRepository.AddRangeAsync(logsToInsert);
+            LogId = Guid.NewGuid().ToString(),
+            Timestamp = DateTime.UtcNow,
+            ActionType = "CreateSchedule",
+            ActorStaffId = actorStaffId,
+            SubjectStaffId = staff?.StaffId,
+            SubjectTeamId = team?.TeamId,
+            SnapshotName = staff != null ? subjectName : null,
+            SnapshotPosition = staff?.Position,
+            SnapshotTeamName = team?.TeamName,
+            Description = description
+        });
     }
-    private (string DutyStatus, string? Reason, string? Description, string SourceType, string? SourceDetail)
-    ResolveDailyStatus(Staff staff, Team team, DateTime date, List<Timeline> timelines)
+
+    public async Task LogScheduleChangedAsync(Timeline timeline, Staff? staff, Team? team, string? actorStaffId, string changeSummary)
     {
-        var rotation = timelines.FirstOrDefault(t => t.StaffId == staff.StaffId)
-                    ?? timelines.FirstOrDefault(t => t.TeamId == team.TeamId);
+        var subjectName = staff != null ? $"{staff.FirstName} {staff.LastName}".Trim() : team?.TeamName;
 
-        var sourceType = timelines.Any(t => t.StaffId == staff.StaffId)
-            ? "PersonalSchedule"
-            : "TeamSchedule";
-
-        bool isOnFromRotation = false;
-        if (rotation != null && date >= rotation.StartDate.Date && (!rotation.EndDate.HasValue || date <= rotation.EndDate.Value.Date))
+        await _activityLogRepository.AddAsync(new ActivityLog
         {
-            int cycleLength = rotation.DaysOn + rotation.DaysOff;
-            int dayInCycle = (date - rotation.StartDate.Date).Days % cycleLength;
-            isOnFromRotation = dayInCycle < rotation.DaysOn;
-        }
+            LogId = Guid.NewGuid().ToString(),
+            Timestamp = DateTime.UtcNow,
+            ActionType = "ChangeSchedule",
+            ActorStaffId = actorStaffId,
+            SubjectStaffId = staff?.StaffId,
+            SubjectTeamId = team?.TeamId,
+            SnapshotName = staff != null ? subjectName : null,
+            SnapshotPosition = staff?.Position,
+            SnapshotTeamName = team?.TeamName,
+            Description = changeSummary
+        });
+    }
 
-        var activeTicket = staff.Tickets.FirstOrDefault(t =>
-            t.Status == TicketStatus.Approved &&
-            date >= t.StartDate.Date && date <= t.EndDate.Date);
+    public async Task LogScheduleDeletedAsync(Staff? staff, Team? team, string? actorStaffId)
+    {
+        var subjectName = staff != null ? $"{staff.FirstName} {staff.LastName}".Trim() : team?.TeamName;
+        var description = staff != null
+            ? $"Deleted rotation schedule for staff {subjectName}"
+            : $"Deleted rotation schedule for team {team?.TeamName}";
 
-        if (activeTicket != null)
+        await _activityLogRepository.AddAsync(new ActivityLog
         {
-            if (activeTicket.Type == TicketType.On)
-                return ("OnDuty", "Ticket override", activeTicket.Title, "FromTicket", activeTicket.Title);
+            LogId = Guid.NewGuid().ToString(),
+            Timestamp = DateTime.UtcNow,
+            ActionType = "DeleteSchedule",
+            ActorStaffId = actorStaffId,
+            SubjectStaffId = staff?.StaffId,
+            SubjectTeamId = team?.TeamId,
+            SnapshotName = staff != null ? subjectName : null,
+            SnapshotPosition = staff?.Position,
+            SnapshotTeamName = team?.TeamName,
+            Description = description
+        });
+    }
 
-            return ("OffDuty", activeTicket.Reason, activeTicket.Title, "FromTicket", activeTicket.Title);
-        }
+    public async Task LogTicketCreatedAsync(Ticket ticket, Staff staff, string? actorStaffId)
+    {
+        var staffName = $"{staff.FirstName} {staff.LastName}".Trim();
 
-        return isOnFromRotation
-            ? ("OnDuty", "Scheduled duty", "Regular shift", sourceType, sourceType == "TeamSchedule" ? team.TeamName : "Personal rotation")
-            : ("OffDuty", "Scheduled rest", "Rotation rest day", sourceType, sourceType == "TeamSchedule" ? team.TeamName : "Personal rotation");
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Timestamp = DateTime.UtcNow,
+            ActionType = "CreateTicket",
+            ActorStaffId = actorStaffId,
+            SubjectStaffId = staff.StaffId,
+            SnapshotName = staffName,
+            SnapshotPosition = staff.Position,
+            Description = $"Submitted ticket \"{ticket.Title}\" ({ticket.Type}) from {ticket.StartDate:yyyy-MM-dd} to {ticket.EndDate:yyyy-MM-dd}"
+        });
     }
 }

@@ -79,72 +79,20 @@ public partial class ApplicationDbContext : DbContext
         modelBuilder.Entity<ActivityLog>(entity =>
         {
             entity.ToTable("ACTIVITY_LOG");
-
             entity.HasKey(e => e.LogId);
 
-            entity.Property(e => e.LogId)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasColumnName("LOG_ID");
+            entity.Property(e => e.LogId).HasMaxLength(36).IsUnicode(false).HasColumnName("LOG_ID");
+            entity.Property(e => e.Timestamp).HasColumnType("datetime2").HasColumnName("TIMESTAMP");
+            entity.Property(e => e.ActionType).HasMaxLength(50).IsUnicode(false).HasColumnName("ACTION_TYPE");
+            entity.Property(e => e.ActorStaffId).HasMaxLength(36).IsUnicode(false).HasColumnName("ACTOR_STAFF_ID");
+            entity.Property(e => e.SubjectStaffId).HasMaxLength(36).IsUnicode(false).HasColumnName("SUBJECT_STAFF_ID");
+            entity.Property(e => e.SubjectTeamId).HasMaxLength(36).IsUnicode(false).HasColumnName("SUBJECT_TEAM_ID");
+            entity.Property(e => e.SnapshotName).HasMaxLength(150).HasColumnName("SNAPSHOT_NAME");
+            entity.Property(e => e.SnapshotPosition).HasMaxLength(100).HasColumnName("SNAPSHOT_POSITION");
+            entity.Property(e => e.SnapshotTeamName).HasMaxLength(100).HasColumnName("SNAPSHOT_TEAM_NAME");
+            entity.Property(e => e.Description).HasMaxLength(500).IsUnicode(false).HasColumnName("DESCRIPTION");
 
-            entity.Property(e => e.Timestamp)
-                .HasColumnType("datetime2")
-                .HasColumnName("TIMESTAMP");
-
-            entity.Property(e => e.SubjectStaffId)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasColumnName("SUBJECT_STAFF_ID");
-
-            entity.Property(e => e.SubjectTeamId)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasColumnName("SUBJECT_TEAM_ID");
-
-            entity.Property(e => e.SnapshotName)
-                .HasMaxLength(150)
-                .HasColumnName("SNAPSHOT_NAME");
-
-            entity.Property(e => e.SnapshotPosition)
-                .HasMaxLength(100)
-                .HasColumnName("SNAPSHOT_POSITION");
-
-            entity.Property(e => e.SnapshotTeamName)
-                .HasMaxLength(100)
-                .HasColumnName("SNAPSHOT_TEAM_NAME");
-
-            entity.Property(e => e.DutyStatus)
-                .HasMaxLength(20)
-                .IsUnicode(false)
-                .HasColumnName("DUTY_STATUS");
-
-            entity.Property(e => e.Reason)
-                .HasMaxLength(200)
-                .HasColumnName("REASON");
-
-            entity.Property(e => e.Description)
-                .HasMaxLength(500)
-                .HasColumnName("DESCRIPTION");
-
-            entity.Property(e => e.SourceType)
-                .HasMaxLength(30)
-                .IsUnicode(false)
-                .HasColumnName("SOURCE_TYPE");
-
-            entity.Property(e => e.SourceDetail)
-                .HasMaxLength(150)
-                .HasColumnName("SOURCE_DETAIL");
-
-            entity.Property(e => e.ActionType)
-                .HasMaxLength(50)
-                .HasColumnName("ACTION_TYPE");
-
-            entity.Property(e => e.ActorStaffId)
-                .HasMaxLength(36)
-                .IsUnicode(false)
-                .HasColumnName("ACTOR_STAFF_ID");
-
-            // No FK constraints on SubjectStaffId, SubjectTeamId, or ActorStaffId.
+            // No FK constraints — intentional, survives Staff/Team deletion
         });
 
         modelBuilder.Entity<Staff>(entity =>

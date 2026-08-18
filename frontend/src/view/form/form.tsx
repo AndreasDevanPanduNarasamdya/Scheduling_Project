@@ -55,7 +55,7 @@ export default function Form() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 w-full bg-brand-bg">
+    <div className="min-h-screen w-full flex flex-col items-center justify-start pt-24 pb-16 px-6 bg-brand-bg overflow-y-auto">
       
       <div className="card p-8 w-[30vw] min-w-[450px]">
         <div className="ml-5 mr-5">

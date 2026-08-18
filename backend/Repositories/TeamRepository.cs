@@ -52,4 +52,8 @@ public class TeamRepository : ITeamRepository
             throw;
         }
     }
+    public async Task<Team?> GetByIdAsync(string teamId)
+    {
+        return await _context.Teams.FirstOrDefaultAsync(t => t.TeamId == teamId);
+    }
 }

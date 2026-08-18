@@ -8,6 +8,9 @@ public partial class ActivityLog
     public string LogId { get; set; } = null!;
     public DateTime Timestamp { get; set; }
 
+    public string ActionType { get; set; } = null!;   // "CreateSchedule", "ChangeSchedule", "DeleteSchedule", "CreateTicket"
+
+    public string? ActorStaffId { get; set; }          // who performed it (nullable if system/unknown)
     public string? SubjectStaffId { get; set; }
     public string? SubjectTeamId { get; set; }
 
@@ -15,13 +18,5 @@ public partial class ActivityLog
     public string? SnapshotPosition { get; set; }
     public string? SnapshotTeamName { get; set; }
 
-    public string DutyStatus { get; set; } = null!;
-    public string? Reason { get; set; }
-    public string? Description { get; set; }
-
-    public string SourceType { get; set; } = null!;
-    public string? SourceDetail { get; set; }
-
-    public string? ActionType { get; set; }
-    public string? ActorStaffId { get; set; }
+    public string Description { get; set; } = null!;   // human-readable summary, e.g. "Created 4-on/2-off rotation for Tim A"
 }

@@ -1,80 +1,21 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  History as HistoryIcon, CheckCircle2, XCircle, RefreshCw,
-  Filter, X, Calendar as CalendarIcon
+  History as HistoryIcon, RefreshCw,
+  Filter, X, ChevronDown, User, Users
 } from "lucide-react";
 import { fetchActivityLogs, fetchTeams } from "../../api";
-import type { ActivityLogResponse, Team, DutyStatus, LogSourceType } from "../../types";
+import type { Team, ActivityLogResponse } from "../../types";
 
 /* ================= HELPERS ================= */
 
-function formatDate(iso: string) {
+function formatDateHeading(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
 function formatTime(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
-}
-
-function initials(name?: string | null) {
-  if (!name) return "?";
-  const parts = name.trim().split(" ").filter(Boolean);
-  if (parts.length === 0) return "?";
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
-const AVATAR_COLORS = [
-  "bg-brand-primary", "bg-brand-light", "bg-emerald-500",
-  "bg-amber-500", "bg-rose-500", "bg-violet-500"
-];
-
-function avatarColor(name?: string | null) {
-  if (!name) return AVATAR_COLORS[0];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
-}
-
-const SOURCE_LABELS: Record<LogSourceType, string> = {
-  TeamSchedule: "TEAM SCHEDULE",
-  PersonalSchedule: "PERSONAL SCHEDULE",
-  FromTicket: "FROM TICKET",
-};
-
-const SOURCE_STYLES: Record<LogSourceType, string> = {
-  TeamSchedule: "bg-blue-50 text-blue-700",
-  PersonalSchedule: "bg-amber-50 text-amber-700",
-  FromTicket: "bg-violet-50 text-violet-700",
-};
-
-function DutyStatusBadge({ status }: { status: DutyStatus }) {
-  const isOn = status === "OnDuty";
-  return (
-    <span className={`badge ${isOn ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
-      {isOn ? "ON DUTY" : "OFF DUTY"}
-    </span>
-  );
-}
-
-function RowIcon({ sourceType, dutyStatus }: { sourceType: LogSourceType; dutyStatus: DutyStatus }) {
-  if (sourceType === "FromTicket") {
-    return (
-      <span className="w-9 h-9 rounded-full bg-violet-50 flex items-center justify-center shrink-0">
-        <CalendarIcon size={16} className="text-violet-600" />
-      </span>
-    );
-  }
-  const isOn = dutyStatus === "OnDuty";
-  return (
-    <span className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${isOn ? "bg-emerald-50" : "bg-red-50"}`}>
-      {isOn
-        ? <CheckCircle2 size={18} className="text-emerald-600" />
-        : <XCircle size={18} className="text-red-500" />}
-    </span>
-  );
+  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
 }
 
 /* ================= MAIN PAGE ================= */
@@ -89,11 +30,14 @@ export default function History() {
   const [filters, setFilters] = useState({ startDate: "", endDate: "", teamId: "", staffId: "" });
   const [appliedFilters, setAppliedFilters] = useState(filters);
 
+  const [hiddenDays, setHiddenDays] = useState<Record<string, boolean>>({});
+  const [hiddenLogs, setHiddenLogs] = useState<Record<string, boolean>>({});
+
   const loadTeams = async () => {
     try {
       setTeams(await fetchTeams());
     } catch {
-      // non-critical for this page, ignore silently
+      // non-critical
     }
   };
 
@@ -127,6 +71,20 @@ export default function History() {
     return Array.from(map.values());
   }, [teams]);
 
+  // Group by date; entries within a day sorted earliest -> latest; days sorted earliest -> latest (left to right)
+  const groupedLogs = useMemo(() => {
+    const map = new Map<string, ActivityLogResponse[]>();
+    const sorted = [...logs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    sorted.forEach((log) => {
+      const dateKey = log.timestamp.split("T")[0];
+      if (!map.has(dateKey)) map.set(dateKey, []);
+      map.get(dateKey)!.push(log);
+    });
+
+    return Array.from(map.entries()).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
+  }, [logs]);
+
   const activeFilterCount = [appliedFilters.startDate, appliedFilters.endDate, appliedFilters.teamId, appliedFilters.staffId]
     .filter(Boolean).length;
 
@@ -144,27 +102,31 @@ export default function History() {
     loadLogs(empty);
   };
 
+  const toggleDay = (dateKey: string) => {
+    setHiddenDays((prev) => ({ ...prev, [dateKey]: !prev[dateKey] }));
+  };
+
+  const toggleLog = (logId: string) => {
+    setHiddenLogs((prev) => ({ ...prev, [logId]: !prev[logId] }));
+  };
+
   return (
     <div className="min-h-screen w-full bg-brand-bg font-sans overflow-y-auto">
-      <div className="max-w-6xl mx-auto px-8 pt-20 pb-16">
+      <div className="max-w-7xl mx-auto px-8 pt-20 pb-16">
 
         {/* Page Header */}
         <div className="flex items-center gap-3 mb-6">
-          <h1 className="text-3xl font-semibold text-brand-dark">Riwayat Aktivitas</h1>
+          <h1 className="text-3xl font-semibold text-brand-dark">Activity Log</h1>
           <HistoryIcon size={22} className="text-brand-dark mt-1" strokeWidth={2.2} />
         </div>
 
         {/* Action / Filter bar */}
-        <div className="mb-6 flex items-center justify-between flex-wrap gap-3">
+        <div className="mb-10 flex items-center justify-between flex-wrap gap-3">
           <div className="action-group">
-            <button
-              type="button"
-              onClick={() => setIsFilterOpen(true)}
-              className="action-group-btn relative"
-            >
+            <button type="button" onClick={() => setIsFilterOpen(true)} className="action-group-btn relative">
               Filter <Filter size={16} strokeWidth={2.5} />
               {activeFilterCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-primary text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-primary text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-brand-primary/20 shadow-sm">
                   {activeFilterCount}
                 </span>
               )}
@@ -174,93 +136,116 @@ export default function History() {
                 Reset <X size={16} strokeWidth={2.5} />
               </button>
             )}
+            <button type="button" onClick={() => loadLogs(appliedFilters)} className="action-group-btn">
+              <RefreshCw size={16} strokeWidth={2.5} className={isLoading ? "animate-spin" : ""} />
+            </button>
           </div>
 
-          <span className="text-sm text-black/50">
+          <span className="text-sm text-black/50 font-medium">
             {isLoading ? "Memuat…" : `${logs.length} rekaman ditemukan`}
           </span>
         </div>
 
         {/* Content states */}
         {isLoading && (
-          <div className="card p-12 text-center text-sm text-black/50">Memuat riwayat aktivitas…</div>
+          <div className="text-center text-sm text-black/50 py-12">Memuat riwayat aktivitas…</div>
         )}
 
         {!isLoading && error && (
-          <div className="card p-8 text-center text-sm text-state-error">{error}</div>
+          <div className="text-center text-sm text-state-error py-12">{error}</div>
         )}
 
         {!isLoading && !error && logs.length === 0 && (
-          <div className="card p-12 text-center text-sm text-black/40 italic">
+          <div className="text-center text-sm text-black/40 italic py-12">
             Belum ada riwayat aktivitas untuk filter ini.
           </div>
         )}
 
-        {!isLoading && !error && logs.length > 0 && (
-          <div className="card overflow-hidden">
-            {/* Table Header */}
-            <div className="grid grid-cols-[1.4fr_1.6fr_1.1fr_1.1fr_1.8fr_1.3fr_1.3fr] px-6 py-3 text-xs font-bold uppercase tracking-wide text-black/40 border-b border-brand-outline/40 bg-brand-bg/40">
-              <span>Waktu</span>
-              <span>Staf</span>
-              <span>Tim</span>
-              <span>Status</span>
-              <span>Alasan / Keterangan</span>
-              <span>Sumber</span>
-              <span>Detail Sumber</span>
-            </div>
+        {/* ============ OPEN VERTICAL-LINE TIMELINE, NO CARDS/BOXES ============ */}
+        {!isLoading && !error && groupedLogs.length > 0 && (
+          <div className="flex gap-16 overflow-x-auto pb-8 items-start">
+            {groupedLogs.map(([dateKey, dayLogs]) => {
+              const isDayHidden = !!hiddenDays[dateKey];
 
-            {logs.map((log, i) => (
-              <div
-                key={log.logId}
-                className={`grid grid-cols-[1.4fr_1.6fr_1.1fr_1.1fr_1.8fr_1.3fr_1.3fr] items-center px-6 py-4 text-[14px] text-black/90 hover:bg-brand-bg/40 transition-colors ${
-                  i !== logs.length - 1 ? "border-b border-brand-outline/30" : ""
-                }`}
-              >
-                {/* Waktu */}
-                <div className="flex items-center gap-3">
-                  <RowIcon sourceType={log.sourceType} dutyStatus={log.dutyStatus} />
-                  <div className="flex flex-col leading-tight">
-                    <span className="font-medium">{formatDate(log.timestamp)}</span>
-                    <span className="text-xs text-black/40">{formatTime(log.timestamp)}</span>
+              return (
+                <div key={dateKey} className="min-w-[280px] shrink-0">
+
+                  {/* Day heading: orange dot + date + chevron */}
+                  <div className="flex items-center gap-2.5 mb-3">
+                    <button
+                      type="button"
+                      onClick={() => toggleDay(dateKey)}
+                      className="w-3.5 h-3.5 rounded-full bg-amber-500 hover:scale-110 transition-transform cursor-pointer shrink-0"
+                      title="Sembunyikan / tampilkan aktivitas hari ini"
+                    />
+                    <span className="font-semibold text-black/90 text-[17px]">
+                      {formatDateHeading(dateKey)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => toggleDay(dateKey)}
+                      className="text-black/40 hover:text-black/70 transition cursor-pointer"
+                    >
+                      <ChevronDown size={16} className={`transition-transform ${isDayHidden ? "-rotate-90" : ""}`} />
+                    </button>
                   </div>
-                </div>
 
-                {/* Staf */}
-                <div className="flex items-center gap-2.5">
-                  <span className={`w-8 h-8 rounded-full ${avatarColor(log.staffName)} text-white text-[11px] font-bold flex items-center justify-center shrink-0`}>
-                    {initials(log.staffName)}
-                  </span>
-                  <div className="flex flex-col leading-tight min-w-0">
-                    <span className="font-medium truncate">{log.staffName || "-"}</span>
-                    <span className="text-xs text-black/40 truncate">{log.position || ""}</span>
-                  </div>
-                </div>
+                  {!isDayHidden && (
+                    <div className="relative pl-6">
+                      {/* continuous vertical line, earliest (top) to latest (bottom) */}
+                      <div className="absolute left-[5px] top-0 bottom-0 w-px bg-black/25" />
+                      {/* elbow connecting the day-dot down into the line, matching the mockup */}
+                      <div className="absolute left-[5px] -top-[26px] w-4 h-4 border-l border-b border-black/25 rounded-bl-md" />
 
-                {/* Tim */}
-                <span className="text-black/70 truncate">{log.teamName || "-"}</span>
+                      <div className="flex flex-col gap-5">
+                        {dayLogs.map((log) => {
+                          const isLogHidden = !!hiddenLogs[log.logId];
+                          const timeStr = formatTime(log.timestamp);
+                          const actor = log.actorName || "System";
 
-                {/* Status */}
-                <div><DutyStatusBadge status={log.dutyStatus} /></div>
+                          return (
+                            <div key={log.logId} className="relative">
+                              {/* Blue dot on the line */}
+                              <button
+                                type="button"
+                                onClick={() => toggleLog(log.logId)}
+                                className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-brand-primary hover:scale-125 transition-transform cursor-pointer z-10"
+                                title="Sembunyikan / tampilkan detail aktivitas"
+                              />
 
-                {/* Alasan / Keterangan */}
-                <div className="flex flex-col leading-tight min-w-0 pr-2">
-                  <span className="truncate">{log.reason || "-"}</span>
-                  {log.description && (
-                    <span className="text-xs text-black/40 truncate">{log.description}</span>
+                              {isLogHidden ? (
+                                <div className="text-sm font-medium text-black/50">{timeStr}</div>
+                              ) : (
+                                <div className="flex flex-col gap-1">
+                                  <span className="text-sm font-medium text-black/50">{timeStr}</span>
+                                  <span className="text-[15px] font-semibold text-black/90 leading-tight">{actor}</span>
+                                  <span className="text-sm text-black/70">{log.description}</span>
+
+                                  {log.staffName && (
+                                    <span className="flex items-center gap-1.5 text-sm text-black/80 font-medium mt-0.5">
+                                      <User size={14} className="text-black/50" />{log.staffName}
+                                    </span>
+                                  )}
+                                  {log.teamName && (
+                                    <span className="flex items-center gap-1.5 text-sm text-black/80 font-medium">
+                                      <Users size={14} className="text-black/50" />{log.teamName}
+                                    </span>
+                                  )}
+
+                                  {log.description && (
+                                    <span className="text-sm text-black/40 italic mt-0.5">{log.description}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                {/* Sumber */}
-                <div>
-                  <span className={`badge ${SOURCE_STYLES[log.sourceType]}`}>
-                    {SOURCE_LABELS[log.sourceType]}
-                  </span>
-                </div>
-
-                {/* Detail Sumber */}
-                <span className="text-black/50 text-sm truncate">{log.sourceDetail || "-"}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -268,7 +253,7 @@ export default function History() {
       {/* ================= FILTER MODAL ================= */}
       {isFilterOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card w-full max-w-md p-8 shadow-2xl">
+          <div className="card w-full max-w-md p-8 shadow-2xl bg-white">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-black">Filter Riwayat</h2>
               <button onClick={() => setIsFilterOpen(false)} className="text-black/40 hover:text-black cursor-pointer">
@@ -338,11 +323,7 @@ export default function History() {
               >
                 Reset
               </button>
-              <button
-                type="button"
-                onClick={handleApplyFilters}
-                className="btn-primary text-sm"
-              >
+              <button type="button" onClick={handleApplyFilters} className="btn-primary text-sm">
                 Terapkan Filter
               </button>
             </div>

@@ -88,13 +88,11 @@ export type LogSourceType = "TeamSchedule" | "PersonalSchedule" | "FromTicket";
 
 export interface ActivityLogResponse {
   logId: string;
-  timestamp: string; // ISO datetime, e.g. "2026-08-17T08:00:00"
+  timestamp: string; // ISO datetime
+  actionType: string;
+  actorName?: string | null;
   staffName?: string | null;
   position?: string | null;
   teamName?: string | null;
-  dutyStatus: DutyStatus;
-  reason?: string | null;
-  description?: string | null;
-  sourceType: LogSourceType;
-  sourceDetail?: string | null;
+  description: string;
 }

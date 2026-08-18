@@ -1,5 +1,7 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +12,7 @@ using SchedulingMeruap.Api.DTO.Requests;
 
 namespace SchedulingMeruap.Api.Controllers
 {
+    [Authorize] // 🔥 IMPORTANT: This ensures only logged-in users can hit this, allowing us to read their token
     [ApiController]
     [Route("api/[controller]")]
     public class TimelineController : ControllerBase
@@ -21,6 +24,13 @@ namespace SchedulingMeruap.Api.Controllers
             _timelineService = timelineService;
         }
 
+        // 🔥 NEW HELPER: Extracts the logged-in user's ID from their Token
+        private string? GetCurrentActorId()
+        {
+            // If your token saves the ID under a different claim, adjust this (e.g., ClaimTypes.NameIdentifier)
+            return User.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetTimeline([FromQuery] TimelineRequest request)
         {
@@ -29,7 +39,7 @@ namespace SchedulingMeruap.Api.Controllers
                 return BadRequest(ModelState);
             }
 
-            // 🔥 BACKEND CONTROLLER SAFETY NET: Fallback to current year if dates are missing
+            // Fallback to current year if dates are missing
             if (request.StartDate == default)
             {
                 request.StartDate = new DateTime(DateTime.UtcNow.Year, 1, 1);
@@ -43,7 +53,6 @@ namespace SchedulingMeruap.Api.Controllers
             return Ok(data);
         }
 
-        // Add this missing block right here!
         [HttpPost]
         public async Task<IActionResult> CreateTimeline([FromBody] CreateTimelineRequest request)
         {
@@ -54,12 +63,14 @@ namespace SchedulingMeruap.Api.Controllers
 
             try
             {
-                var result = await _timelineService.CreateTimelineAsync(request);
+                var actorId = GetCurrentActorId(); // 🔥 Grab the user who clicked "Save"
+                var result = await _timelineService.CreateTimelineAsync(request, actorId); // 🔥 Pass it down
                 return Ok(result);
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message);
+                // Wrapped in a JSON object so the frontend can read errorData.message cleanly
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -73,7 +84,7 @@ namespace SchedulingMeruap.Api.Controllers
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(new { message = ex.Message });
             }
         }
 
@@ -83,12 +94,13 @@ namespace SchedulingMeruap.Api.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
-                await _timelineService.EndActiveTimelineAsync(request);
+                var actorId = GetCurrentActorId(); // 🔥 Grab the user who clicked "End"
+                await _timelineService.EndActiveTimelineAsync(request, actorId); // 🔥 Pass it down
                 return Ok(new { message = "Schedule successfully closed." });
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(new { message = ex.Message });
             }
         }
     }

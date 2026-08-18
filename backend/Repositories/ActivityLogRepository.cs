@@ -14,9 +14,9 @@ public class ActivityLogRepository : IActivityLogRepository
         _context = context;
     }
 
-    public async Task AddRangeAsync(List<ActivityLog> logs)
+    public async Task AddAsync(ActivityLog log)
     {
-        _context.ActivityLogs.AddRange(logs);
+        _context.ActivityLogs.Add(log);
         await _context.SaveChangesAsync();
     }
 

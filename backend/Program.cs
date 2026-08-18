@@ -64,7 +64,6 @@ builder.Services.AddScoped<ITimelineRepository, TimelineRepository>();
 builder.Services.AddScoped<ITimelineService, TimelineService>();
 builder.Services.AddScoped<IActivityLogRepository, ActivityLogRepository>();
 builder.Services.AddScoped<IActivityLogService, ActivityLogService>();
-builder.Services.AddHostedService<DailyActivityLogJob>();
 
 var app = builder.Build();
 

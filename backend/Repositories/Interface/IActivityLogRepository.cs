@@ -4,6 +4,6 @@ namespace SchedulingMeruap.Api.Repositories.Interfaces;
 
 public interface IActivityLogRepository
 {
-    Task AddRangeAsync(List<ActivityLog> logs);
+    Task AddAsync(ActivityLog log);
     Task<List<ActivityLog>> GetLogsAsync(DateTime? startDate, DateTime? endDate, string? staffId, string? teamId);
 }
