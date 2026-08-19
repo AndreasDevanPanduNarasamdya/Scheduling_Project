@@ -81,18 +81,15 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable("ACTIVITY_LOG");
             entity.HasKey(e => e.LogId);
 
-            entity.Property(e => e.LogId).HasMaxLength(36).IsUnicode(false).HasColumnName("LOG_ID");
-            entity.Property(e => e.Timestamp).HasColumnType("datetime2").HasColumnName("TIMESTAMP");
-            entity.Property(e => e.ActionType).HasMaxLength(50).IsUnicode(false).HasColumnName("ACTION_TYPE");
-            entity.Property(e => e.ActorStaffId).HasMaxLength(36).IsUnicode(false).HasColumnName("ACTOR_STAFF_ID");
-            entity.Property(e => e.SubjectStaffId).HasMaxLength(36).IsUnicode(false).HasColumnName("SUBJECT_STAFF_ID");
-            entity.Property(e => e.SubjectTeamId).HasMaxLength(36).IsUnicode(false).HasColumnName("SUBJECT_TEAM_ID");
-            entity.Property(e => e.SnapshotName).HasMaxLength(150).HasColumnName("SNAPSHOT_NAME");
-            entity.Property(e => e.SnapshotPosition).HasMaxLength(100).HasColumnName("SNAPSHOT_POSITION");
-            entity.Property(e => e.SnapshotTeamName).HasMaxLength(100).HasColumnName("SNAPSHOT_TEAM_NAME");
-            entity.Property(e => e.Description).HasMaxLength(500).IsUnicode(false).HasColumnName("DESCRIPTION");
-
-            // No FK constraints — intentional, survives Staff/Team deletion
+            entity.Property(e => e.LogId).HasMaxLength(36).IsUnicode(false).HasColumnName("LOG_ID").IsRequired();
+            entity.Property(e => e.Date).HasColumnType("date").HasColumnName("DATE").IsRequired();
+            entity.Property(e => e.Time).HasColumnType("time").HasColumnName("TIME").IsRequired();
+            entity.Property(e => e.Actor).HasMaxLength(150).HasColumnName("ACTOR").IsRequired();
+            entity.Property(e => e.Action).HasColumnType("tinyint").HasColumnName("ACTION").IsRequired();
+            entity.Property(e => e.DateRange).HasMaxLength(100).IsUnicode(false).HasColumnName("DATE_RANGE");
+            entity.Property(e => e.Rotation).HasMaxLength(50).IsUnicode(false).HasColumnName("ROTATION");
+            entity.Property(e => e.Target).HasMaxLength(150).HasColumnName("TARGET").IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500).HasColumnName("DESCRIPTION");
         });
 
         modelBuilder.Entity<Staff>(entity =>

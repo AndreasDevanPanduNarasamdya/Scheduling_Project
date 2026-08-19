@@ -24,11 +24,37 @@ public class ActivityLogRepository : IActivityLogRepository
     {
         var query = _context.ActivityLogs.AsQueryable();
 
-        if (startDate.HasValue) query = query.Where(l => l.Timestamp >= startDate.Value);
-        if (endDate.HasValue) query = query.Where(l => l.Timestamp <= endDate.Value);
-        if (!string.IsNullOrEmpty(staffId)) query = query.Where(l => l.SubjectStaffId == staffId);
-        if (!string.IsNullOrEmpty(teamId)) query = query.Where(l => l.SubjectTeamId == teamId);
+        // 1. Filter strictly by the new Date column
+        if (startDate.HasValue)
+            query = query.Where(l => l.Date >= startDate.Value.Date);
 
-        return await query.OrderByDescending(l => l.Timestamp).ToListAsync();
+        if (endDate.HasValue)
+            query = query.Where(l => l.Date <= endDate.Value.Date);
+
+        // 2. Filter by Target Name (since we dropped the UUID columns)
+        if (!string.IsNullOrEmpty(staffId))
+        {
+            var staff = await _context.Set<Staff>().FindAsync(staffId);
+            if (staff != null)
+            {
+                var staffName = $"{staff.FirstName} {staff.LastName}".Trim();
+                query = query.Where(l => l.Target == staffName);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(teamId))
+        {
+            var team = await _context.Set<Team>().FindAsync(teamId);
+            if (team != null)
+            {
+                query = query.Where(l => l.Target == team.TeamName);
+            }
+        }
+
+        // 3. Order chronologically: Newest Date, then Newest Time
+        return await query
+            .OrderByDescending(l => l.Date)
+            .ThenByDescending(l => l.Time)
+            .ToListAsync();
     }
 }

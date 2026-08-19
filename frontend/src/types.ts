@@ -2,6 +2,12 @@ export type TicketStatus = "Pending" | "Approved" | "Declined";
 export type TicketType = "On" | "Off";
 export type BarType = "None" | "OffDuty" | "Leave" | "Transition";
 export type ScheduleVersionStatus = "Active" | "Historical" | "Future";
+export type ActionType = 
+  | "CreateStaff" | "EditStaff" | "RemoveStaff" | "AccountActivation"
+  | "CreateTicket" | "ApproveTicket" | "DeclineTicket"
+  | "CreateTeam" | "EditTeam" | "RemoveTeam"
+  | "CreatePersonalSchedule" | "EditPersonalSchedule" | "RemovePersonalSchedule"
+  | "CreateTeamSchedule" | "EditTeamSchedule" | "RemoveTeamSchedule";
 
 export interface EndTimelinePayload {
   teamId: string | null;
@@ -88,11 +94,12 @@ export type LogSourceType = "TeamSchedule" | "PersonalSchedule" | "FromTicket";
 
 export interface ActivityLogResponse {
   logId: string;
-  timestamp: string; // ISO datetime
-  actionType: string;
-  actorName?: string | null;
-  staffName?: string | null;
-  position?: string | null;
-  teamName?: string | null;
-  description: string;
+  date: string; 
+  time: string; 
+  actor: string;
+  action: ActionType;
+  dateRange?: string | null;
+  rotation?: string | null;
+  target: string;
+  description?: string | null;
 }

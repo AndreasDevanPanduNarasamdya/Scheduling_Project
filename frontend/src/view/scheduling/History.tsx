@@ -1,21 +1,44 @@
 import { useState, useEffect, useMemo } from "react";
 import {
-  History as HistoryIcon, RefreshCw,
-  Filter, X, ChevronDown, User, Users
+  History as HistoryIcon, RefreshCw, Filter, X,
+  User, Users, ChevronDown, Calendar, Repeat
 } from "lucide-react";
 import { fetchActivityLogs, fetchTeams } from "../../api";
 import type { Team, ActivityLogResponse } from "../../types";
 
 /* ================= HELPERS ================= */
 
-function formatDateHeading(iso: string) {
-  const d = new Date(iso);
+function formatTimeOnly(timeString: string | undefined) {
+  if (!timeString) return "";
+  return timeString.slice(0, 5); 
+}
+
+function formatDayHeader(isoDate: string) {
+  const d = new Date(isoDate);
   return d.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 }
 
-function formatTime(iso: string) {
-  const d = new Date(iso);
-  return d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false });
+const ACTION_META: Record<string, string> = {
+  CreateStaff: "Menambah Akun Baru",
+  EditStaff: "Mengedit Staff",
+  RemoveStaff: "Menghapus Staff",
+  AccountActivation: "Akun Teraktivasi",
+  CreateTicket: "Membuat Tiket Baru",
+  ApproveTicket: "Tiket Disetujui",
+  DeclineTicket: "Tiket Ditolak",
+  CreateTeam: "Membuat tim baru",
+  EditTeam: "Mengedit Tim",
+  RemoveTeam: "Menghapus Tim",
+  CreatePersonalSchedule: "Membuat Jadwal Personal Baru",
+  EditPersonalSchedule: "Mengedit Jadwal Personal",
+  RemovePersonalSchedule: "Menghapus Jadwal Personal",
+  CreateTeamSchedule: "Membuat Jadwal Tim Baru",
+  EditTeamSchedule: "Mengedit Jadwal Tim",
+  RemoveTeamSchedule: "Menghapus Jadwal Tim"
+};
+
+function getActionLabel(actionType: string) {
+  return ACTION_META[actionType] || actionType;
 }
 
 /* ================= MAIN PAGE ================= */
@@ -29,16 +52,12 @@ export default function History() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({ startDate: "", endDate: "", teamId: "", staffId: "" });
   const [appliedFilters, setAppliedFilters] = useState(filters);
-
-  const [hiddenDays, setHiddenDays] = useState<Record<string, boolean>>({});
-  const [hiddenLogs, setHiddenLogs] = useState<Record<string, boolean>>({});
+  
+  const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
+  const [collapsedLogs, setCollapsedLogs] = useState<Set<string>>(new Set()); 
 
   const loadTeams = async () => {
-    try {
-      setTeams(await fetchTeams());
-    } catch {
-      // non-critical
-    }
+    try { setTeams(await fetchTeams()); } catch {}
   };
 
   const loadLogs = async (f: typeof filters) => {
@@ -71,169 +90,197 @@ export default function History() {
     return Array.from(map.values());
   }, [teams]);
 
-  // Group by date; entries within a day sorted earliest -> latest; days sorted earliest -> latest (left to right)
-  const groupedLogs = useMemo(() => {
-    const map = new Map<string, ActivityLogResponse[]>();
-    const sorted = [...logs].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-    sorted.forEach((log) => {
-      const dateKey = log.timestamp.split("T")[0];
-      if (!map.has(dateKey)) map.set(dateKey, []);
-      map.get(dateKey)!.push(log);
-    });
-
-    return Array.from(map.entries()).sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime());
+  const groupedByDay = useMemo(() => {
+    const groups = new Map<string, { label: string; entries: ActivityLogResponse[] }>();
+    
+    for (const log of logs) {
+      const key = log.date; 
+      if (!groups.has(key)) {
+        groups.set(key, { label: formatDayHeader(key), entries: [] });
+      }
+      groups.get(key)!.entries.push(log);
+    }
+    
+    for (const group of groups.values()) {
+      group.entries.sort((a, b) => {
+        const timeA = a.time || "";
+        const timeB = b.time || "";
+        return timeA.localeCompare(timeB);
+      });
+    }
+    
+    return Array.from(groups.entries())
+      .sort((a, b) => (new Date(a[0]).getTime() < new Date(b[0]).getTime() ? 1 : -1))
+      .map(([key, value]) => ({ key, ...value }));
   }, [logs]);
 
-  const activeFilterCount = [appliedFilters.startDate, appliedFilters.endDate, appliedFilters.teamId, appliedFilters.staffId]
-    .filter(Boolean).length;
+  const activeFilterCount = [appliedFilters.startDate, appliedFilters.endDate, appliedFilters.teamId, appliedFilters.staffId].filter(Boolean).length;
 
-  const handleApplyFilters = () => {
-    setAppliedFilters(filters);
-    setIsFilterOpen(false);
-    loadLogs(filters);
-  };
-
+  const handleApplyFilters = () => { setAppliedFilters(filters); setIsFilterOpen(false); loadLogs(filters); };
   const handleResetFilters = () => {
     const empty = { startDate: "", endDate: "", teamId: "", staffId: "" };
-    setFilters(empty);
-    setAppliedFilters(empty);
-    setIsFilterOpen(false);
-    loadLogs(empty);
+    setFilters(empty); setAppliedFilters(empty); setIsFilterOpen(false); loadLogs(empty);
   };
 
-  const toggleDay = (dateKey: string) => {
-    setHiddenDays((prev) => ({ ...prev, [dateKey]: !prev[dateKey] }));
+  const toggleDay = (key: string) => {
+    setCollapsedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
   };
 
   const toggleLog = (logId: string) => {
-    setHiddenLogs((prev) => ({ ...prev, [logId]: !prev[logId] }));
+    setCollapsedLogs((prev) => {
+      const next = new Set(prev);
+      if (next.has(logId)) next.delete(logId); else next.add(logId);
+      return next;
+    });
   };
 
   return (
-    <div className="min-h-screen w-full bg-brand-bg font-sans overflow-y-auto">
-      <div className="max-w-7xl mx-auto px-8 pt-20 pb-16">
+    <div className="min-h-screen w-full bg-[#f4f7fc] font-sans overflow-y-auto">
+      <div className="max-w-[1400px] mx-auto px-10 pt-20 pb-16">
 
         {/* Page Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <h1 className="text-3xl font-semibold text-brand-dark">Activity Log</h1>
-          <HistoryIcon size={22} className="text-brand-dark mt-1" strokeWidth={2.2} />
+        <div className="flex items-center gap-3 mb-10">
+          <h1 className="text-[32px] font-medium text-gray-900 tracking-tight">Activity Log</h1>
+          <HistoryIcon size={26} className="text-gray-900 mt-1" strokeWidth={2.5} />
         </div>
 
         {/* Action / Filter bar */}
-        <div className="mb-10 flex items-center justify-between flex-wrap gap-3">
-          <div className="action-group">
-            <button type="button" onClick={() => setIsFilterOpen(true)} className="action-group-btn relative">
+        <div className="mb-12 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => setIsFilterOpen(true)} className="px-5 py-2.5 bg-[#3b5998] hover:bg-[#2d4373] text-white rounded-lg text-sm font-medium flex items-center gap-2 shadow-sm transition-colors relative">
               Filter <Filter size={16} strokeWidth={2.5} />
-              {activeFilterCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 bg-white text-brand-primary text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-brand-primary/20 shadow-sm">
-                  {activeFilterCount}
-                </span>
-              )}
+              {activeFilterCount > 0 && <span className="absolute -top-1.5 -right-1.5 bg-amber-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm">{activeFilterCount}</span>}
             </button>
-            {activeFilterCount > 0 && (
-              <button type="button" onClick={handleResetFilters} className="action-group-btn">
-                Reset <X size={16} strokeWidth={2.5} />
-              </button>
-            )}
-            <button type="button" onClick={() => loadLogs(appliedFilters)} className="action-group-btn">
+            <button type="button" onClick={() => loadLogs(appliedFilters)} className="p-2.5 bg-[#3b5998] hover:bg-[#2d4373] text-white rounded-lg shadow-sm transition-colors">
               <RefreshCw size={16} strokeWidth={2.5} className={isLoading ? "animate-spin" : ""} />
             </button>
+            {activeFilterCount > 0 && (
+              <button type="button" onClick={handleResetFilters} className="px-4 py-2.5 text-gray-600 hover:bg-gray-200 rounded-lg text-sm font-medium transition-colors">Reset</button>
+            )}
           </div>
-
-          <span className="text-sm text-black/50 font-medium">
+          <span className="text-sm text-gray-500 font-medium">
             {isLoading ? "Memuat…" : `${logs.length} rekaman ditemukan`}
           </span>
         </div>
 
-        {/* Content states */}
-        {isLoading && (
-          <div className="text-center text-sm text-black/50 py-12">Memuat riwayat aktivitas…</div>
-        )}
+        {/* Error / Empty States */}
+        {isLoading && <div className="text-gray-500 text-sm">Memuat riwayat aktivitas…</div>}
+        {!isLoading && error && <div className="text-red-500 text-sm font-medium">{error}</div>}
+        {!isLoading && !error && groupedByDay.length === 0 && <div className="text-gray-400 italic text-sm">Belum ada riwayat aktivitas untuk filter ini.</div>}
 
-        {!isLoading && error && (
-          <div className="text-center text-sm text-state-error py-12">{error}</div>
-        )}
-
-        {!isLoading && !error && logs.length === 0 && (
-          <div className="text-center text-sm text-black/40 italic py-12">
-            Belum ada riwayat aktivitas untuk filter ini.
-          </div>
-        )}
-
-        {/* ============ OPEN VERTICAL-LINE TIMELINE, NO CARDS/BOXES ============ */}
-        {!isLoading && !error && groupedLogs.length > 0 && (
-          <div className="flex gap-16 overflow-x-auto pb-8 items-start">
-            {groupedLogs.map(([dateKey, dayLogs]) => {
-              const isDayHidden = !!hiddenDays[dateKey];
-
+        {/* ================= SEAMLESS HORIZONTAL TIMELINE ================= */}
+        {!isLoading && !error && groupedByDay.length > 0 && (
+          <div className="flex gap-12 overflow-x-auto pb-10 items-start">
+            {groupedByDay.map((day) => {
+              const isDayCollapsed = collapsedDays.has(day.key);
+              
               return (
-                <div key={dateKey} className="min-w-[280px] shrink-0">
+                <div key={day.key} className="flex flex-col shrink-0 min-w-[340px] max-w-[380px]">
 
-                  {/* Day heading: orange dot + date + chevron */}
-                  <div className="flex items-center gap-2.5 mb-3">
-                    <button
-                      type="button"
-                      onClick={() => toggleDay(dateKey)}
-                      className="w-3.5 h-3.5 rounded-full bg-amber-500 hover:scale-110 transition-transform cursor-pointer shrink-0"
-                      title="Sembunyikan / tampilkan aktivitas hari ini"
-                    />
-                    <span className="font-semibold text-black/90 text-[17px]">
-                      {formatDateHeading(dateKey)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => toggleDay(dateKey)}
-                      className="text-black/40 hover:text-black/70 transition cursor-pointer"
-                    >
-                      <ChevronDown size={16} className={`transition-transform ${isDayHidden ? "-rotate-90" : ""}`} />
-                    </button>
+                  {/* Day Header (Orange Dot & Text) */}
+                  <div onClick={() => toggleDay(day.key)} className="flex items-center gap-3 cursor-pointer select-none relative z-10">
+                    <div className="w-[16px] h-[16px] rounded-full bg-[#f59e0b] shrink-0 ring-[4px] ring-[#f4f7fc]" />
+                    {/* Day text: slightly smaller, medium weight */}
+                    <span className="text-[16px] font-medium text-gray-900">{day.label}</span>
+                    <ChevronDown size={18} className={`text-gray-900 transition-transform ${isDayCollapsed ? "-rotate-90" : ""}`} />
                   </div>
 
-                  {!isDayHidden && (
-                    <div className="relative pl-6">
-                      {/* continuous vertical line, earliest (top) to latest (bottom) */}
-                      <div className="absolute left-[5px] top-0 bottom-0 w-px bg-black/25" />
-                      {/* elbow connecting the day-dot down into the line, matching the mockup */}
-                      <div className="absolute left-[5px] -top-[26px] w-4 h-4 border-l border-b border-black/25 rounded-bl-md" />
+                  {/* Branching Path & Logs */}
+                  {!isDayCollapsed && (
+                    <div className="relative mt-[-10px]">
+                      
+                      {/* 1. MAIN VERTICAL STEM */}
+                      <div className="absolute left-[7px] top-0 bottom-[-40px] w-[2px] bg-slate-400/80 z-0" />
+                      
+                      {/* 2. THE CURVE BRANCH */}
+                      <div className="absolute left-[7px] top-[24px] w-[24px] h-[24px] border-l-[2px] border-b-[2px] border-slate-400/80 rounded-bl-[16px] z-0" />
 
-                      <div className="flex flex-col gap-5">
-                        {dayLogs.map((log) => {
-                          const isLogHidden = !!hiddenLogs[log.logId];
-                          const timeStr = formatTime(log.timestamp);
-                          const actor = log.actorName || "System";
-
+                      {/* 3. LOG ITEMS CONTAINER */}
+                      <div className="relative ml-[31px] pt-[41px] pb-2 z-0">
+                        
+                        {day.entries.map((log, index) => {
+                          const isLast = index === day.entries.length - 1;
+                          const isCollapsed = collapsedLogs.has(log.logId);
+                          const actionLabel = getActionLabel(log.action);
+                          
                           return (
-                            <div key={log.logId} className="relative">
-                              {/* Blue dot on the line */}
+                            <div key={log.logId} className={`relative pl-7 w-full ${isCollapsed ? 'pb-5' : 'pb-10'}`}>
+                              
+                              {/* 4. THE SECONDARY SIBLING LINE */}
+                              {!isLast && (
+                                <div className="absolute left-[-1px] top-[14px] bottom-[-7px] w-[2px] bg-slate-400/80 z-0" />
+                              )}
+                              
+                              {/* 5. Blue Timeline Dot */}
                               <button
                                 type="button"
                                 onClick={() => toggleLog(log.logId)}
-                                className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-brand-primary hover:scale-125 transition-transform cursor-pointer z-10"
-                                title="Sembunyikan / tampilkan detail aktivitas"
+                                title={isCollapsed ? "Tampilkan detail" : "Sembunyikan detail"}
+                                className="absolute left-[-7px] top-[0px] w-[14px] h-[14px] rounded-full bg-[#3b5998] ring-[4px] ring-[#f4f7fc] z-10 hover:scale-[1.15] transition-transform cursor-pointer"
                               />
 
-                              {isLogHidden ? (
-                                <div className="text-sm font-medium text-black/50">{timeStr}</div>
+                              {/* Content Hierarchy */}
+                              {isCollapsed ? (
+                                // 🔥 COLLAPSED STATE (Just Time)
+                                <div className="flex items-center h-[14px]">
+                                  <span className="text-[13px] text-gray-500 font-normal leading-none select-none cursor-pointer" onClick={() => toggleLog(log.logId)}>
+                                    {formatTimeOnly(log.time)}
+                                  </span>
+                                </div>
                               ) : (
-                                <div className="flex flex-col gap-1">
-                                  <span className="text-sm font-medium text-black/50">{timeStr}</span>
-                                  <span className="text-[15px] font-semibold text-black/90 leading-tight">{actor}</span>
-                                  <span className="text-sm text-black/70">{log.description}</span>
+                                // 🔥 EXPANDED STATE (Typography perfectly tuned to image_d738a0.png)
+                                <div className="flex flex-col items-start text-left w-full mt-[-2px]">
+                                  
+                                  {/* Time: Small, normal weight, gray */}
+                                  <span className="text-[13px] text-gray-500 font-normal mb-1 leading-none">
+                                    {formatTimeOnly(log.time)}
+                                  </span>
+                                  
+                                  {/* Actor: Normal weight (not bold), dark gray/black */}
+                                  <span className="text-[15px] text-gray-900 font-normal leading-snug mb-0.5">
+                                    {log.actor}
+                                  </span>
+                                  
+                                  {/* Action: Normal weight, lighter gray */}
+                                  <span className="text-[15px] text-gray-500 font-normal leading-snug mb-3">
+                                    {actionLabel}
+                                  </span>
 
-                                  {log.staffName && (
-                                    <span className="flex items-center gap-1.5 text-sm text-black/80 font-medium mt-0.5">
-                                      <User size={14} className="text-black/50" />{log.staffName}
-                                    </span>
-                                  )}
-                                  {log.teamName && (
-                                    <span className="flex items-center gap-1.5 text-sm text-black/80 font-medium">
-                                      <Users size={14} className="text-black/50" />{log.teamName}
-                                    </span>
-                                  )}
+                                  <div className="flex flex-col items-start gap-1.5 mb-2">
+                                    {log.dateRange && (
+                                      <div className="flex items-center gap-2 text-[12px] font-bold text-gray-700">
+                                        <Calendar size={14} strokeWidth={2.5} className="text-gray-700" />
+                                        {log.dateRange}
+                                      </div>
+                                    )}
 
+                                    {log.rotation && (
+                                      <div className="flex items-center gap-2 text-[12px] font-bold text-gray-700">
+                                        <Repeat size={14} strokeWidth={2.5} className="text-gray-700" />
+                                        {log.rotation}
+                                      </div>
+                                    )}
+
+                                    {/* Target: Small, heavy bold, dark gray */}
+                                    <div className="flex items-center gap-2 text-[12px] font-bold text-gray-700">
+                                      {log.target.toLowerCase().includes("tim") ? (
+                                        <Users size={14} strokeWidth={2.5} className="text-gray-700" />
+                                      ) : (
+                                        <User size={14} strokeWidth={2.5} className="text-gray-700" />
+                                      )}
+                                      {log.target}
+                                    </div>
+                                  </div>
+
+                                  {/* Description: Very small, heavy bold, light gray */}
                                   {log.description && (
-                                    <span className="text-sm text-black/40 italic mt-0.5">{log.description}</span>
+                                    <div className="text-[11px] font-bold text-gray-400 mt-1 leading-snug text-left max-w-[280px] break-words">
+                                      {log.description}
+                                    </div>
                                   )}
                                 </div>
                               )}
@@ -243,6 +290,7 @@ export default function History() {
                       </div>
                     </div>
                   )}
+
                 </div>
               );
             })}
@@ -250,82 +298,43 @@ export default function History() {
         )}
       </div>
 
-      {/* ================= FILTER MODAL ================= */}
+      {/* FILTER MODAL */}
       {isFilterOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="card w-full max-w-md p-8 shadow-2xl bg-white">
+          <div className="w-full max-w-md p-8 shadow-2xl bg-white rounded-2xl">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-black">Filter Riwayat</h2>
-              <button onClick={() => setIsFilterOpen(false)} className="text-black/40 hover:text-black cursor-pointer">
-                <X size={20} />
-              </button>
+              <h2 className="text-xl font-semibold text-gray-900">Filter Riwayat</h2>
+              <button onClick={() => setIsFilterOpen(false)} className="text-gray-400 hover:text-gray-900 cursor-pointer transition-colors"><X size={20} /></button>
             </div>
-
-            <div className="flex flex-col gap-4 text-left">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-5 text-left">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="form-label">Dari Tanggal</label>
-                  <input
-                    type="date"
-                    className="input-field cursor-pointer text-black/80"
-                    value={filters.startDate}
-                    onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
-                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
-                  />
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Dari Tanggal</label>
+                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#3b5998] focus:outline-none" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
                 </div>
                 <div>
-                  <label className="form-label">Sampai Tanggal</label>
-                  <input
-                    type="date"
-                    className="input-field cursor-pointer text-black/80"
-                    value={filters.endDate}
-                    min={filters.startDate || undefined}
-                    onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
-                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch {} }}
-                  />
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Sampai Tanggal</label>
+                  <input type="date" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#3b5998] focus:outline-none" value={filters.endDate} min={filters.startDate || undefined} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} />
                 </div>
               </div>
-
               <div>
-                <label className="form-label">Tim</label>
-                <select
-                  className="input-field cursor-pointer"
-                  value={filters.teamId}
-                  onChange={(e) => setFilters({ ...filters, teamId: e.target.value, staffId: "" })}
-                >
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tim</label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#3b5998] focus:outline-none" value={filters.teamId} onChange={(e) => setFilters({ ...filters, teamId: e.target.value, staffId: "" })}>
                   <option value="">Semua Tim</option>
-                  {teams.map((t) => (
-                    <option key={t.teamId} value={t.teamId}>{t.teamName}</option>
-                  ))}
+                  {teams.map((t) => <option key={t.teamId} value={t.teamId}>{t.teamName}</option>)}
                 </select>
               </div>
-
               <div>
-                <label className="form-label">Staf</label>
-                <select
-                  className="input-field cursor-pointer"
-                  value={filters.staffId}
-                  onChange={(e) => setFilters({ ...filters, staffId: e.target.value })}
-                >
+                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Staf</label>
+                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-[#3b5998] focus:outline-none" value={filters.staffId} onChange={(e) => setFilters({ ...filters, staffId: e.target.value })}>
                   <option value="">Semua Staf</option>
-                  {staffOptions.map((s) => (
-                    <option key={s.staffId} value={s.staffId}>{s.name}</option>
-                  ))}
+                  {staffOptions.map((s) => <option key={s.staffId} value={s.staffId}>{s.name}</option>)}
                 </select>
               </div>
             </div>
-
-            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-brand-outline/40">
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="px-5 py-2 text-sm font-medium text-black/60 hover:bg-brand-bg rounded-xl transition cursor-pointer"
-              >
-                Reset
-              </button>
-              <button type="button" onClick={handleApplyFilters} className="btn-primary text-sm">
-                Terapkan Filter
-              </button>
+            <div className="flex justify-end gap-3 mt-8">
+              <button type="button" onClick={handleResetFilters} className="px-5 py-2.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer">Reset</button>
+              <button type="button" onClick={handleApplyFilters} className="px-5 py-2.5 bg-[#3b5998] hover:bg-[#2d4373] text-white rounded-lg text-sm font-medium transition-colors">Terapkan Filter</button>
             </div>
           </div>
         </div>

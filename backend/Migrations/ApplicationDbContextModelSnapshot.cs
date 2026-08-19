@@ -30,56 +30,46 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnType("varchar(36)")
                         .HasColumnName("LOG_ID");
 
-                    b.Property<string>("ActionType")
+                    b.Property<byte>("Action")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("ACTION");
+
+                    b.Property<string>("Actor")
                         .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("ACTOR");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("date")
+                        .HasColumnName("DATE");
+
+                    b.Property<string>("DateRange")
+                        .HasMaxLength(100)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(100)")
+                        .HasColumnName("DATE_RANGE");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasColumnName("DESCRIPTION");
+
+                    b.Property<string>("Rotation")
                         .HasMaxLength(50)
                         .IsUnicode(false)
                         .HasColumnType("varchar(50)")
-                        .HasColumnName("ACTION_TYPE");
+                        .HasColumnName("ROTATION");
 
-                    b.Property<string>("ActorStaffId")
-                        .HasMaxLength(36)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("ACTOR_STAFF_ID");
-
-                    b.Property<string>("Description")
+                    b.Property<string>("Target")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(500)")
-                        .HasColumnName("DESCRIPTION");
-
-                    b.Property<string>("SnapshotName")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)")
-                        .HasColumnName("SNAPSHOT_NAME");
+                        .HasColumnName("TARGET");
 
-                    b.Property<string>("SnapshotPosition")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("SNAPSHOT_POSITION");
-
-                    b.Property<string>("SnapshotTeamName")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)")
-                        .HasColumnName("SNAPSHOT_TEAM_NAME");
-
-                    b.Property<string>("SubjectStaffId")
-                        .HasMaxLength(36)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("SUBJECT_STAFF_ID");
-
-                    b.Property<string>("SubjectTeamId")
-                        .HasMaxLength(36)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(36)")
-                        .HasColumnName("SUBJECT_TEAM_ID");
-
-                    b.Property<DateTime>("Timestamp")
-                        .HasColumnType("datetime2")
-                        .HasColumnName("TIMESTAMP");
+                    b.Property<TimeSpan>("Time")
+                        .HasColumnType("time")
+                        .HasColumnName("TIME");
 
                     b.HasKey("LogId");
 

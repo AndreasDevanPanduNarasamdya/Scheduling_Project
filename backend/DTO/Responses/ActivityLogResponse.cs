@@ -1,15 +1,18 @@
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using SchedulingMeruap.Api.Models;
+using Action = SchedulingMeruap.Api.Models.Action;
 
 namespace SchedulingMeruap.Api.DTO.Responses;
 
 public class ActivityLogResponse
 {
     public string LogId { get; set; } = null!;
-    public DateTime Timestamp { get; set; }
-    public string ActionType { get; set; } = null!;
-    public string? ActorName { get; set; }
-    public string? StaffName { get; set; }
-    public string? Position { get; set; }
-    public string? TeamName { get; set; }
-    public string Description { get; set; } = null!;
+    public DateTime Date { get; set; }
+    public TimeSpan Time { get; set; }
+    public string Actor { get; set; } = null!;
+    public Action Action { get; set; }
+    public string? DateRange { get; set; }
+    public string? Rotation { get; set; }
+    public string Target { get; set; } = null!;
+    public string? Description { get; set; }
 }
