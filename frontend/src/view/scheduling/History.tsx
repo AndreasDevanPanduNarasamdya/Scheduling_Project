@@ -177,44 +177,42 @@ export default function History() {
           <div className="flex gap-12 overflow-x-auto pb-10 items-start">
             {groupedByDay.map((day) => {
               const isDayCollapsed = collapsedDays.has(day.key);
-              
+
               return (
                 <div key={day.key} className="flex flex-col shrink-0 min-w-[340px] max-w-[380px]">
 
                   {/* Day Header (Orange Dot & Text) */}
                   <div onClick={() => toggleDay(day.key)} className="flex items-center gap-3 cursor-pointer select-none relative z-10">
                     <div className="w-[16px] h-[16px] rounded-full bg-[#f59e0b] shrink-0 ring-[4px] ring-[#f4f7fc]" />
-                    {/* Day text: slightly smaller, medium weight */}
-                    <span className="text-[16px] font-medium text-gray-900">{day.label}</span>
-                    <ChevronDown size={18} className={`text-gray-900 transition-transform ${isDayCollapsed ? "-rotate-90" : ""}`} />
+                    <span className="text-[18px] font-medium text-gray-900">{day.label}</span>
                   </div>
 
                   {/* Branching Path & Logs */}
                   {!isDayCollapsed && (
                     <div className="relative mt-[-10px]">
-                      
+
                       {/* 1. MAIN VERTICAL STEM */}
                       <div className="absolute left-[7px] top-0 bottom-[-40px] w-[2px] bg-slate-400/80 z-0" />
-                      
+
                       {/* 2. THE CURVE BRANCH */}
                       <div className="absolute left-[7px] top-[24px] w-[24px] h-[24px] border-l-[2px] border-b-[2px] border-slate-400/80 rounded-bl-[16px] z-0" />
 
                       {/* 3. LOG ITEMS CONTAINER */}
                       <div className="relative ml-[31px] pt-[41px] pb-2 z-0">
-                        
+
                         {day.entries.map((log, index) => {
                           const isLast = index === day.entries.length - 1;
                           const isCollapsed = collapsedLogs.has(log.logId);
                           const actionLabel = getActionLabel(log.action);
-                          
+
                           return (
                             <div key={log.logId} className={`relative pl-7 w-full ${isCollapsed ? 'pb-5' : 'pb-10'}`}>
-                              
+
                               {/* 4. THE SECONDARY SIBLING LINE */}
                               {!isLast && (
                                 <div className="absolute left-[-1px] top-[14px] bottom-[-7px] w-[2px] bg-slate-400/80 z-0" />
                               )}
-                              
+
                               {/* 5. Blue Timeline Dot */}
                               <button
                                 type="button"
@@ -225,60 +223,60 @@ export default function History() {
 
                               {/* Content Hierarchy */}
                               {isCollapsed ? (
-                                // 🔥 COLLAPSED STATE (Just Time)
+                                // COLLAPSED STATE (Just Time)
                                 <div className="flex items-center h-[14px]">
-                                  <span className="text-[13px] text-gray-500 font-normal leading-none select-none cursor-pointer" onClick={() => toggleLog(log.logId)}>
+                                  <span className="text-[16px] text-gray-500 font-semibold leading-none select-none cursor-pointer" onClick={() => toggleLog(log.logId)}>
                                     {formatTimeOnly(log.time)}
                                   </span>
                                 </div>
                               ) : (
-                                // 🔥 EXPANDED STATE (Typography perfectly tuned to image_d738a0.png)
+                                // EXPANDED STATE
                                 <div className="flex flex-col items-start text-left w-full mt-[-2px]">
-                                  
-                                  {/* Time: Small, normal weight, gray */}
-                                  <span className="text-[13px] text-gray-500 font-normal mb-1 leading-none">
+
+                                  {/* Time: bold, medium gray */}
+                                  <span className="text-[16px] text-gray-500 font-semibold mb-1 leading-none">
                                     {formatTimeOnly(log.time)}
                                   </span>
-                                  
-                                  {/* Actor: Normal weight (not bold), dark gray/black */}
-                                  <span className="text-[15px] text-gray-900 font-normal leading-snug mb-0.5">
+
+                                  {/* Actor: bold, near-black */}
+                                  <span className="text-[18px] text-gray-900 font-semibold leading-snug mb-0.5">
                                     {log.actor}
                                   </span>
-                                  
-                                  {/* Action: Normal weight, lighter gray */}
-                                  <span className="text-[15px] text-gray-500 font-normal leading-snug mb-3">
+
+                                  {/* Action: normal weight, medium gray */}
+                                  <span className="text-[18px] text-gray-500 font-normal leading-snug mb-3">
                                     {actionLabel}
                                   </span>
 
-                                  <div className="flex flex-col items-start gap-1.5 mb-2">
+                                  <div className="flex flex-col items-start gap-2 mb-2">
                                     {log.dateRange && (
-                                      <div className="flex items-center gap-2 text-[12px] font-bold text-gray-700">
-                                        <Calendar size={14} strokeWidth={2.5} className="text-gray-700" />
+                                      <div className="flex items-center gap-2 text-[14px] font-normal text-gray-600">
+                                        <Calendar size={16} strokeWidth={2} className="text-gray-600" />
                                         {log.dateRange}
                                       </div>
                                     )}
 
                                     {log.rotation && (
-                                      <div className="flex items-center gap-2 text-[12px] font-bold text-gray-700">
-                                        <Repeat size={14} strokeWidth={2.5} className="text-gray-700" />
+                                      <div className="flex items-center gap-2 text-[14px] font-normal text-gray-600">
+                                        <Repeat size={16} strokeWidth={2} className="text-gray-600" />
                                         {log.rotation}
                                       </div>
                                     )}
 
-                                    {/* Target: Small, heavy bold, dark gray */}
-                                    <div className="flex items-center gap-2 text-[12px] font-bold text-gray-700">
+                                    {/* Target: bold, darker gray */}
+                                    <div className="flex items-center gap-2 text-[14px] font-semibold text-gray-700">
                                       {log.target.toLowerCase().includes("tim") ? (
-                                        <Users size={14} strokeWidth={2.5} className="text-gray-700" />
+                                        <Users size={16} strokeWidth={2} className="text-gray-700" />
                                       ) : (
-                                        <User size={14} strokeWidth={2.5} className="text-gray-700" />
+                                        <User size={16} strokeWidth={2} className="text-gray-700" />
                                       )}
                                       {log.target}
                                     </div>
                                   </div>
 
-                                  {/* Description: Very small, heavy bold, light gray */}
+                                  {/* Description: small, normal weight, light gray */}
                                   {log.description && (
-                                    <div className="text-[11px] font-bold text-gray-400 mt-1 leading-snug text-left max-w-[280px] break-words">
+                                    <div className="text-[13px] font-normal text-gray-400 mt-1 leading-snug text-left max-w-[280px] break-words">
                                       {log.description}
                                     </div>
                                   )}
@@ -298,7 +296,6 @@ export default function History() {
         )}
       </div>
 
-      {/* FILTER MODAL */}
       {isFilterOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-md p-8 shadow-2xl bg-white rounded-2xl">

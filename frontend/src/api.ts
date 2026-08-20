@@ -5,7 +5,8 @@ import type {
   TokenValidationResult,
   EndTimelinePayload,
   TimelineHistoryRecord,
-  ActivityLogResponse
+  ActivityLogResponse,
+  UpdateStaffPayload
 } from "./types";
 
 const API_BASE_URL = "http://localhost:5096/api";
@@ -162,7 +163,7 @@ export async function endActiveTimeline(payload: EndTimelinePayload): Promise<vo
 }
 
 export async function deleteStaff(staffId: string) {
-  const response = await fetchWithToken(`http://localhost:5096/api/staff/${staffId}`, {
+  const response = await fetchWithToken(`${API_BASE_URL}/staff/${staffId}`, {
     method: "DELETE",
   });
   if (!response.ok) throw new Error("Failed to delete staff");
@@ -170,7 +171,7 @@ export async function deleteStaff(staffId: string) {
 }
 
 export async function deleteTeam(teamId: string) {
-  const response = await fetchWithToken(`http://localhost:5096/api/teams/${teamId}`, {
+  const response = await fetchWithToken(`${API_BASE_URL}/teams/${teamId}`, {
     method: "DELETE",
   });
   if (!response.ok) throw new Error("Failed to delete team");
@@ -197,4 +198,63 @@ export async function fetchActivityLogs(params: {
   }
 
   return response.json();
+}
+
+export async function editStaff(staffId: string, payload: UpdateStaffPayload) {
+  const response = await fetchWithToken(`${API_BASE_URL}/staff/${staffId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    // Try to catch the JSON error message from the backend, fallback to text if it fails
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Gagal memperbarui staff");
+  }
+  
+  return response.json();
+}
+
+export async function fetchStaffById(staffId: string) {
+  const response = await fetchWithToken(`${API_BASE_URL}/staff/${staffId}`);
+  if (!response.ok) throw new Error("Failed to fetch staff details");
+  return response.json();
+}
+
+export async function editTeam(teamId: string, payload: { teamName: string }) {
+  const response = await fetchWithToken(`${API_BASE_URL}/teams/${teamId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.message || "Gagal memperbarui nama tim");
+  }
+  
+  return response.json();
+}
+
+export async function updateTimeline(
+  timelineId: string,
+  payload: { daysOn: number; daysOff: number; startDate: string; endDate?: string | null }
+): Promise<void> {
+  const response = await fetchWithToken(`${API_BASE_URL}/timeline/${timelineId}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Gagal memperbarui jadwal");
+  }
+}
+
+export async function deleteTimelineSchedule(timelineId: string): Promise<void> {
+  const response = await fetchWithToken(`${API_BASE_URL}/timeline/${timelineId}`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Gagal menghapus jadwal");
+  }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { ChevronDown, Menu, UserRound, Plus, ArrowLeftRight, Filter, X } from "lucide-react";
+import { ChevronDown, Menu, UserRound, Plus, ArrowLeftRight, Filter, X, Trash2, Pencil } from "lucide-react";
 import type { Team, StaffMember } from "../../types";
 import { 
   fetchTeams, 
@@ -8,21 +8,37 @@ import {
   createTeam, 
   assignStaffToTeam,
   deleteStaff,
-  deleteTeam
-} from "../../api"; 
-import { Trash2 } from "lucide-react";
+  deleteTeam,
+  editStaff,
+  fetchStaffById,
+  editTeam 
+} from "../../api";
 
 export default function ManagementPage() {
-  // --- STAFF FORM STATE ---
+  // --- STAFF FORM STATE (CREATE) ---
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [staffForm, setStaffForm] = useState({
     firstName: "", lastName: "", sex: "P", position: "",
     email: "", phone: "", dob: "", joinDate: ""
   });
 
-  // --- TEAM FORM STATE ---
+  // --- STAFF FORM STATE (EDIT/INFO) ---
+  const [isEditStaffOpen, setIsEditStaffOpen] = useState(false);
+  const [isEditingStaff, setIsEditingStaff] = useState(false); 
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [editStaffForm, setEditStaffForm] = useState({
+    firstName: "", lastName: "", sex: "P", position: "",
+    email: "", phone: "", dob: "", joinDate: ""
+  });
+
+  // --- TEAM FORM STATE (CREATE) ---
   const [isAddTeamOpen, setIsAddTeamOpen] = useState(false);
   const [teamName, setTeamName] = useState("");
+
+  // --- TEAM FORM STATE (EDIT) 🔥 MOVED TO MAIN BAR ---
+  const [isEditTeamOpen, setIsEditTeamOpen] = useState(false);
+  const [editTeamId, setEditTeamId] = useState("");
+  const [editTeamName, setEditTeamName] = useState("");
 
   // --- ASSIGN STAFF STATE ---
   const [isAssignStaffOpen, setIsAssignStaffOpen] = useState(false);
@@ -70,6 +86,31 @@ export default function ManagementPage() {
     });
   };
 
+  // ================= INTERACTION HANDLERS =================
+
+  const handleStaffClick = async (staff: StaffMember) => {
+    try {
+      const realData = await fetchStaffById(staff.staffId);
+
+      setEditStaffForm({
+        firstName: realData.firstName || "",
+        lastName: realData.lastName || "",
+        sex: realData.sex === 1 ? "W" : "P", 
+        position: realData.position || "",
+        email: realData.email || "", 
+        phone: realData.phone || "",
+        dob: realData.dob ? realData.dob.split("T")[0] : "",
+        joinDate: realData.joinDate ? realData.joinDate.split("T")[0] : ""
+      });
+      
+      setSelectedStaffId(staff.staffId);
+      setIsEditingStaff(false); 
+      setIsEditStaffOpen(true);
+    } catch (err) {
+      alert("Gagal mengambil data lengkap staff dari database.");
+    }
+  };
+
   // ================= SUBMIT HANDLERS =================
 
   const handleAddStaffSubmit = async (e: React.FormEvent) => {
@@ -98,6 +139,37 @@ export default function ManagementPage() {
     }
   };
 
+  const handleEditStaffSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStaffId) return;
+    setIsSubmitting(true);
+    
+    try {
+      const payload = {
+        firstName: editStaffForm.firstName,
+        lastName: editStaffForm.lastName,
+        sex: editStaffForm.sex === "P" ? 0 : 1,
+        position: editStaffForm.position,
+        email: editStaffForm.email,
+        phone: editStaffForm.phone,
+        dob: editStaffForm.dob,
+        joinDate: editStaffForm.joinDate
+      };
+
+      await editStaff(selectedStaffId, payload);
+      
+      alert("Informasi staff berhasil diperbarui!");
+      setIsEditingStaff(false); 
+      setIsEditStaffOpen(false); 
+      setSelectedStaffId(null);
+      loadData(); 
+    } catch (err: any) {
+      alert(err.message || "Gagal memperbarui staff");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleAddTeamSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -109,6 +181,24 @@ export default function ManagementPage() {
       loadData();
     } catch (err: any) {
       alert(err.message || "Failed to create team");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditTeamSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTeamId) return;
+    setIsSubmitting(true);
+    try {
+      await editTeam(editTeamId, { teamName: editTeamName });
+      alert("Nama tim berhasil diperbarui!");
+      setIsEditTeamOpen(false);
+      setEditTeamId("");
+      setEditTeamName("");
+      loadData();
+    } catch (err: any) {
+      alert(err.message || "Gagal memperbarui tim");
     } finally {
       setIsSubmitting(false);
     }
@@ -165,7 +255,7 @@ export default function ManagementPage() {
           <UserRound size={22} className="text-brand-dark mt-1" strokeWidth={2.2} />
         </div>
 
-        {/* Fused Action Bar Group - all actions grouped together at the top */}
+        {/* 🔥 Fused Action Bar Group - NOW WITH EDIT TIM BUTTON */}
         <div className="mb-8 flex justify-start">
           <div className="action-group">
             <button type="button" onClick={() => setIsAddStaffOpen(true)} className="action-group-btn">
@@ -173,6 +263,9 @@ export default function ManagementPage() {
             </button>
             <button type="button" onClick={() => setIsAddTeamOpen(true)} className="action-group-btn">
               Tambah Tim <Plus size={16} strokeWidth={2.5} />
+            </button>
+            <button type="button" onClick={() => setIsEditTeamOpen(true)} className="action-group-btn">
+              Edit Tim <Pencil size={16} strokeWidth={2.5} />
             </button>
             <button type="button" onClick={() => setIsAssignStaffOpen(true)} className="action-group-btn">
               Ubah Anggota <ArrowLeftRight size={16} strokeWidth={2.5} />
@@ -195,7 +288,6 @@ export default function ManagementPage() {
         {/* Render Teams & Unassigned Staff */}
         {!isLoading && !error && (
           <div className="flex flex-col gap-8">
-
             {unassignedStaff.length > 0 && (
               <TeamSection
                 key="unassigned"
@@ -203,6 +295,7 @@ export default function ManagementPage() {
                 collapsed={collapsedTeams.has("unassigned")}
                 onToggle={() => toggleTeam("unassigned")}
                 isUnassigned={true}
+                onStaffClick={handleStaffClick} 
               />
             )}
 
@@ -217,6 +310,7 @@ export default function ManagementPage() {
                   team={team}
                   collapsed={collapsedTeams.has(team.teamId)}
                   onToggle={() => toggleTeam(team.teamId)}
+                  onStaffClick={handleStaffClick} 
                 />
               ))
             )}
@@ -230,17 +324,15 @@ export default function ManagementPage() {
       {isAddStaffOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 sm:p-6">
           <div className="card w-full max-w-md shadow-2xl flex flex-col max-h-[95vh] p-8">
-
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-semibold text-black">Tambah Staff</h2>
               <button onClick={() => setIsAddStaffOpen(false)} className="text-black/40 hover:text-black">
                 <X size={20} />
               </button>
             </div>
-
+            
             <form onSubmit={handleAddStaffSubmit} className="flex flex-col min-h-0">
               <div className="overflow-y-auto py-2 space-y-4 text-left scrollbar-thin">
-
                 <div>
                   <label className="form-label">Nama Lengkap</label>
                   <div className="grid grid-cols-2 gap-3">
@@ -262,7 +354,6 @@ export default function ManagementPage() {
                     />
                   </div>
                 </div>
-
                 <div>
                   <label className="form-label">Jenis Kelamin</label>
                   <div className="flex gap-2">
@@ -282,7 +373,6 @@ export default function ManagementPage() {
                     </button>
                   </div>
                 </div>
-
                 <div>
                   <label className="form-label">Posisi</label>
                   <input
@@ -294,7 +384,6 @@ export default function ManagementPage() {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="form-label">Email</label>
                   <input
@@ -306,7 +395,6 @@ export default function ManagementPage() {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="form-label">Nomor Telepon</label>
                   <input
@@ -322,9 +410,7 @@ export default function ManagementPage() {
                   <label className="form-label">Tanggal Lahir</label>
                   <input
                     type="date"
-                    onClick={(e) => {
-                      try { (e.target as HTMLInputElement).showPicker(); } catch (err) {}
-                    }}
+                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch (err) {} }}
                     className="input-field cursor-pointer text-black/80"
                     value={staffForm.dob}
                     onChange={e => setStaffForm({ ...staffForm, dob: e.target.value })}
@@ -335,9 +421,7 @@ export default function ManagementPage() {
                   <label className="form-label">Tanggal Bergabung</label>
                   <input
                     type="date"
-                    onClick={(e) => {
-                      try { (e.target as HTMLInputElement).showPicker(); } catch (err) {}
-                    }}
+                    onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch (err) {} }}
                     className="input-field cursor-pointer text-black/80"
                     value={staffForm.joinDate}
                     onChange={e => setStaffForm({ ...staffForm, joinDate: e.target.value })}
@@ -345,7 +429,6 @@ export default function ManagementPage() {
                   />
                 </div>
               </div>
-
               <div className="flex justify-end gap-3 pt-6 border-t border-brand-outline/40 mt-4">
                 <button
                   type="button"
@@ -354,11 +437,7 @@ export default function ManagementPage() {
                 >
                   Batal
                 </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="btn-primary text-sm"
-                >
+                <button type="submit" disabled={isSubmitting} className="btn-primary text-sm">
                   {isSubmitting ? "Memproses..." : "Tambah Staff"}
                 </button>
               </div>
@@ -367,7 +446,164 @@ export default function ManagementPage() {
         </div>
       )}
 
-      {/* 2. Tambah Tim Modal */}
+      {/* 2. Informasi & Edit Staff Modal */}
+      {isEditStaffOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 sm:p-6">
+          <div className="card w-full max-w-md shadow-2xl flex flex-col max-h-[95vh] p-8 transition-all">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-black">
+                {isEditingStaff ? "Edit Staff" : "Informasi Staff"}
+              </h2>
+              <button onClick={() => { setIsEditStaffOpen(false); setSelectedStaffId(null); setIsEditingStaff(false); }} className="text-black/40 hover:text-black">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditStaffSubmit} className="flex flex-col min-h-0">
+              <div className="overflow-y-auto py-2 space-y-4 text-left scrollbar-thin pr-1">
+                <div>
+                  <label className="form-label">Nama Lengkap</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <input
+                      type="text"
+                      className="input-field disabled:bg-brand-bg/60 disabled:text-black/60 disabled:border-transparent disabled:cursor-not-allowed"
+                      value={editStaffForm.firstName}
+                      onChange={e => setEditStaffForm({ ...editStaffForm, firstName: e.target.value })}
+                      required
+                      disabled={!isEditingStaff}
+                    />
+                    <input
+                      type="text"
+                      className="input-field disabled:bg-brand-bg/60 disabled:text-black/60 disabled:border-transparent disabled:cursor-not-allowed"
+                      value={editStaffForm.lastName}
+                      onChange={e => setEditStaffForm({ ...editStaffForm, lastName: e.target.value })}
+                      required
+                      disabled={!isEditingStaff}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label">Jenis Kelamin</label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditStaffForm({ ...editStaffForm, sex: "P" })}
+                      className={`btn-toggle disabled:opacity-70 disabled:cursor-not-allowed ${editStaffForm.sex === "P" ? "btn-active" : "btn-inactive"}`}
+                      disabled={!isEditingStaff}
+                    >
+                      P
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditStaffForm({ ...editStaffForm, sex: "W" })}
+                      className={`btn-toggle disabled:opacity-70 disabled:cursor-not-allowed ${editStaffForm.sex === "W" ? "btn-active" : "btn-inactive"}`}
+                      disabled={!isEditingStaff}
+                    >
+                      W
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label">Posisi</label>
+                  <input
+                    type="text"
+                    className="input-field disabled:bg-brand-bg/60 disabled:text-black/60 disabled:border-transparent disabled:cursor-not-allowed"
+                    value={editStaffForm.position}
+                    onChange={e => setEditStaffForm({ ...editStaffForm, position: e.target.value })}
+                    required
+                    disabled={!isEditingStaff}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Email</label>
+                  <input
+                    type="email"
+                    className="input-field disabled:bg-brand-bg/60 disabled:text-black/60 disabled:border-transparent disabled:cursor-not-allowed"
+                    value={editStaffForm.email}
+                    onChange={e => setEditStaffForm({ ...editStaffForm, email: e.target.value })}
+                    required
+                    disabled={!isEditingStaff}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Nomor Telepon</label>
+                  <input
+                    type="tel"
+                    className="input-field disabled:bg-brand-bg/60 disabled:text-black/60 disabled:border-transparent disabled:cursor-not-allowed"
+                    value={editStaffForm.phone}
+                    onChange={e => setEditStaffForm({ ...editStaffForm, phone: e.target.value })}
+                    required
+                    disabled={!isEditingStaff}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Tanggal Lahir</label>
+                  <input
+                    type="date"
+                    onClick={(e) => { if (isEditingStaff) { try { (e.target as HTMLInputElement).showPicker(); } catch (err) {} } }}
+                    className={`input-field disabled:bg-brand-bg/60 disabled:text-black/60 disabled:border-transparent disabled:cursor-not-allowed ${isEditingStaff ? 'cursor-pointer text-black/80' : ''}`}
+                    value={editStaffForm.dob}
+                    onChange={e => setEditStaffForm({ ...editStaffForm, dob: e.target.value })}
+                    required
+                    disabled={!isEditingStaff}
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Tanggal Bergabung</label>
+                  <input
+                    type="date"
+                    onClick={(e) => { if (isEditingStaff) { try { (e.target as HTMLInputElement).showPicker(); } catch (err) {} } }}
+                    className={`input-field disabled:bg-brand-bg/60 disabled:text-black/60 disabled:border-transparent disabled:cursor-not-allowed ${isEditingStaff ? 'cursor-pointer text-black/80' : ''}`}
+                    value={editStaffForm.joinDate}
+                    onChange={e => setEditStaffForm({ ...editStaffForm, joinDate: e.target.value })}
+                    required
+                    disabled={!isEditingStaff}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-3 pt-6 border-t border-brand-outline/40 mt-4">
+                {!isEditingStaff ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => { setIsEditStaffOpen(false); setSelectedStaffId(null); }}
+                      className="px-5 py-2 text-sm font-medium text-black/60 hover:bg-brand-bg rounded-xl transition cursor-pointer"
+                    >
+                      Tutup
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault(); 
+                        setIsEditingStaff(true);
+                      }}
+                      className="btn-primary text-sm bg-brand-primary cursor-pointer"
+                    >
+                      Edit Data
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingStaff(false)}
+                      className="px-5 py-2 text-sm font-medium text-black/60 hover:bg-brand-bg rounded-xl transition cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <button type="submit" disabled={isSubmitting} className="btn-primary text-sm bg-brand-primary cursor-pointer">
+                      {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
+                    </button>
+                  </>
+                )}
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Tambah Tim Modal */}
       {isAddTeamOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card w-full max-w-md p-8 shadow-2xl">
@@ -397,13 +633,71 @@ export default function ManagementPage() {
         </div>
       )}
 
-      {/* 3. Assign / Ubah Anggota Modal */}
+      {/* 3.5. 🔥 NEW: Edit Tim Modal with Dropdown */}
+      {isEditTeamOpen && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-md p-8 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold text-black">Edit Nama Tim</h2>
+              <button onClick={() => { setIsEditTeamOpen(false); setEditTeamId(""); setEditTeamName(""); }} className="text-black/40 hover:text-black">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleEditTeamSubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="form-label">Pilih Tim</label>
+                <select
+                  className="input-field cursor-pointer"
+                  value={editTeamId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setEditTeamId(id);
+                    const selectedTeam = teams.find(t => t.teamId === id);
+                    setEditTeamName(selectedTeam ? selectedTeam.teamName : "");
+                  }}
+                  required
+                >
+                  <option value="" disabled>-- Pilih Tim --</option>
+                  {teams.map(t => (
+                    <option key={t.teamId} value={t.teamId}>{t.teamName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="form-label">Nama Baru</label>
+                <input
+                  type="text"
+                  placeholder="Masukkan nama baru"
+                  className="input-field"
+                  value={editTeamName}
+                  onChange={e => setEditTeamName(e.target.value)}
+                  required
+                  disabled={!editTeamId}
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-4">
+                <button 
+                  type="button" 
+                  onClick={() => { setIsEditTeamOpen(false); setEditTeamId(""); setEditTeamName(""); }} 
+                  className="px-5 py-2 text-sm text-black/60 hover:bg-brand-bg rounded-xl"
+                >
+                  Batal
+                </button>
+                <button type="submit" disabled={isSubmitting || !editTeamId} className="btn-primary text-sm">
+                  {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Assign / Ubah Anggota Modal */}
       {isAssignStaffOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card w-full max-w-md p-8 shadow-2xl">
             <h2 className="text-xl font-semibold text-center text-black mb-6">Pindah / Assign Anggota</h2>
             <form onSubmit={handleAssignStaffSubmit} className="flex flex-col gap-4">
-
               <div>
                 <label className="form-label">Pilih Staff</label>
                 <select
@@ -427,7 +721,6 @@ export default function ManagementPage() {
                   ))}
                 </select>
               </div>
-
               <div>
                 <label className="form-label">Pindah ke Tim</label>
                 <select
@@ -443,7 +736,6 @@ export default function ManagementPage() {
                   <option value="unassigned">-- Hapus dari Tim (Unassign) --</option>
                 </select>
               </div>
-
               <div className="flex justify-end gap-3 mt-4">
                 <button type="button" onClick={() => setIsAssignStaffOpen(false)} className="px-5 py-2 text-sm text-black/60 hover:bg-brand-bg rounded-xl">
                   Batal
@@ -457,12 +749,11 @@ export default function ManagementPage() {
         </div>
       )}
 
-      {/* 4. Hapus Modal */}
+      {/* 5. Hapus Modal */}
       {isDeleteOpen && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="card w-full max-w-md p-8 shadow-2xl">
             <h2 className="text-xl font-semibold text-center text-black mb-6">Hapus Staff / Tim</h2>
-
             <div className="flex flex-col gap-4">
               <div>
                 <label className="form-label">Pilih yang ingin dihapus</label>
@@ -500,7 +791,6 @@ export default function ManagementPage() {
                   ))}
                 </select>
               </div>
-
               {deleteTarget && (
                 <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-3">
                   {deleteTarget.type === "staff"
@@ -509,7 +799,6 @@ export default function ManagementPage() {
                 </div>
               )}
             </div>
-
             <div className="flex justify-end gap-3 mt-6">
               <button
                 type="button"
@@ -530,21 +819,24 @@ export default function ManagementPage() {
           </div>
         </div>
       )}
-
     </div>
   );
 }
+
+// ================= SUBCOMPONENTS =================
 
 function TeamSection({
   team,
   collapsed,
   onToggle,
   isUnassigned = false,
+  onStaffClick 
 }: {
   team: Team;
   collapsed: boolean;
   onToggle: () => void;
   isUnassigned?: boolean;
+  onStaffClick: (staff: StaffMember) => void;
 }) {
   return (
     <section>
@@ -579,14 +871,15 @@ function TeamSection({
               {team.members.map((member, i) => (
                 <div
                   key={member.staffId}
-                  className={`grid grid-cols-[1.2fr_1.2fr_0.8fr_2fr] items-center px-6 py-4 text-[15px] text-black/90 hover:bg-brand-bg/50 transition-colors ${
+                  onClick={() => onStaffClick(member)}
+                  className={`cursor-pointer grid grid-cols-[1.2fr_1.2fr_0.8fr_2fr] items-center px-6 py-4 text-[15px] text-black/90 hover:bg-brand-bg/80 transition-colors ${
                     i !== team.members.length - 1 ? "border-b border-brand-outline/40" : ""
                   }`}
                 >
-                  <span className="font-medium">{member.name}</span>
+                  <span className="font-medium text-brand-primary">{member.name}</span>
                   <span className="text-black/70">{member.position}</span>
                   <span><StatusBadge status={member.status as "ON" | "OFF"} /></span>
-                  <span className="text-sm text-black/50">{member.note ?? ""}</span>
+                  <span className="text-sm text-black/50 truncate pr-4">{member.note ?? ""}</span>
                 </div>
               ))}
             </div>

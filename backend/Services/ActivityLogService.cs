@@ -36,10 +36,10 @@ public class ActivityLogService : IActivityLogService
         return logs.Select(l => new ActivityLogResponse
         {
             LogId = l.LogId,
-            Date = l.Date,     // 🔥 Pure DateTime
-            Time = l.Time,     // 🔥 Pure TimeSpan
+            Date = l.Date,
+            Time = l.Time,
             Actor = l.Actor,
-            Action = l.Action, // 🔥 Pure Enum mapping
+            Action = l.Action,
             DateRange = l.DateRange,
             Rotation = l.Rotation,
             Target = l.Target,
@@ -130,6 +130,177 @@ public class ActivityLogService : IActivityLogService
             Rotation = null,
             Target = targetName,
             Description = ticket.Title ?? "Pengajuan Tiket Baru"
+        });
+    }
+
+    public async Task LogTicketApprovedAsync(Ticket ticket, Staff staff, string? actorStaffId)
+    {
+        var actorName = await GetActorNameAsync(actorStaffId);
+        var targetName = $"{staff.FirstName} {staff.LastName}".Trim();
+        var dateRange = $"{ticket.StartDate:yyyy-MM-dd} - {ticket.EndDate:yyyy-MM-dd}";
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Date = DateTime.UtcNow.Date,
+            Time = DateTime.UtcNow.TimeOfDay,
+            Actor = actorName,
+            Action = Action.ApproveTicket,
+            DateRange = dateRange,
+            Rotation = null,
+            Target = targetName,
+            Description = $"Menyetujui tiket: {ticket.Title}"
+        });
+    }
+
+    public async Task LogTicketDeclinedAsync(Ticket ticket, Staff staff, string? actorStaffId, string declineReason)
+    {
+        var actorName = await GetActorNameAsync(actorStaffId);
+        var targetName = $"{staff.FirstName} {staff.LastName}".Trim();
+        var dateRange = $"{ticket.StartDate:yyyy-MM-dd} - {ticket.EndDate:yyyy-MM-dd}";
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Date = DateTime.UtcNow.Date,
+            Time = DateTime.UtcNow.TimeOfDay,
+            Actor = actorName,
+            Action = Action.DeclineTicket,
+            DateRange = dateRange,
+            Rotation = null,
+            Target = targetName,
+            Description = $"Menolak tiket. Alasan: {declineReason}"
+        });
+    }
+
+    public async Task LogStaffCreatedAsync(Staff staff, string? actorStaffId)
+    {
+        var actorName = await GetActorNameAsync(actorStaffId);
+        var targetName = $"{staff.FirstName} {staff.LastName}".Trim();
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Date = DateTime.UtcNow.Date,
+            Time = DateTime.UtcNow.TimeOfDay,
+            Actor = actorName,
+            Action = Action.CreateStaff,
+            DateRange = null,
+            Rotation = null,
+            Target = targetName,
+            Description = $"Menambahkan staf baru dengan posisi {staff.Position ?? "Staff"}"
+        });
+    }
+
+    public async Task LogStaffEditedAsync(Staff staff, string? actorStaffId, string changeSummary)
+    {
+        var actorName = await GetActorNameAsync(actorStaffId);
+        var targetName = $"{staff.FirstName} {staff.LastName}".Trim();
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Date = DateTime.UtcNow.Date,
+            Time = DateTime.UtcNow.TimeOfDay,
+            Actor = actorName,
+            Action = Action.EditStaff,
+            DateRange = null,
+            Rotation = null,
+            Target = targetName,
+            Description = changeSummary
+        });
+    }
+
+    public async Task LogStaffDeletedAsync(string staffName, string? actorStaffId)
+    {
+        var actorName = await GetActorNameAsync(actorStaffId);
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Date = DateTime.UtcNow.Date,
+            Time = DateTime.UtcNow.TimeOfDay,
+            Actor = actorName,
+            Action = Action.RemoveStaff,
+            DateRange = null,
+            Rotation = null,
+            Target = staffName, // Passed as string because the entity is deleted
+            Description = "Menghapus profil staf dan akses pengguna dari sistem"
+        });
+    }
+
+    public async Task LogAccountActivatedAsync(Staff staff)
+    {
+        var staffName = $"{staff.FirstName} {staff.LastName}".Trim();
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Date = DateTime.UtcNow.Date,
+            Time = DateTime.UtcNow.TimeOfDay,
+            Actor = staffName, // The staff activates their own account
+            Action = Action.AccountActivation,
+            DateRange = null,
+            Rotation = null,
+            Target = staffName,
+            Description = "Berhasil mengaktivasi akun dan membuat password"
+        });
+    }
+
+    // ==========================================
+    // TEAM LOGS
+    // ==========================================
+    public async Task LogTeamCreatedAsync(Team team, string? actorStaffId)
+    {
+        var actorName = await GetActorNameAsync(actorStaffId);
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Date = DateTime.UtcNow.Date,
+            Time = DateTime.UtcNow.TimeOfDay,
+            Actor = actorName,
+            Action = Action.CreateTeam,
+            DateRange = null,
+            Rotation = null,
+            Target = $"Tim {team.TeamName}",
+            Description = "Membuat tim lapangan baru"
+        });
+    }
+
+    public async Task LogTeamEditedAsync(Team team, string? actorStaffId, string changeSummary)
+    {
+        var actorName = await GetActorNameAsync(actorStaffId);
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Date = DateTime.UtcNow.Date,
+            Time = DateTime.UtcNow.TimeOfDay,
+            Actor = actorName,
+            Action = Action.EditTeam,
+            DateRange = null,
+            Rotation = null,
+            Target = $"Tim {team.TeamName}",
+            Description = changeSummary
+        });
+    }
+
+    public async Task LogTeamDeletedAsync(string teamName, string? actorStaffId)
+    {
+        var actorName = await GetActorNameAsync(actorStaffId);
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Date = DateTime.UtcNow.Date,
+            Time = DateTime.UtcNow.TimeOfDay,
+            Actor = actorName,
+            Action = Action.RemoveTeam,
+            DateRange = null,
+            Rotation = null,
+            Target = $"Tim {teamName}", // Passed as string because the entity is deleted
+            Description = "Menghapus tim beserta strukturnya dari sistem"
         });
     }
 }

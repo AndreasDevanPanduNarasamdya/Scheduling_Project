@@ -10,9 +10,10 @@ using SchedulingMeruap.Api.Data;
 using SchedulingMeruap.Api.Services.Interfaces;
 using SchedulingMeruap.Api.DTO.Requests;
 
+
 namespace SchedulingMeruap.Api.Controllers
 {
-    [Authorize] // 🔥 IMPORTANT: This ensures only logged-in users can hit this, allowing us to read their token
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class TimelineController : ControllerBase
@@ -65,7 +66,7 @@ namespace SchedulingMeruap.Api.Controllers
             {
                 var actorId = GetCurrentActorId(); // 🔥 Grab the user who clicked "Save"
                 var result = await _timelineService.CreateTimelineAsync(request, actorId); // 🔥 Pass it down
-                return Ok(result);
+                return Ok(new { message = "Jadwal berhasil dibuat." });
             }
             catch (ArgumentException ex)
             {
@@ -94,13 +95,53 @@ namespace SchedulingMeruap.Api.Controllers
             if (!ModelState.IsValid) return BadRequest(ModelState);
             try
             {
-                var actorId = GetCurrentActorId(); // 🔥 Grab the user who clicked "End"
-                await _timelineService.EndActiveTimelineAsync(request, actorId); // 🔥 Pass it down
+                var actorId = GetCurrentActorId();
+                await _timelineService.EndActiveTimelineAsync(request, actorId);
                 return Ok(new { message = "Schedule successfully closed." });
             }
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
+            }
+        }
+        [HttpPut("{timelineId}")]
+        public async Task<IActionResult> UpdateTimeline(string timelineId, [FromBody] UpdateTimelineRequest request)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            try
+            {
+                var actorId = GetCurrentActorId();
+                await _timelineService.UpdateTimelineAsync(timelineId, request, actorId);
+                return Ok(new { message = "Jadwal berhasil diperbarui." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Gagal memperbarui jadwal.", details = ex.Message });
+            }
+        }
+
+        // 🔥 NEW: Delete Timeline Endpoint
+        [HttpDelete("{timelineId}")]
+        public async Task<IActionResult> DeleteTimeline(string timelineId)
+        {
+            try
+            {
+                var actorId = GetCurrentActorId();
+                await _timelineService.DeleteTimelineAsync(timelineId, actorId);
+                return Ok(new { message = "Jadwal berhasil dihapus." });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Gagal menghapus jadwal.", details = ex.Message });
             }
         }
     }

@@ -7,6 +7,6 @@ public interface ITicketService
 {
     Task<Ticket> SubmitTicketAsync(SubmitTicketRequest request, string userId, string? actorStaffId);
     Task<IEnumerable<Ticket>> GetAllTicketsAsync();
-    Task ApproveTicketAsync(string id, string reason);
-    Task RejectTicketAsync(string id, string reason);
+    Task ApproveTicketAsync(string id, string reason, string? actorStaffId);
+    Task RejectTicketAsync(string id, string reason, string? actorStaffId);
 }

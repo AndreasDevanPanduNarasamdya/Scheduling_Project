@@ -47,7 +47,8 @@ public class ActivityLogRepository : IActivityLogRepository
             var team = await _context.Set<Team>().FindAsync(teamId);
             if (team != null)
             {
-                query = query.Where(l => l.Target == team.TeamName);
+                var teamTargetName = $"Tim {team.TeamName}";
+                query = query.Where(l => l.Target == teamTargetName);
             }
         }
 

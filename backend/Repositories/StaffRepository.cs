@@ -16,7 +16,9 @@ public class StaffRepository : IStaffRepository
 
     public async Task<Staff?> GetByIdAsync(string staffId)
     {
+        // 🔥 ADDED .Include(s => s.User) so the Service can update the Email!
         return await _dbContext.Staff
+            .Include(s => s.User)
             .FirstOrDefaultAsync(s => s.StaffId == staffId);
     }
 
@@ -36,6 +38,7 @@ public class StaffRepository : IStaffRepository
         _dbContext.Staff.Update(staff);
         await _dbContext.SaveChangesAsync();
     }
+
     public async Task<List<Staff>> GetUnassignedStaffAsync()
     {
         return await _dbContext.Staff
@@ -43,6 +46,7 @@ public class StaffRepository : IStaffRepository
             .Where(s => !s.StaffTeams.Any())
             .ToListAsync();
     }
+
     public async Task AssignStaffToTeamAsync(string staffId, string teamId)
     {
         // 1. Remove old assignments for this staff

@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Upload, Send } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchWithToken } from "../../api";
+import { fetchWithToken, fetchStaffById } from "../../api";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+
 
 export default function Form() {
   const [isTicketOn, setIsTicketOn] = useState(true);
@@ -12,6 +13,20 @@ export default function Form() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const { user } = useAuth();
+  const [liveStaff, setLiveStaff] = useState<any>(null);
+
+  useEffect(() => {
+    if (user?.staff?.staffId) {
+      fetchStaffById(user.staff.staffId)
+        .then((data) => setLiveStaff(data))
+        .catch((err) => console.error("Failed to fetch live staff profile:", err));
+    }
+  }, [user?.staff?.staffId]);
+
+  // Use live data if we have it, otherwise fallback to the auth token data
+  const displayFirstName = liveStaff?.firstName ?? user?.staff?.firstName ?? "";
+  const displayLastName = liveStaff?.lastName ?? user?.staff?.lastName ?? "";
+  const displayPosition = liveStaff?.position ?? user?.staff?.position ?? "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,13 +86,13 @@ export default function Form() {
             <div className="flex gap-3">
               <input 
                 type="text" 
-                value={user?.staff?.firstName ?? ""} 
+                value={displayFirstName} 
                 readOnly
                 className="input-locked" 
               />
               <input 
                 type="text" 
-                value={user?.staff?.lastName ?? ""}
+                value={displayLastName}
                 readOnly
                 className="input-locked" 
               />
@@ -88,7 +103,7 @@ export default function Form() {
             <label className="form-label">Posisi</label>
             <input 
               type="text" 
-              value={user?.staff?.position ?? ""}
+              value={displayPosition}
               readOnly
               className="input-locked" 
             />

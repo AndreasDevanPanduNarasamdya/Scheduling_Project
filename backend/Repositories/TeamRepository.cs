@@ -56,4 +56,10 @@ public class TeamRepository : ITeamRepository
     {
         return await _context.Teams.FirstOrDefaultAsync(t => t.TeamId == teamId);
     }
+
+    public async Task UpdateTeamAsync(Team team)
+    {
+        _context.Teams.Update(team);
+        await _context.SaveChangesAsync();
+    }
 }

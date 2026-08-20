@@ -5,16 +5,19 @@ using SchedulingMeruap.Api.Repositories.Interfaces;
 using SchedulingMeruap.Api.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using SchedulingMeruap.Api.DTO.Requests;
+using Action = SchedulingMeruap.Api.Models.Action;
 
 namespace SchedulingMeruap.Api.Services;
 
 public class StaffService : IStaffService
 {
     private readonly IStaffRepository _staffRepository;
+    private readonly IActivityLogService _activityLogService;
 
-    public StaffService(IStaffRepository staffRepository)
+    public StaffService(IStaffRepository staffRepository, IActivityLogService activityLogService)
     {
         _staffRepository = staffRepository;
+        _activityLogService = activityLogService;
     }
 
     public async Task<StaffResponse?> GetByIdAsync(string staffId)
@@ -42,11 +45,15 @@ public class StaffService : IStaffService
             StaffId = staff.StaffId,
             FirstName = staff.FirstName,
             LastName = staff.LastName,
+            Sex = (byte)staff.Sex,
             Position = staff.Position,
             Phone = staff.Phone,
-            JoinDate = staff.JoinDate
+            Dob = staff.Dob,
+            JoinDate = staff.JoinDate,
+            Email = staff.User?.Email
         };
     }
+
     public async Task<List<TeamMemberResponse>> GetUnassignedStaffAsync()
     {
         var staffList = await _staffRepository.GetUnassignedStaffAsync();
@@ -61,7 +68,6 @@ public class StaffService : IStaffService
         }).ToList();
     }
 
-    // NEW
     public async Task<bool> AssignStaffAsync(StaffRequest dto)
     {
         // Check if staff exists first
@@ -71,11 +77,52 @@ public class StaffService : IStaffService
         await _staffRepository.AssignStaffToTeamAsync(dto.StaffId, dto.TeamId);
         return true;
     }
-    public async Task DeleteStaffAsync(string staffId)
+
+    public async Task DeleteStaffAsync(string staffId, string? actorStaffId)
     {
         if (string.IsNullOrEmpty(staffId))
             throw new ArgumentException("Staff ID is required.");
 
+        // 🔥 Grab the staff info BEFORE deleting so we can log their name!
+        var staff = await _staffRepository.GetByIdAsync(staffId);
+        if (staff == null) throw new ArgumentException("Staff not found.");
+
+        string staffName = $"{staff.FirstName} {staff.LastName}".Trim();
+
         await _staffRepository.DeleteStaffAsync(staffId);
+
+        // 🔥 Trigger the log!
+        await _activityLogService.LogStaffDeletedAsync(staffName, actorStaffId);
+    }
+
+    public async Task UpdateStaffAsync(string staffId, UpdateStaffRequest request, string? actorStaffId)
+    {
+        // 1. Fetch the existing staff member (Includes the User navigation property)
+        var staff = await _staffRepository.GetByIdAsync(staffId);
+        if (staff == null)
+        {
+            throw new ArgumentException("Staff member not found.");
+        }
+
+        // 2. Update the pure STAFF properties
+        staff.FirstName = request.FirstName;
+        staff.LastName = request.LastName;
+        staff.Sex = (Sex)request.Sex;
+        staff.Position = request.Position;
+        staff.Phone = request.Phone;
+        staff.Dob = request.Dob;
+        staff.JoinDate = request.JoinDate;
+
+        // 3. Update the linked USER property (The Email)
+        if (staff.User != null)
+        {
+            staff.User.Email = request.Email;
+        }
+
+        // 4. Save to database
+        await _staffRepository.UpdateAsync(staff);
+
+        // 5. 🔥 Trigger the Log!
+        await _activityLogService.LogStaffEditedAsync(staff, actorStaffId, "Memperbarui informasi profil staf");
     }
 }

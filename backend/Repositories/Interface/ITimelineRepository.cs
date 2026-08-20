@@ -13,4 +13,6 @@ public interface ITimelineRepository
     Task UpdateTimelineAsync(Timeline timeline);
     Task<bool> TeamExistsAsync(string teamId);
     Task<bool> StaffExistsAsync(string staffId);
+    Task<Timeline?> GetTimelineByIdAsync(string timelineId);
+    Task DeleteTimelineAsync(string timelineId);
 }

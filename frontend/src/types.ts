@@ -103,3 +103,14 @@ export interface ActivityLogResponse {
   target: string;
   description?: string | null;
 }
+
+export interface UpdateStaffPayload {
+  firstName: string;
+  lastName: string;
+  sex: number; // 0 for P, 1 for W
+  position: string;
+  email: string;
+  phone: string;
+  dob: string; // YYYY-MM-DD
+  joinDate: string; // YYYY-MM-DD
+}

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from "../../context/AuthContext";
-import { fetchTimeline } from "../../api";
+import { fetchTimeline, fetchStaffById } from "../../api";
 import TimelineComponent from "../components/TimelineComponent";
 import type { TimelineTeam } from "../../types";
 
@@ -12,6 +12,7 @@ export default function Dashboard() {
 
   const timelineStartDate = useMemo(() => new Date(new Date().getFullYear(), 0, 1), []);
   const timelineEndDate = useMemo(() => new Date(new Date().getFullYear() + 1, 11, 31), []);
+  const [liveStaff, setLiveStaff] = useState<any>(null);
 
   useEffect(() => {
   const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -21,7 +22,13 @@ export default function Dashboard() {
     .then((data) => setTeams(Array.isArray(data) ? data : []))
     .catch((err) => console.error("Failed to fetch timeline:", err))
     .finally(() => setIsTimelineLoading(false));
-
+    
+  if (user?.staff?.staffId) {
+      fetchStaffById(user.staff.staffId)
+        .then((data) => setLiveStaff(data))
+        .catch((err) => console.error("Failed to fetch live staff profile:", err));
+    }
+    
   return () => clearInterval(timer);
 }, []);
     
@@ -31,10 +38,14 @@ export default function Dashboard() {
   const hours = currentTime.getHours().toString().padStart(2, "0");
   const minutes = currentTime.getMinutes().toString().padStart(2, "0");
   const timeZone = currentTime.toLocaleTimeString("en-us", { timeZoneName: "short" }).split(" ")[2];
-  const displayName = user?.staff?.firstName
-    ? `${user.staff.firstName} ${user.staff.lastName ?? ""}`.trim()
+  const firstName = liveStaff?.firstName ?? user?.staff?.firstName;
+  const lastName = liveStaff?.lastName ?? user?.staff?.lastName ?? "";
+  
+  const displayName = firstName 
+    ? `${firstName} ${lastName}`.trim() 
     : user?.email ?? "Guest";
-  const displayPosition = user?.staff?.position ?? "Team";
+    
+  const displayPosition = liveStaff?.position ?? user?.staff?.position ?? "Team";
   const currentHour = currentTime.getHours();
   let greeting = "Welcome";
   

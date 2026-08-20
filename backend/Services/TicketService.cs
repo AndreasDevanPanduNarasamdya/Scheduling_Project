@@ -11,7 +11,6 @@ public class TicketService : ITicketService
     private readonly IStaffRepository _staffRepository;
     private readonly IActivityLogService _activityLogService;
 
-    // 🔥 1. Fixed constructor to inject all three dependencies properly
     public TicketService(
         ITicketRepository ticketRepository,
         IStaffRepository staffRepository,
@@ -22,7 +21,6 @@ public class TicketService : ITicketService
         _activityLogService = activityLogService;
     }
 
-    // 🔥 2. Added `string? actorStaffId` to the method signature
     public async Task<Ticket> SubmitTicketAsync(SubmitTicketRequest request, string userId, string? actorStaffId)
     {
         var newTicket = new Ticket
@@ -38,10 +36,9 @@ public class TicketService : ITicketService
             Reason = null,
         };
 
-        // 🔥 3. Added back the save call so it actually inserts into your database!
         await _ticketRepository.CreateAsync(newTicket);
 
-        // 🔥 4. Records the action permanently into your history log
+        // 🔥 Logs the ticket creation
         var staff = await _staffRepository.GetByIdAsync(userId);
         if (staff != null)
         {
@@ -56,25 +53,39 @@ public class TicketService : ITicketService
         return await _ticketRepository.GetAllTicketsAsync();
     }
 
-    public async Task ApproveTicketAsync(string id, string reason)
+    public async Task ApproveTicketAsync(string id, string reason, string? actorStaffId)
     {
         var ticket = await _ticketRepository.GetByIdAsync(id);
         if (ticket == null) throw new KeyNotFoundException("Ticket not found");
 
-        ticket.Status = (TicketStatus)1;
+        ticket.Status = TicketStatus.Approved;
         ticket.Reason = reason;
 
         await _ticketRepository.UpdateAsync(ticket);
+
+        // 🔥 Fetch the staff member who owns the ticket, then log the approval!
+        var staff = await _staffRepository.GetByIdAsync(ticket.StaffId);
+        if (staff != null)
+        {
+            await _activityLogService.LogTicketApprovedAsync(ticket, staff, actorStaffId);
+        }
     }
 
-    public async Task RejectTicketAsync(string id, string reason)
+    public async Task RejectTicketAsync(string id, string reason, string? actorStaffId)
     {
         var ticket = await _ticketRepository.GetByIdAsync(id);
         if (ticket == null) throw new KeyNotFoundException("Ticket not found");
 
-        ticket.Status = (TicketStatus)2;
+        ticket.Status = TicketStatus.Declined;
         ticket.Reason = reason;
 
         await _ticketRepository.UpdateAsync(ticket);
+
+        // 🔥 Fetch the staff member who owns the ticket, then log the rejection!
+        var staff = await _staffRepository.GetByIdAsync(ticket.StaffId);
+        if (staff != null)
+        {
+            await _activityLogService.LogTicketDeclinedAsync(ticket, staff, actorStaffId, reason);
+        }
     }
 }

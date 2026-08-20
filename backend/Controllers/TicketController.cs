@@ -91,7 +91,8 @@ public class TicketController : ControllerBase
     {
         try
         {
-            await _ticketService.ApproveTicketAsync(id, request.Reason);
+            var actorId = GetCurrentActorId(); // 🔥 1. Grab the admin who clicked approve
+            await _ticketService.ApproveTicketAsync(id, request.Reason, actorId); // 🔥 2. Pass it down
             return Ok(new { message = "Ticket approved successfully" });
         }
         catch (KeyNotFoundException)
@@ -105,7 +106,8 @@ public class TicketController : ControllerBase
     {
         try
         {
-            await _ticketService.RejectTicketAsync(id, request.Reason);
+            var actorId = GetCurrentActorId(); // 🔥 1. Grab the admin who clicked reject
+            await _ticketService.RejectTicketAsync(id, request.Reason, actorId); // 🔥 2. Pass it down
             return Ok(new { message = "Ticket rejected successfully" });
         }
         catch (KeyNotFoundException)

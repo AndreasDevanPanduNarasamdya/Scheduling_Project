@@ -343,4 +343,45 @@ public class TimelineService : ITimelineService
         var team = !string.IsNullOrEmpty(request.TeamId) ? await _teamRepository.GetByIdAsync(request.TeamId) : null;
         await _activityLogService.LogScheduleChangedAsync(openTimeline, staff, team, actorStaffId, $"Ended active schedule effective {request.EffectiveEndDate:yyyy-MM-dd}");
     }
+    public async Task UpdateTimelineAsync(string timelineId, UpdateTimelineRequest request, string? actorStaffId)
+    {
+        var timeline = await _repository.GetTimelineByIdAsync(timelineId);
+        if (timeline == null)
+        {
+            throw new ArgumentException("Schedule not found.");
+        }
+
+        if (request.EndDate.HasValue && request.EndDate.Value.Date < request.StartDate.Date)
+            throw new ArgumentException("EndDate cannot be earlier than StartDate.");
+
+        if (request.DaysOn < 1 || request.DaysOff < 1)
+            throw new ArgumentException("DaysOn and DaysOff must be greater than or equal to 1.");
+
+        timeline.DaysOn = request.DaysOn;
+        timeline.DaysOff = request.DaysOff;
+        timeline.StartDate = request.StartDate.Date;
+        timeline.EndDate = request.EndDate?.Date;
+
+        await _repository.UpdateTimelineAsync(timeline);
+
+        var staff = !string.IsNullOrEmpty(timeline.StaffId) ? await _staffRepository.GetByIdAsync(timeline.StaffId) : null;
+        var team = !string.IsNullOrEmpty(timeline.TeamId) ? await _teamRepository.GetByIdAsync(timeline.TeamId) : null;
+        await _activityLogService.LogScheduleChangedAsync(timeline, staff, team, actorStaffId, "Updated timeline schedule configuration");
+    }
+
+    public async Task DeleteTimelineAsync(string timelineId, string? actorStaffId)
+    {
+        var timeline = await _repository.GetTimelineByIdAsync(timelineId);
+        if (timeline == null)
+        {
+            throw new ArgumentException("Schedule not found.");
+        }
+
+        var staff = !string.IsNullOrEmpty(timeline.StaffId) ? await _staffRepository.GetByIdAsync(timeline.StaffId) : null;
+        var team = !string.IsNullOrEmpty(timeline.TeamId) ? await _teamRepository.GetByIdAsync(timeline.TeamId) : null;
+
+        await _repository.DeleteTimelineAsync(timelineId);
+
+        await _activityLogService.LogScheduleDeletedAsync(staff, team, actorStaffId);
+    }
 }

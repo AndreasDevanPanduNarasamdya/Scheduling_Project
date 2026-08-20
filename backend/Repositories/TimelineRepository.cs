@@ -57,16 +57,6 @@ public class TimelineRepository : ITimelineRepository
         await _context.SaveChangesAsync();
     }
 
-    // public async Task SetFollowsTeamScheduleAsync(string staffId, bool followsTeam)
-    // {
-    //     var staffTeams = await _context.StaffTeams.Where(st => st.StaffId == staffId).ToListAsync();
-    //     foreach (var st in staffTeams)
-    //     {
-    //         st.FollowsTeamSchedule = followsTeam;
-    //     }
-    //     await _context.SaveChangesAsync();
-    // }
-
     public async Task<bool> TeamExistsAsync(string teamId)
     {
         return await _context.Teams.AnyAsync(t => t.TeamId == teamId);
@@ -75,5 +65,19 @@ public class TimelineRepository : ITimelineRepository
     public async Task<bool> StaffExistsAsync(string staffId)
     {
         return await _context.Staff.AnyAsync(s => s.StaffId == staffId);
+    }
+    public async Task<Timeline?> GetTimelineByIdAsync(string timelineId)
+    {
+        return await _context.Timelines.FirstOrDefaultAsync(t => t.TimelineId == timelineId);
+    }
+
+    public async Task DeleteTimelineAsync(string timelineId)
+    {
+        var timeline = await _context.Timelines.FirstOrDefaultAsync(t => t.TimelineId == timelineId);
+        if (timeline != null)
+        {
+            _context.Timelines.Remove(timeline);
+            await _context.SaveChangesAsync();
+        }
     }
 }

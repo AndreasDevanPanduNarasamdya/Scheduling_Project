@@ -13,29 +13,31 @@ public class NewHireService : INewHireService
 {
     private readonly INewHireRepository _newHireRepository;
     private readonly ApplicationDbContext _context;
+    private readonly IActivityLogService _activityLogService;
 
-    public NewHireService(INewHireRepository newHireRepository, ApplicationDbContext context)
+    public NewHireService(
+        INewHireRepository newHireRepository,
+        ApplicationDbContext context,
+        IActivityLogService activityLogService)
     {
         _newHireRepository = newHireRepository;
         _context = context;
+        _activityLogService = activityLogService;
     }
 
     public async Task<bool> ActivateAccountAsync(string token, string password)
     {
-        // 1. Find the staging record by token and verify expiration
         var newHire = await _newHireRepository.GetByTokenAsync(token);
         if (newHire == null || newHire.TokenExpiry < DateTime.Now)
         {
             return false;
         }
 
-        // 2. Open a transaction to ensure atomic execution (all or nothing)
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             string userId = Guid.NewGuid().ToString();
 
-            // 3. Create the permanent User record
             var user = new User
             {
                 UserId = userId,
@@ -46,7 +48,6 @@ public class NewHireService : INewHireService
             };
             _context.Users.Add(user);
 
-            // 4. Create the permanent Staff record linked to the User
             var staff = new Staff
             {
                 StaffId = Guid.NewGuid().ToString(),
@@ -60,12 +61,12 @@ public class NewHireService : INewHireService
                 JoinDate = newHire.JoinDate
             };
             _context.Staff.Add(staff);
-
-            // 5. Remove the temporary record from the staging table
             _context.NewHires.Remove(newHire);
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+            await _activityLogService.LogAccountActivatedAsync(staff);
+
             return true;
         }
         catch
@@ -89,7 +90,6 @@ public class NewHireService : INewHireService
             return new NewHireResponse { Status = "expired" };
         }
 
-        // Token is valid! Grab the name and send it back.
         return new NewHireResponse
         {
             Status = "valid",

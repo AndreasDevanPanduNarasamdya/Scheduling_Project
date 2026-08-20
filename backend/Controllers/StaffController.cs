@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SchedulingMeruap.Api.DTO.Requests;
@@ -17,6 +18,12 @@ public class StaffController : ControllerBase
         _staffService = staffService;
     }
 
+    // 🔥 1. Add the helper to get the logged-in user
+    private string? GetCurrentActorId()
+    {
+        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    }
+
     [HttpGet]
     public async Task<IActionResult> GetAll()
     {
@@ -31,6 +38,7 @@ public class StaffController : ControllerBase
         if (staff == null) return NotFound();
         return Ok(staff);
     }
+
     [HttpGet("unassigned")]
     public async Task<IActionResult> GetUnassignedStaff()
     {
@@ -48,12 +56,34 @@ public class StaffController : ControllerBase
         return Ok(new { message = "Staff assigned successfully!" });
     }
 
+    // 🔥 2. Update Edit Staff Endpoint
+    [HttpPut("{staffId}")]
+    public async Task<IActionResult> EditStaff(string staffId, [FromBody] UpdateStaffRequest request)
+    {
+        try
+        {
+            var actorId = GetCurrentActorId(); // 🔥 Grab the admin editing the staff
+            await _staffService.UpdateStaffAsync(staffId, request, actorId); // 🔥 Pass it down
+            return Ok(new { message = "Staff updated successfully" });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { message = "An error occurred while updating the staff member." });
+        }
+    }
+
+    // 🔥 3. Update Delete Staff Endpoint
     [HttpDelete("{staffId}")]
     public async Task<IActionResult> DeleteStaff(string staffId)
     {
         try
         {
-            await _staffService.DeleteStaffAsync(staffId);
+            var actorId = GetCurrentActorId(); // 🔥 Grab the admin deleting the staff
+            await _staffService.DeleteStaffAsync(staffId, actorId); // 🔥 Pass it down
             return Ok(new { message = "Staff deleted successfully" });
         }
         catch (ArgumentException ex)

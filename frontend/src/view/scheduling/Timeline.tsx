@@ -5,9 +5,10 @@ import {
   CheckCircle2, Filter, UserPlus, Plus
 } from "lucide-react";
 import type { TimelineTeam, BarType, TimelineHistoryRecord } from "../../types";
-import { 
-  fetchTimeline, createTimeline, fetchTimelineHistory, 
-  endActiveTimeline, createTeam, fetchUnassignedStaff, assignStaffToTeam
+import {
+  fetchTimeline, createTimeline, fetchTimelineHistory,
+  endActiveTimeline, createTeam, fetchUnassignedStaff, assignStaffToTeam,
+  updateTimeline, deleteTimelineSchedule
 } from "../../api";
 
 export default function TimelinePage() {
@@ -38,6 +39,13 @@ export default function TimelinePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [targetHasActiveSchedule, setTargetHasActiveSchedule] = useState(false);
+  const [isCheckingTarget, setIsCheckingTarget] = useState(false);
+
+  const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
+  const [isEditingFields, setIsEditingFields] = useState(false);
+  const [editForm, setEditForm] = useState({ daysOn: "", daysOff: "", startDate: "", endDate: "" });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   const filteredTeams = useMemo(() => {
     if (selectedTeamFilter === "All") return teams;
@@ -54,6 +62,25 @@ export default function TimelinePage() {
       setErrorMessage("Gagal memuat jadwal lapangan dari server.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkTargetActiveSchedule = async (targetValue: string) => {
+    if (!targetValue) {
+      setTargetHasActiveSchedule(false);
+      return;
+    }
+    setIsCheckingTarget(true);
+    try {
+      const isTeam = targetValue.startsWith("team:");
+      const actualId = targetValue.split(":")[1];
+      const history = await fetchTimelineHistory(isTeam ? actualId : undefined, isTeam ? undefined : actualId);
+      const hasActive = history.some((r) => r.status === "Active");
+      setTargetHasActiveSchedule(hasActive);
+    } catch {
+      setTargetHasActiveSchedule(false);
+    } finally {
+      setIsCheckingTarget(false);
     }
   };
 
@@ -246,7 +273,11 @@ export default function TimelinePage() {
           </button>
 
           <div className="action-group ml-2">
-            <button type="button" onClick={() => { setErrorMessage(null); setIsAssignModalOpen(true); }} className="action-group-btn">
+            <button 
+              type="button" 
+              onClick={() => { setErrorMessage(null); setIsAssignModalOpen(true); setTargetHasActiveSchedule(false); }} 
+              className="action-group-btn"
+            >
               Atur Jadwal <Plus size={15} strokeWidth={2.5} />
             </button>
             <button type="button" onClick={() => { setErrorMessage(null); setIsNewTeamModalOpen(true); }} className="action-group-btn">
@@ -321,67 +352,190 @@ export default function TimelinePage() {
                   {historyRecords.map((rec, index) => {
                     const isActive = rec.status === "Active";
                     const isTicket = rec.isTicket;
-                    const isLeave = rec.barType === "Leave"; // Check if it's an OFF ticket
-                    
-                    // 🎨 Style adjustments for Tickets (Red for OFF, Green for ON) vs Schedules (Blue)
-                    const cardBorder = isTicket 
-                      ? (isLeave 
+                    const isLeave = rec.barType === "Leave";
+                    const recordKey = `${rec.timelineId}-${index}`;
+                    const isSelected = editingRecordId === recordKey;
+
+                    const cardBorder = isTicket
+                      ? (isLeave
                           ? (isActive ? "border-red-500 bg-red-50/50" : "border-red-300 bg-red-50/30")
-                          : (isActive ? "border-emerald-500 bg-emerald-50/50" : "border-emerald-300 bg-emerald-50/30")) 
+                          : (isActive ? "border-emerald-500 bg-emerald-50/50" : "border-emerald-300 bg-emerald-50/30"))
                       : (isActive ? "border-brand-primary bg-brand-bg/60 shadow-sm" : "border-amber-300 bg-amber-50/40");
-                      
+
                     const badgeClass = isTicket
-                      ? (isLeave 
+                      ? (isLeave
                           ? (isActive ? "bg-red-500 text-white" : "bg-red-100 text-red-800")
                           : (isActive ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-800"))
                       : (isActive ? "bg-brand-primary text-white" : "bg-amber-100 text-amber-800");
 
+                    const canEditThis = !isTicket; // rule: only schedules (personal/team) are editable, tickets never
+
                     return (
-                      <div key={`${rec.timelineId}-${index}`} className={`p-3 rounded-xl border transition ${cardBorder}`}>
-                        
+                      <div
+                        key={recordKey}
+                        onClick={() => {
+                          if (!canEditThis) return; // tickets: clicking does nothing extra, they're already fully shown
+                          setEditingRecordId(isSelected ? null : recordKey);
+                          setIsEditingFields(false);
+                          setEditForm({
+                            daysOn: String(rec.daysOn ?? ""),
+                            daysOff: String(rec.daysOff ?? ""),
+                            startDate: rec.startDate ?? "",
+                            endDate: rec.endDate ?? "",
+                          });
+                        }}
+                        className={`p-3 rounded-xl border transition ${cardBorder} ${canEditThis ? "cursor-pointer hover:shadow-md" : ""}`}
+                      >
                         <div className="flex items-center justify-between mb-1.5">
                           <div className="flex items-center gap-2">
                             <span className={`badge text-[10px] py-0.5 px-2 ${badgeClass}`}>
                               {isActive ? "AKTIF" : "MENDATANG"}
                             </span>
-                            
-                            {/* Shows if this schedule belongs to the Team, Person, or is a Ticket */}
                             {rec._source && (
                               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm border ${isTicket ? 'text-red-700 bg-white border-red-200' : 'text-brand-dark bg-white border-brand-outline/60'}`}>
                                 {rec._source}
                               </span>
                             )}
                           </div>
-                          
-                          {/* If Ticket, show LEAVE, else show Days ON/OFF */}
+
                           {isTicket ? (
                             <span className={`text-xs font-bold uppercase tracking-wide ${isLeave ? 'text-red-600' : 'text-emerald-600'}`}>
                               {isLeave ? "LEAVE (OFF)" : "TICKET (OFF)"}
                             </span>
-                          ) : (
+                          ) : !isEditingFields || !isSelected ? (
                             <span className="text-xs font-semibold text-black/80">{rec.daysOn} ON / {rec.daysOff} OFF</span>
-                          )}
+                          ) : null}
                         </div>
 
-                        <div className="flex items-center gap-1.5 text-xs text-black/70 mt-2"><CalendarIcon size={14} className="text-black/40" /><span>Mulai: <strong className="text-black/90">{rec.startDate}</strong></span></div>
-                        <div className="flex items-center gap-1.5 text-xs text-black/70 mt-1"><Clock size={14} className="text-black/40" /><span>Selesai: <strong className="text-black/90">{rec.endDate || "Sekarang (Tanpa Batas)"}</strong></span></div>
-                        
-                        {/* Display ticket reason if it exists */}
-                        {isTicket && rec.reason && (
-                           <div className="mt-2.5 p-2 bg-white border border-red-100 rounded-lg text-xs text-red-900 font-medium shadow-sm">
-                             <strong className="block text-red-400 mb-0.5 text-[10px] uppercase tracking-wider">Catatan Tiket:</strong>
-                             {rec.reason}
-                           </div>
+                        {/* View mode (default) */}
+                        {(!isSelected || !isEditingFields) && (
+                          <>
+                            <div className="flex items-center gap-1.5 text-xs text-black/70 mt-2">
+                              <CalendarIcon size={14} className="text-black/40" />
+                              <span>Mulai: <strong className="text-black/90">{rec.startDate}</strong></span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-xs text-black/70 mt-1">
+                              <Clock size={14} className="text-black/40" />
+                              <span>Selesai: <strong className="text-black/90">{rec.endDate || "Sekarang (Tanpa Batas)"}</strong></span>
+                            </div>
+
+                            {isTicket && rec.reason && (
+                              <div className="mt-2.5 p-2 bg-white border border-red-100 rounded-lg text-xs text-red-900 font-medium shadow-sm">
+                                <strong className="block text-red-400 mb-0.5 text-[10px] uppercase tracking-wider">Catatan Tiket:</strong>
+                                {rec.reason}
+                              </div>
+                            )}
+                          </>
                         )}
 
-                        {/* Only allow ending the schedule if it is Personal, OR if you are inspecting the Team itself */}
-                        {!isTicket && isActive && !rec.endDate && (rec._source === "Personal" || rec._source === "Jadwal Tim") && (
-                          <button onClick={() => {
-                            const todayStr = new Date().toISOString().split("T")[0];
-                            if (confirm("Akhiri siklus rotasi aktif ini mulai hari ini?")) handleEndSchedule(todayStr);
-                          }} className="mt-3 w-full py-1 text-xs text-state-error hover:bg-red-50 font-medium rounded-lg border border-red-200 transition cursor-pointer">
-                            Akhiri Jadwal Ini
-                          </button>
+                        {/* Edit mode form (only for schedules, only when selected + Edit clicked) */}
+                        {canEditThis && isSelected && isEditingFields && (
+                          <div className="flex flex-col gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex gap-2">
+                              <input
+                                type="number" min="1" className="input-field text-sm py-1.5"
+                                value={editForm.daysOn}
+                                onChange={(e) => setEditForm({ ...editForm, daysOn: e.target.value })}
+                                placeholder="Days On"
+                              />
+                              <input
+                                type="number" min="1" className="input-field text-sm py-1.5"
+                                value={editForm.daysOff}
+                                onChange={(e) => setEditForm({ ...editForm, daysOff: e.target.value })}
+                                placeholder="Days Off"
+                              />
+                            </div>
+                            
+                            <input
+                              type="date" 
+                              className="input-field text-sm py-1.5 cursor-pointer text-black/80"
+                              value={editForm.startDate}
+                              onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch (err) {} }}
+                              onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                            />
+                            <input
+                              type="date" 
+                              className="input-field text-sm py-1.5 cursor-pointer text-black/80"
+                              value={editForm.endDate}
+                              min={editForm.startDate}
+                              onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch (err) {} }}
+                              onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                            />
+                          </div>
+                        )}
+
+                        {/* Action row — only for non-ticket, selected cards */}
+                        {canEditThis && isSelected && (
+                          <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
+                            {!isEditingFields ? (
+                              <>
+                                <button
+                                  onClick={() => setIsEditingFields(true)}
+                                  className="flex-1 py-1.5 text-xs font-bold rounded-lg border border-brand-primary text-brand-primary hover:bg-brand-bg transition cursor-pointer"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm("Hapus jadwal ini secara permanen?")) return;
+                                    try {
+                                      await deleteTimelineSchedule(rec.timelineId);
+                                      setSuccessMessage("Jadwal berhasil dihapus.");
+                                      setEditingRecordId(null);
+                                      await loadData();
+                                      if (selectedInspection) await handleInspectTarget(selectedInspection.id, selectedInspection.name, selectedInspection.type, selectedInspection.subtitle);
+                                    } catch (err: any) {
+                                      setErrorMessage(err.message || "Gagal menghapus jadwal.");
+                                    }
+                                  }}
+                                  className="flex-1 py-1.5 text-xs font-bold rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition cursor-pointer"
+                                >
+                                  Hapus
+                                </button>
+                                <button
+                                  onClick={() => setEditingRecordId(null)}
+                                  className="px-3 py-1.5 text-xs font-medium text-black/50 hover:bg-black/5 rounded-lg transition cursor-pointer"
+                                >
+                                  Batal
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  disabled={isSavingEdit}
+                                  onClick={async () => {
+                                    setIsSavingEdit(true);
+                                    try {
+                                      await updateTimeline(rec.timelineId, {
+                                        daysOn: parseInt(editForm.daysOn, 10),
+                                        daysOff: parseInt(editForm.daysOff, 10),
+                                        startDate: editForm.startDate,
+                                        endDate: editForm.endDate || null,
+                                      });
+                                      setSuccessMessage("Jadwal berhasil diperbarui.");
+                                      setEditingRecordId(null);
+                                      setIsEditingFields(false);
+                                      await loadData();
+                                      if (selectedInspection) await handleInspectTarget(selectedInspection.id, selectedInspection.name, selectedInspection.type, selectedInspection.subtitle);
+                                    } catch (err: any) {
+                                      setErrorMessage(err.message || "Gagal memperbarui jadwal.");
+                                    } finally {
+                                      setIsSavingEdit(false);
+                                    }
+                                  }}
+                                  className="flex-1 py-1.5 text-xs font-bold rounded-lg bg-brand-primary text-white hover:bg-brand-dark transition cursor-pointer disabled:opacity-50"
+                                >
+                                  {isSavingEdit ? "Menyimpan..." : "Simpan"}
+                                </button>
+                                <button
+                                  onClick={() => setIsEditingFields(false)}
+                                  className="px-3 py-1.5 text-xs font-medium text-black/50 hover:bg-black/5 rounded-lg transition cursor-pointer"
+                                >
+                                  Batal
+                                </button>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
@@ -391,14 +545,31 @@ export default function TimelinePage() {
             </div>
 
             <div className="p-4 border-t border-brand-outline bg-brand-bg/30 shrink-0">
-              <button onClick={() => {
-                if (!selectedInspection) return;
-                const targetPrefix = selectedInspection.type === "team" ? "team:" : "staff:";
-                setFormData(prev => ({ ...prev, targetId: targetPrefix + selectedInspection.id }));
-                setIsAssignModalOpen(true);
-              }} className="btn-primary w-full justify-center py-2 text-sm cursor-pointer">
-                + Perbarui / Atur Rotasi Baru
-              </button>
+              {(() => {
+                // 🔥 Check if the target already has a blocking active schedule
+                const disableNewSchedule = historyRecords.some(rec => 
+                  rec.status === "Active" && 
+                  (selectedInspection?.type === "team" || rec._source === "Personal")
+                );
+
+                return (
+                  <button 
+                    disabled={disableNewSchedule}
+                    onClick={() => {
+                      if (!selectedInspection) return;
+                      const targetPrefix = selectedInspection.type === "team" ? "team:" : "staff:";
+                      setFormData(prev => ({ ...prev, targetId: targetPrefix + selectedInspection.id }));
+                      setIsAssignModalOpen(true);
+                      setTargetHasActiveSchedule(false);
+                    }} 
+                    className={`btn-primary w-full justify-center py-2 text-sm transition-all ${
+                      disableNewSchedule ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer"
+                    }`}
+                  >
+                    {disableNewSchedule ? "Jadwal Aktif Sudah Ada" : "+ Perbarui / Atur Rotasi Baru"}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -441,7 +612,14 @@ export default function TimelinePage() {
             </div>
             <div className="flex flex-col gap-3">
               <label className="form-label">Pilih Target (Staf / Tim)</label>
-              <select className="input-field cursor-pointer" value={formData.targetId} onChange={(e) => setFormData({ ...formData, targetId: e.target.value })}>
+              <select 
+                className="input-field cursor-pointer" 
+                value={formData.targetId} 
+                onChange={(e) => {
+                  setFormData({ ...formData, targetId: e.target.value });
+                  checkTargetActiveSchedule(e.target.value);
+                }}
+              >
                 <option value="">-- Pilih Tim atau Staf --</option>
                 {teams.map((team) => (
                   <optgroup key={team.teamId} label={`Tim: ${team.teamName}`}>
@@ -450,6 +628,13 @@ export default function TimelinePage() {
                   </optgroup>
                 ))}
               </select>
+
+              {targetHasActiveSchedule && (
+                <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                  Target ini sudah memiliki jadwal aktif. Edit atau hapus jadwal yang ada terlebih dahulu melalui panel inspeksi.
+                </div>
+              )}
+
               <label className="form-label mt-1">Pola Shift (Days On / Days Off)</label>
               <div className="flex gap-2">
                 <div className="w-full"><input type="number" min="1" placeholder="On (e.g. 5)" className="input-field" value={formData.daysOn} onChange={(e) => setFormData({ ...formData, daysOn: e.target.value })}/><span className="text-[11px] text-black/40 mt-1 block">Hari Kerja Aktif</span></div>
@@ -463,7 +648,13 @@ export default function TimelinePage() {
             </div>
             <div className="mt-6 flex justify-end gap-2 border-t border-brand-outline/40 pt-4">
               <button onClick={() => { setIsAssignModalOpen(false); setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "" }); }} className="px-4 py-2 text-black/60 hover:bg-brand-bg rounded-xl text-sm font-medium transition cursor-pointer" disabled={isSubmitting}>Batal</button>
-              <button onClick={handleSaveSchedule} className="btn-primary text-sm cursor-pointer" disabled={isSubmitting}>{isSubmitting ? "Menyimpan..." : "Simpan Versi Jadwal"}</button>
+              <button
+                onClick={handleSaveSchedule}
+                className="btn-primary text-sm cursor-pointer"
+                disabled={isSubmitting || targetHasActiveSchedule || isCheckingTarget}
+              >
+                {isSubmitting ? "Menyimpan..." : "Simpan Versi Jadwal"}
+              </button>
             </div>
           </div>
         </div>
