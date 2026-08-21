@@ -90,6 +90,6 @@ public class TeamService : ITeamService
 
         // 🔥 Call your new centralized log method!
         string summary = $"Mengubah nama tim dari {oldName} menjadi {newTeamName}";
-        await _activityLogService.LogTeamEditedAsync(team, actorStaffId, summary);
+        await _activityLogService.LogTeamEditedAsync(oldName, team, actorStaffId, summary);
     }
 }

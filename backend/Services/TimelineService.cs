@@ -336,12 +336,23 @@ public class TimelineService : ITimelineService
         if (request.EffectiveEndDate.Date < openTimeline.StartDate.Date)
             throw new ArgumentException("The EffectiveEndDate cannot be earlier than the schedule's StartDate.");
 
+        // 🔥 SNAPSHOT THE OLD STATE before we change it!
+        var oldTimelineSnapshot = new Timeline
+        {
+            StartDate = openTimeline.StartDate,
+            EndDate = openTimeline.EndDate,
+            DaysOn = openTimeline.DaysOn,
+            DaysOff = openTimeline.DaysOff
+        };
+
         openTimeline.EndDate = request.EffectiveEndDate.Date;
         await _repository.UpdateTimelineAsync(openTimeline);
 
         var staff = !string.IsNullOrEmpty(request.StaffId) ? await _staffRepository.GetByIdAsync(request.StaffId) : null;
         var team = !string.IsNullOrEmpty(request.TeamId) ? await _teamRepository.GetByIdAsync(request.TeamId) : null;
-        await _activityLogService.LogScheduleChangedAsync(openTimeline, staff, team, actorStaffId, $"Ended active schedule effective {request.EffectiveEndDate:yyyy-MM-dd}");
+
+        // 🔥 Pass BOTH the old snapshot and the newly updated openTimeline
+        await _activityLogService.LogScheduleChangedAsync(oldTimelineSnapshot, openTimeline, staff, team, actorStaffId, $"Ended active schedule effective {request.EffectiveEndDate:yyyy-MM-dd}");
     }
     public async Task UpdateTimelineAsync(string timelineId, UpdateTimelineRequest request, string? actorStaffId)
     {
@@ -357,6 +368,15 @@ public class TimelineService : ITimelineService
         if (request.DaysOn < 1 || request.DaysOff < 1)
             throw new ArgumentException("DaysOn and DaysOff must be greater than or equal to 1.");
 
+        // 🔥 SNAPSHOT THE OLD STATE before we change it!
+        var oldTimelineSnapshot = new Timeline
+        {
+            StartDate = timeline.StartDate,
+            EndDate = timeline.EndDate,
+            DaysOn = timeline.DaysOn,
+            DaysOff = timeline.DaysOff
+        };
+
         timeline.DaysOn = request.DaysOn;
         timeline.DaysOff = request.DaysOff;
         timeline.StartDate = request.StartDate.Date;
@@ -366,7 +386,9 @@ public class TimelineService : ITimelineService
 
         var staff = !string.IsNullOrEmpty(timeline.StaffId) ? await _staffRepository.GetByIdAsync(timeline.StaffId) : null;
         var team = !string.IsNullOrEmpty(timeline.TeamId) ? await _teamRepository.GetByIdAsync(timeline.TeamId) : null;
-        await _activityLogService.LogScheduleChangedAsync(timeline, staff, team, actorStaffId, "Updated timeline schedule configuration");
+
+        // 🔥 Pass BOTH the old snapshot and the newly updated timeline
+        await _activityLogService.LogScheduleChangedAsync(oldTimelineSnapshot, timeline, staff, team, actorStaffId, "Updated timeline schedule configuration");
     }
 
     public async Task DeleteTimelineAsync(string timelineId, string? actorStaffId)
@@ -382,6 +404,7 @@ public class TimelineService : ITimelineService
 
         await _repository.DeleteTimelineAsync(timelineId);
 
-        await _activityLogService.LogScheduleDeletedAsync(staff, team, actorStaffId);
+        // 🔥 Added `timeline` as the first parameter so it matches the interface
+        await _activityLogService.LogScheduleDeletedAsync(timeline, staff, team, actorStaffId);
     }
 }

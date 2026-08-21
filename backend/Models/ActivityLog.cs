@@ -10,8 +10,10 @@ public class ActivityLog
     public TimeSpan Time { get; set; }
     public string Actor { get; set; } = null!;
     public Action Action { get; set; }
+    public string Target { get; set; } = null!;
+    public TicketType? Type { get; set; }
+    public string? Edit { get; set; }
     public string? DateRange { get; set; }
     public string? Rotation { get; set; }
-    public string Target { get; set; } = null!; // REQUIRED
-    public string? Description { get; set; }    // REQUIRED (allowed null for now)
+    public string? Description { get; set; }
 }

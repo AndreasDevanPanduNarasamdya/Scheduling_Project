@@ -21,7 +21,6 @@ public class ActivityLogService : IActivityLogService
         _staffRepository = staffRepository;
     }
 
-    // Helper method to convert the Actor ID into their full name
     private async Task<string> GetActorNameAsync(string? actorStaffId)
     {
         if (string.IsNullOrEmpty(actorStaffId)) return "Sistem";
@@ -40,21 +39,27 @@ public class ActivityLogService : IActivityLogService
             Time = l.Time,
             Actor = l.Actor,
             Action = l.Action,
+            Target = l.Target,
+            Type = l.Type,
+            Edit = l.Edit,
             DateRange = l.DateRange,
             Rotation = l.Rotation,
-            Target = l.Target,
             Description = l.Description
         }).ToList();
     }
 
-    public async Task LogScheduleCreatedAsync(Timeline timeline, Staff? staff, Team? team, string? actorStaffId)
+    // ==========================================
+    // SCHEDULE LOGS
+    // ==========================================
+
+    public async Task LogScheduleCreatedAsync(Timeline timeline, Staff? staff, Team? team, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
         var targetName = staff != null ? $"{staff.FirstName} {staff.LastName}".Trim() : team?.TeamName ?? "Sistem";
-        var actionEnum = staff != null ? Action.CreatePersonalSchedule : Action.CreateTeamSchedule; // 🔥 Uses Action enum
+        var actionEnum = staff != null ? Action.CreatePersonalSchedule : Action.CreateTeamSchedule;
 
         var dateRange = $"{timeline.StartDate:yyyy-MM-dd} - {(timeline.EndDate.HasValue ? timeline.EndDate.Value.ToString("yyyy-MM-dd") : "Seterusnya")}";
-        var rotation = $"{timeline.DaysOn} On / {timeline.DaysOff} Off";
+        var rotation = $"{timeline.DaysOn} Hari On - {timeline.DaysOff} Hari Off";
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
@@ -63,21 +68,24 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = actionEnum,
+            Target = targetName,
             DateRange = dateRange,
             Rotation = rotation,
-            Target = targetName,
-            Description = null
+            Description = note
         });
     }
 
-    public async Task LogScheduleChangedAsync(Timeline timeline, Staff? staff, Team? team, string? actorStaffId, string changeSummary)
+    // oldTimeline is the row's state BEFORE the update was applied — caller must fetch it first
+    public async Task LogScheduleChangedAsync(Timeline oldTimeline, Timeline newTimeline, Staff? staff, Team? team, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
         var targetName = staff != null ? $"{staff.FirstName} {staff.LastName}".Trim() : team?.TeamName ?? "Sistem";
-        var actionEnum = staff != null ? Action.EditPersonalSchedule : Action.EditTeamSchedule; // 🔥 Uses Action enum
+        var actionEnum = staff != null ? Action.EditPersonalSchedule : Action.EditTeamSchedule;
 
-        var dateRange = $"{timeline.StartDate:yyyy-MM-dd} - {(timeline.EndDate.HasValue ? timeline.EndDate.Value.ToString("yyyy-MM-dd") : "Seterusnya")}";
-        var rotation = $"{timeline.DaysOn} On / {timeline.DaysOff} Off";
+        var oldRange = $"{oldTimeline.StartDate:yyyy-MM-dd} - {(oldTimeline.EndDate.HasValue ? oldTimeline.EndDate.Value.ToString("yyyy-MM-dd") : "Seterusnya")}";
+        var newRange = $"{newTimeline.StartDate:yyyy-MM-dd} - {(newTimeline.EndDate.HasValue ? newTimeline.EndDate.Value.ToString("yyyy-MM-dd") : "Seterusnya")}";
+        var oldRotation = $"{oldTimeline.DaysOn} Hari On - {oldTimeline.DaysOff} Hari Off";
+        var newRotation = $"{newTimeline.DaysOn} Hari On - {newTimeline.DaysOff} Hari Off";
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
@@ -86,18 +94,21 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = actionEnum,
-            DateRange = dateRange,
-            Rotation = rotation,
             Target = targetName,
-            Description = changeSummary
+            DateRange = oldRange == newRange ? newRange : $"{oldRange} → {newRange}",
+            Rotation = oldRotation == newRotation ? newRotation : $"{oldRotation} → {newRotation}",
+            Description = note
         });
     }
 
-    public async Task LogScheduleDeletedAsync(Staff? staff, Team? team, string? actorStaffId)
+    public async Task LogScheduleDeletedAsync(Timeline deleted, Staff? staff, Team? team, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
         var targetName = staff != null ? $"{staff.FirstName} {staff.LastName}".Trim() : team?.TeamName ?? "Sistem";
-        var actionEnum = staff != null ? Action.RemovePersonalSchedule : Action.RemoveTeamSchedule; // 🔥 Uses Action enum
+        var actionEnum = staff != null ? Action.RemovePersonalSchedule : Action.RemoveTeamSchedule;
+
+        var dateRange = $"{deleted.StartDate:yyyy-MM-dd} - {(deleted.EndDate.HasValue ? deleted.EndDate.Value.ToString("yyyy-MM-dd") : "Seterusnya")}";
+        var rotation = $"{deleted.DaysOn} Hari On - {deleted.DaysOff} Hari Off";
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
@@ -106,12 +117,16 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = actionEnum,
-            DateRange = null,
-            Rotation = null,
             Target = targetName,
-            Description = "Menghapus jadwal dari sistem"
+            DateRange = dateRange,
+            Rotation = rotation,
+            Description = note
         });
     }
+
+    // ==========================================
+    // TICKET LOGS
+    // ==========================================
 
     public async Task LogTicketCreatedAsync(Ticket ticket, Staff staff, string? actorStaffId)
     {
@@ -125,15 +140,15 @@ public class ActivityLogService : IActivityLogService
             Date = DateTime.UtcNow.Date,
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
-            Action = Action.CreateTicket, // 🔥 Uses Action enum
-            DateRange = dateRange,
-            Rotation = null,
+            Action = Action.CreateTicket,
             Target = targetName,
-            Description = ticket.Title ?? "Pengajuan Tiket Baru"
+            Type = ticket.Type,   // 0 = On, 1 = Off — populates the ON/OFF badge
+            DateRange = dateRange,
+            Description = ticket.Reason ?? ticket.Title
         });
     }
 
-    public async Task LogTicketApprovedAsync(Ticket ticket, Staff staff, string? actorStaffId)
+    public async Task LogTicketApprovedAsync(Ticket ticket, Staff staff, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
         var targetName = $"{staff.FirstName} {staff.LastName}".Trim();
@@ -146,10 +161,10 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = Action.ApproveTicket,
-            DateRange = dateRange,
-            Rotation = null,
             Target = targetName,
-            Description = $"Menyetujui tiket: {ticket.Title}"
+            Type = ticket.Type,
+            DateRange = dateRange,
+            Description = note
         });
     }
 
@@ -166,17 +181,20 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = Action.DeclineTicket,
-            DateRange = dateRange,
-            Rotation = null,
             Target = targetName,
-            Description = $"Menolak tiket. Alasan: {declineReason}"
+            Type = ticket.Type,
+            DateRange = dateRange,
+            Description = declineReason
         });
     }
 
-    public async Task LogStaffCreatedAsync(Staff staff, string? actorStaffId)
+    // ==========================================
+    // STAFF LOGS
+    // ==========================================
+
+    public async Task LogStaffCreatedAsync(Staff staff, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
-        var targetName = $"{staff.FirstName} {staff.LastName}".Trim();
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
@@ -185,17 +203,35 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = Action.CreateStaff,
-            DateRange = null,
-            Rotation = null,
-            Target = targetName,
-            Description = $"Menambahkan staf baru dengan posisi {staff.Position ?? "Staff"}"
+            Target = $"{staff.FirstName} {staff.LastName}".Trim(),
+            Description = note ?? "Akun baru untuk staff"
         });
     }
 
-    public async Task LogStaffEditedAsync(Staff staff, string? actorStaffId, string changeSummary)
+    // oldStaff must be captured BEFORE applying the update
+    public async Task LogStaffEditedAsync(Staff oldStaff, Staff newStaff, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
-        var targetName = $"{staff.FirstName} {staff.LastName}".Trim();
+        var diffs = new List<string>();
+
+        if (oldStaff.FirstName != newStaff.FirstName)
+            diffs.Add($"First Name: {oldStaff.FirstName} → {newStaff.FirstName}");
+        if (oldStaff.LastName != newStaff.LastName)
+            diffs.Add($"Last Name: {oldStaff.LastName} → {newStaff.LastName}");
+        if (oldStaff.Sex != newStaff.Sex)
+            diffs.Add($"Sex: {oldStaff.Sex} → {newStaff.Sex}");
+        if (oldStaff.Phone != newStaff.Phone)
+            diffs.Add($"Phone: {oldStaff.Phone} → {newStaff.Phone}");
+        if (oldStaff.Position != newStaff.Position)
+            diffs.Add($"Position: {oldStaff.Position} → {newStaff.Position}");
+        if (oldStaff.JoinDate != newStaff.JoinDate)
+            diffs.Add($"Tanggal Bergabung: {oldStaff.JoinDate:yyyy-MM-dd} → {newStaff.JoinDate:yyyy-MM-dd}");
+        if (oldStaff.Dob != newStaff.Dob)
+            diffs.Add($"DOB: {oldStaff.Dob:yyyy-MM-dd} → {newStaff.Dob:yyyy-MM-dd}");
+
+        // NOTE: joined with ';' — Edit column is 150 chars, several diffs can overflow.
+        // If that's a real risk, this column needs widening in a future migration.
+        var editSummary = string.Join("; ", diffs);
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
@@ -204,14 +240,13 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = Action.EditStaff,
-            DateRange = null,
-            Rotation = null,
-            Target = targetName,
-            Description = changeSummary
+            Target = $"{newStaff.FirstName} {newStaff.LastName}".Trim(),
+            Edit = editSummary,
+            Description = note
         });
     }
 
-    public async Task LogStaffDeletedAsync(string staffName, string? actorStaffId)
+    public async Task LogStaffDeletedAsync(string staffName, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
 
@@ -222,10 +257,8 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = Action.RemoveStaff,
-            DateRange = null,
-            Rotation = null,
-            Target = staffName, // Passed as string because the entity is deleted
-            Description = "Menghapus profil staf dan akses pengguna dari sistem"
+            Target = staffName,
+            Description = note ?? "Dipecat"
         });
     }
 
@@ -238,10 +271,8 @@ public class ActivityLogService : IActivityLogService
             LogId = Guid.NewGuid().ToString(),
             Date = DateTime.UtcNow.Date,
             Time = DateTime.UtcNow.TimeOfDay,
-            Actor = staffName, // The staff activates their own account
+            Actor = staffName,
             Action = Action.AccountActivation,
-            DateRange = null,
-            Rotation = null,
             Target = staffName,
             Description = "Berhasil mengaktivasi akun dan membuat password"
         });
@@ -250,7 +281,8 @@ public class ActivityLogService : IActivityLogService
     // ==========================================
     // TEAM LOGS
     // ==========================================
-    public async Task LogTeamCreatedAsync(Team team, string? actorStaffId)
+
+    public async Task LogTeamCreatedAsync(Team team, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
 
@@ -261,14 +293,12 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = Action.CreateTeam,
-            DateRange = null,
-            Rotation = null,
-            Target = $"Tim {team.TeamName}",
-            Description = "Membuat tim lapangan baru"
+            Target = team.TeamName,   // dropped "Tim " prefix — icon in UI conveys type
+            Description = note ?? "Membuat tim lapangan baru"
         });
     }
 
-    public async Task LogTeamEditedAsync(Team team, string? actorStaffId, string changeSummary)
+    public async Task LogTeamEditedAsync(string oldTeamName, Team newTeam, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
 
@@ -279,14 +309,13 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = Action.EditTeam,
-            DateRange = null,
-            Rotation = null,
-            Target = $"Tim {team.TeamName}",
-            Description = changeSummary
+            Target = newTeam.TeamName,
+            Edit = oldTeamName == newTeam.TeamName ? null : $"{oldTeamName} → {newTeam.TeamName}",
+            Description = note
         });
     }
 
-    public async Task LogTeamDeletedAsync(string teamName, string? actorStaffId)
+    public async Task LogTeamDeletedAsync(string teamName, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
 
@@ -297,10 +326,30 @@ public class ActivityLogService : IActivityLogService
             Time = DateTime.UtcNow.TimeOfDay,
             Actor = actorName,
             Action = Action.RemoveTeam,
-            DateRange = null,
-            Rotation = null,
-            Target = $"Tim {teamName}", // Passed as string because the entity is deleted
-            Description = "Menghapus tim beserta strukturnya dari sistem"
+            Target = teamName,
+            Description = note ?? "Menghapus tim beserta strukturnya dari sistem"
+        });
+    }
+
+    // #17 — new
+    public async Task LogTeamMemberSwitchedAsync(Staff staff, Team? oldTeam, Team newTeam, string? actorStaffId, string? note = null)
+    {
+        var actorName = await GetActorNameAsync(actorStaffId);
+        var staffName = $"{staff.FirstName} {staff.LastName}".Trim();
+
+        // No old team → first assignment, plain name. Had an old team → reassignment, arrow diff.
+        var teamInfo = oldTeam == null ? newTeam.TeamName : $"{oldTeam.TeamName} → {newTeam.TeamName}";
+
+        await _activityLogRepository.AddAsync(new ActivityLog
+        {
+            LogId = Guid.NewGuid().ToString(),
+            Date = DateTime.UtcNow.Date,
+            Time = DateTime.UtcNow.TimeOfDay,
+            Actor = actorName,
+            Action = Action.SwitchingTeamMembers,
+            Target = staffName,
+            Rotation = teamInfo,   // repurposed field — see mapping table above
+            Description = note
         });
     }
 }

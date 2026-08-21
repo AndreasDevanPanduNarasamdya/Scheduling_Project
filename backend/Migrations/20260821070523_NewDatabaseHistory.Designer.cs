@@ -12,8 +12,8 @@ using SchedulingMeruap.Api.Data;
 namespace SchedulingMeruap.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260819023528_NewHistoryLogDatabase")]
-    partial class NewHistoryLogDatabase
+    [Migration("20260821070523_NewDatabaseHistory")]
+    partial class NewDatabaseHistory
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -58,6 +58,11 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnType("nvarchar(500)")
                         .HasColumnName("DESCRIPTION");
 
+                    b.Property<string>("Edit")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("EDIT");
+
                     b.Property<string>("Rotation")
                         .HasMaxLength(50)
                         .IsUnicode(false)
@@ -73,6 +78,10 @@ namespace SchedulingMeruap.Api.Migrations
                     b.Property<TimeSpan>("Time")
                         .HasColumnType("time")
                         .HasColumnName("TIME");
+
+                    b.Property<byte?>("Type")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("TYPE");
 
                     b.HasKey("LogId");
 

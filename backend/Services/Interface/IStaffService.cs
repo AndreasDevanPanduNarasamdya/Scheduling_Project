@@ -10,7 +10,7 @@ public interface IStaffService
     Task<StaffResponse?> GetByUserIdAsync(string userId);
     Task<List<StaffResponse>> GetAllAsync();
     Task<List<TeamMemberResponse>> GetUnassignedStaffAsync();
-    Task<bool> AssignStaffAsync(StaffRequest dto);
+    Task<bool> AssignStaffAsync(StaffRequest dto, string? actorStaffId);
     Task DeleteStaffAsync(string staffId, string? actorStaffId);
     Task UpdateStaffAsync(string staffId, UpdateStaffRequest request, string? actorStaffId);
 }

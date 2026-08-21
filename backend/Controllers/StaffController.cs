@@ -49,7 +49,10 @@ public class StaffController : ControllerBase
     [HttpPost("assign")]
     public async Task<IActionResult> AssignStaff([FromBody] StaffRequest dto)
     {
-        var success = await _staffService.AssignStaffAsync(dto);
+        var actorId = GetCurrentActorId();
+
+        // 🔥 Pass it down to the Service
+        var success = await _staffService.AssignStaffAsync(dto, actorId);
 
         if (!success) return NotFound(new { message = "Staff member not found" });
 

@@ -55,6 +55,11 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnType("nvarchar(500)")
                         .HasColumnName("DESCRIPTION");
 
+                    b.Property<string>("Edit")
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)")
+                        .HasColumnName("EDIT");
+
                     b.Property<string>("Rotation")
                         .HasMaxLength(50)
                         .IsUnicode(false)
@@ -70,6 +75,10 @@ namespace SchedulingMeruap.Api.Migrations
                     b.Property<TimeSpan>("Time")
                         .HasColumnType("time")
                         .HasColumnName("TIME");
+
+                    b.Property<byte?>("Type")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("TYPE");
 
                     b.HasKey("LogId");
 

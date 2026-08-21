@@ -13,11 +13,16 @@ public class StaffService : IStaffService
 {
     private readonly IStaffRepository _staffRepository;
     private readonly IActivityLogService _activityLogService;
+    private readonly ITeamRepository _teamRepository;
 
-    public StaffService(IStaffRepository staffRepository, IActivityLogService activityLogService)
+    public StaffService(
+            IStaffRepository staffRepository,
+            IActivityLogService activityLogService,
+            ITeamRepository teamRepository)
     {
         _staffRepository = staffRepository;
         _activityLogService = activityLogService;
+        _teamRepository = teamRepository;
     }
 
     public async Task<StaffResponse?> GetByIdAsync(string staffId)
@@ -68,13 +73,29 @@ public class StaffService : IStaffService
         }).ToList();
     }
 
-    public async Task<bool> AssignStaffAsync(StaffRequest dto)
+    public async Task<bool> AssignStaffAsync(StaffRequest dto, string? actorStaffId)
     {
-        // Check if staff exists first
         var staff = await _staffRepository.GetByIdAsync(dto.StaffId);
         if (staff == null) return false;
 
+        var allTeams = await _teamRepository.GetAllTeamsWithStaffAsync();
+        var oldTeam = allTeams.FirstOrDefault(t => t.StaffTeams.Any(st => st.StaffId == dto.StaffId));
+
         await _staffRepository.AssignStaffToTeamAsync(dto.StaffId, dto.TeamId);
+
+        Team newTeam;
+        if (dto.TeamId == "unassigned" || string.IsNullOrWhiteSpace(dto.TeamId))
+        {
+            newTeam = new Team { TeamName = "Unassigned" }; // Dummy team for the log
+        }
+        else
+        {
+            newTeam = await _teamRepository.GetByIdAsync(dto.TeamId)
+                      ?? new Team { TeamName = "Unknown Team" };
+        }
+
+        await _activityLogService.LogTeamMemberSwitchedAsync(staff, oldTeam, newTeam, actorStaffId, "Memperbarui penugasan tim");
+
         return true;
     }
 
@@ -104,7 +125,19 @@ public class StaffService : IStaffService
             throw new ArgumentException("Staff member not found.");
         }
 
-        // 2. Update the pure STAFF properties
+        // 🔥 2. SNAPSHOT THE OLD STATE before we overwrite it!
+        var oldStaffSnapshot = new Staff
+        {
+            FirstName = staff.FirstName,
+            LastName = staff.LastName,
+            Sex = staff.Sex,
+            Position = staff.Position,
+            Phone = staff.Phone,
+            Dob = staff.Dob,
+            JoinDate = staff.JoinDate
+        };
+
+        // 3. Update the pure STAFF properties (staff now becomes the "newStaff")
         staff.FirstName = request.FirstName;
         staff.LastName = request.LastName;
         staff.Sex = (Sex)request.Sex;
@@ -113,16 +146,16 @@ public class StaffService : IStaffService
         staff.Dob = request.Dob;
         staff.JoinDate = request.JoinDate;
 
-        // 3. Update the linked USER property (The Email)
+        // 4. Update the linked USER property (The Email)
         if (staff.User != null)
         {
             staff.User.Email = request.Email;
         }
 
-        // 4. Save to database
+        // 5. Save to database
         await _staffRepository.UpdateAsync(staff);
 
-        // 5. 🔥 Trigger the Log!
-        await _activityLogService.LogStaffEditedAsync(staff, actorStaffId, "Memperbarui informasi profil staf");
+        // 6. 🔥 Pass BOTH the old snapshot and the newly updated staff!
+        await _activityLogService.LogStaffEditedAsync(oldStaffSnapshot, staff, actorStaffId, "Memperbarui informasi profil staf");
     }
 }

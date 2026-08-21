@@ -6,6 +6,7 @@ namespace SchedulingMeruap.Api.Models;
 public partial class User
 {
     public string UserId { get; set; } = null!;
+    public Clearance Clearance { get; set; }
 
     public string Email { get; set; } = null!;
 

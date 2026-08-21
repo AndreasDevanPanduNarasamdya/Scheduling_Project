@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { ChevronDown, Menu, UserRound, Plus, ArrowLeftRight, Filter, X, Trash2, Pencil } from "lucide-react";
 import type { Team, StaffMember } from "../../types";
+import { Clearance } from "../../types";
 import { 
   fetchTeams, 
   createNewHire, 
@@ -11,7 +12,8 @@ import {
   deleteTeam,
   editStaff,
   fetchStaffById,
-  editTeam 
+  editTeam,
+  getUserClearance
 } from "../../api";
 
 export default function ManagementPage() {
@@ -55,6 +57,20 @@ export default function ManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const [collapsedTeams, setCollapsedTeams] = useState<Set<string>>(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const userClearance = getUserClearance();
+
+  // --- BLOCK STAFF LEVEL ---
+  if (userClearance === Clearance.Staff) {
+    return (
+      <div className="min-h-screen w-full bg-brand-bg flex items-center justify-center">
+        <div className="card p-10 text-center shadow-xl">
+          <h1 className="text-2xl font-bold text-red-600 mb-2">Akses Ditolak</h1>
+          <p className="text-black/60">Anda tidak memiliki izin untuk mengelola data ini.</p>
+        </div>
+      </div>
+    );
+  }
 
   const loadData = async () => {
     setIsLoading(true);
@@ -256,25 +272,27 @@ export default function ManagementPage() {
         </div>
 
         {/* 🔥 Fused Action Bar Group - NOW WITH EDIT TIM BUTTON */}
-        <div className="mb-8 flex justify-start">
-          <div className="action-group">
-            <button type="button" onClick={() => setIsAddStaffOpen(true)} className="action-group-btn">
-              Tambah Anggota <Plus size={16} strokeWidth={2.5} />
-            </button>
-            <button type="button" onClick={() => setIsAddTeamOpen(true)} className="action-group-btn">
-              Tambah Tim <Plus size={16} strokeWidth={2.5} />
-            </button>
-            <button type="button" onClick={() => setIsEditTeamOpen(true)} className="action-group-btn">
-              Edit Tim <Pencil size={16} strokeWidth={2.5} />
-            </button>
-            <button type="button" onClick={() => setIsAssignStaffOpen(true)} className="action-group-btn">
-              Ubah Anggota <ArrowLeftRight size={16} strokeWidth={2.5} />
-            </button>
-            <button type="button" onClick={() => setIsDeleteOpen(true)} className="action-group-btn">
-              Hapus <Trash2 size={16} strokeWidth={2.5} />
-            </button>
+        {userClearance === Clearance.Admin && (
+          <div className="mb-8 flex justify-start">
+            <div className="action-group">
+              <button type="button" onClick={() => setIsAddStaffOpen(true)} className="action-group-btn">
+                Tambah Anggota <Plus size={16} strokeWidth={2.5} />
+              </button>
+              <button type="button" onClick={() => setIsAddTeamOpen(true)} className="action-group-btn">
+                Tambah Tim <Plus size={16} strokeWidth={2.5} />
+              </button>
+              <button type="button" onClick={() => setIsEditTeamOpen(true)} className="action-group-btn">
+                Edit Tim <Pencil size={16} strokeWidth={2.5} />
+              </button>
+              <button type="button" onClick={() => setIsAssignStaffOpen(true)} className="action-group-btn">
+                Ubah Anggota <ArrowLeftRight size={16} strokeWidth={2.5} />
+              </button>
+              <button type="button" onClick={() => setIsDeleteOpen(true)} className="action-group-btn">
+                Hapus <Trash2 size={16} strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Content states */}
         {isLoading && <div className="text-black/50 text-sm py-12 text-center">Memuat data…</div>}
@@ -572,16 +590,19 @@ export default function ManagementPage() {
                     >
                       Tutup
                     </button>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.preventDefault(); 
-                        setIsEditingStaff(true);
-                      }}
-                      className="btn-primary text-sm bg-brand-primary cursor-pointer"
-                    >
-                      Edit Data
-                    </button>
+                    {/* ONLY ADMINS GET THE EDIT BUTTON */}
+                    {userClearance === Clearance.Admin && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault(); 
+                          setIsEditingStaff(true);
+                        }}
+                        className="btn-primary text-sm bg-brand-primary cursor-pointer"
+                      >
+                        Edit Data
+                      </button>
+                    )}
                   </>
                 ) : (
                   <>

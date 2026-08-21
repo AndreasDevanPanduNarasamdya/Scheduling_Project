@@ -24,7 +24,14 @@ public class ActivityLogController : ControllerBase
         [FromQuery] string? staffId,
         [FromQuery] string? teamId)
     {
-        var logs = await _activityLogService.GetLogsAsync(startDate, endDate, staffId, teamId);
-        return Ok(logs);
+        try
+        {
+            var logs = await _activityLogService.GetLogsAsync(startDate, endDate, staffId, teamId);
+            return Ok(logs);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Gagal mengambil log aktivitas.", details = ex.Message });
+        }
     }
 }

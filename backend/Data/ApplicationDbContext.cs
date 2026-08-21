@@ -17,17 +17,11 @@ public partial class ApplicationDbContext : DbContext
     }
 
     public virtual DbSet<Timeline> Timelines { get; set; }
-
     public virtual DbSet<ActivityLog> ActivityLogs { get; set; }
-
     public virtual DbSet<Staff> Staff { get; set; }
-
     public virtual DbSet<StaffTeam> StaffTeams { get; set; }
-
     public virtual DbSet<Team> Teams { get; set; }
-
     public virtual DbSet<Ticket> Tickets { get; set; }
-
     public virtual DbSet<User> Users { get; set; }
     public virtual DbSet<NewHire> NewHires { get; set; }
 
@@ -86,9 +80,11 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Time).HasColumnType("time").HasColumnName("TIME").IsRequired();
             entity.Property(e => e.Actor).HasMaxLength(150).HasColumnName("ACTOR").IsRequired();
             entity.Property(e => e.Action).HasColumnType("tinyint").HasColumnName("ACTION").IsRequired();
+            entity.Property(e => e.Target).HasMaxLength(150).HasColumnName("TARGET").IsRequired();
+            entity.Property(e => e.Type).HasColumnType("tinyint").HasColumnName("TYPE");
+            entity.Property(e => e.Edit).HasMaxLength(150).HasColumnName("EDIT");
             entity.Property(e => e.DateRange).HasMaxLength(100).IsUnicode(false).HasColumnName("DATE_RANGE");
             entity.Property(e => e.Rotation).HasMaxLength(50).IsUnicode(false).HasColumnName("ROTATION");
-            entity.Property(e => e.Target).HasMaxLength(150).HasColumnName("TARGET").IsRequired();
             entity.Property(e => e.Description).HasMaxLength(500).HasColumnName("DESCRIPTION");
         });
 
@@ -97,11 +93,8 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable("STAFF");
 
             entity.HasIndex(e => e.FirstName, "FIRST_NAME_INDX");
-
             entity.HasIndex(e => e.LastName, "LAST_NAME_INDX");
-
             entity.HasIndex(e => e.Position, "POSITON_INDX");
-
             entity.HasIndex(e => e.UserId, "USER_INDX");
 
             entity.Property(e => e.StaffId)
@@ -202,7 +195,6 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable("STAFF_TEAM");
 
             entity.HasIndex(e => e.StaffId, "STAFF_INDX");
-
             entity.HasIndex(e => e.TeamId, "TEAM_INDX");
 
             entity.Property(e => e.StaffTeamId)
@@ -251,7 +243,6 @@ public partial class ApplicationDbContext : DbContext
             entity.ToTable("TICKET");
 
             entity.HasIndex(e => e.StaffId, "STAFF_INDX");
-
             entity.HasIndex(e => e.Title, "TITLE_INDX");
 
             entity.Property(e => e.TicketId)
@@ -276,18 +267,19 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasColumnName("STAFF_ID");
+
+            // 🔥 FIXED: Status
             entity.Property(e => e.Status)
-                .HasMaxLength(1)
-                .IsUnicode(false)
                 .HasColumnType("tinyint")
                 .HasColumnName("STATUS");
+
             entity.Property(e => e.Title)
                 .HasMaxLength(20)
                 .IsUnicode(false)
                 .HasColumnName("TITLE");
+
+            // 🔥 FIXED: Type
             entity.Property(e => e.Type)
-                .HasMaxLength(1)
-                .IsUnicode(false)
                 .HasColumnType("tinyint")
                 .HasColumnName("TYPE");
 
@@ -307,6 +299,13 @@ public partial class ApplicationDbContext : DbContext
                 .HasMaxLength(36)
                 .IsUnicode(false)
                 .HasColumnName("USER_ID");
+
+            // 🔥 FIXED: Clearance (also added .IsRequired() just to be perfectly strict)
+            entity.Property(e => e.Clearance)
+                .HasColumnType("tinyint")
+                .HasColumnName("CLEARANCE")
+                .IsRequired();
+
             entity.Property(e => e.Created)
                 .HasColumnType("datetime")
                 .HasColumnName("CREATED");

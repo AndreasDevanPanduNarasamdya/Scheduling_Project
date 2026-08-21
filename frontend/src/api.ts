@@ -6,8 +6,10 @@ import type {
   EndTimelinePayload,
   TimelineHistoryRecord,
   ActivityLogResponse,
-  UpdateStaffPayload
+  UpdateStaffPayload,
 } from "./types";
+
+import { Clearance } from "./types";
 
 const API_BASE_URL = "http://localhost:5096/api";
 
@@ -257,4 +259,13 @@ export async function deleteTimelineSchedule(timelineId: string): Promise<void> 
     const errorText = await response.text();
     throw new Error(errorText || "Gagal menghapus jadwal");
   }
+}
+
+export function getUserClearance(): Clearance {
+  const clearanceStr = localStorage.getItem("clearance");
+  
+  if (clearanceStr === "Admin" || clearanceStr === "2") return Clearance.Admin;
+  if (clearanceStr === "Supervisor" || clearanceStr === "1") return Clearance.Supervisor;
+  
+  return Clearance.Staff; // Default fallback
 }

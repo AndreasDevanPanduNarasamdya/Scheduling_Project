@@ -34,6 +34,7 @@ public class AuthController : ControllerBase
             token,
             user.UserId,
             user.Email,
+            clearance = user.Clearance.ToString(), // 🔥 NEW: Send "Admin", "Supervisor", or "Staff" to React!
             staffId = staff?.StaffId,
             staff?.FirstName,
             staff?.LastName,

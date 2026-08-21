@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SchedulingMeruap.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class NewHistoryLogDatabase : Migration
+    public partial class NewDatabaseHistory : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -20,9 +20,11 @@ namespace SchedulingMeruap.Api.Migrations
                     TIME = table.Column<TimeSpan>(type: "time", nullable: false),
                     ACTOR = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     ACTION = table.Column<byte>(type: "tinyint", nullable: false),
+                    TARGET = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
+                    TYPE = table.Column<byte>(type: "tinyint", nullable: true),
+                    EDIT = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
                     DATE_RANGE = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: true),
                     ROTATION = table.Column<string>(type: "varchar(50)", unicode: false, maxLength: 50, nullable: true),
-                    TARGET = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     DESCRIPTION = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
                 constraints: table =>

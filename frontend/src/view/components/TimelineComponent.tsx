@@ -122,14 +122,11 @@ export default function TimelineComponent({
   const isAddingPast = useRef(false);
   const previousScrollState = useRef({ width: 0, left: 0 });
 
-  // 1. Take over date control internally
   const [currentRange, setCurrentRange] = useState({ start: startDate, end: endDate });
   const [visibleYear, setVisibleYear] = useState(startDate.getFullYear());
 
-  // 2. ONLY sync if timestamps actually change (Prevents the Dashboard live clock from resetting your scroll!)
   useEffect(() => {
     setCurrentRange(prev => {
-      // If the dates are mathematically the same, do nothing.
       if (prev.start.getTime() === startDate.getTime() && prev.end.getTime() === endDate.getTime()) {
         return prev;
       }
@@ -141,9 +138,11 @@ export default function TimelineComponent({
   const totalWidth = days.length * COLUMN_WIDTH;
   const dayLookup = useDayLookup(teams);
 
-  // Styling Adjustments based on Compact mode
-  const NAME_WIDTH_PX = compact ? 256 : 288; // matches w-64 / w-72
-  const nameWidth = compact ? "w-64" : "w-72";
+  // 🔥 Responsive sidebar classes: shrinks on mobile, expands on desktop
+  const nameWidthClasses = compact 
+    ? "w-[120px] md:w-[200px] lg:w-[256px]" 
+    : "w-[130px] sm:w-[180px] md:w-[240px] lg:w-[288px]";
+
   const headerHeight = compact ? "h-[80px]" : "h-[88px]";
   const teamRowHeight = compact ? "h-[48px]" : "h-[54px]";
   const staffRowHeight = compact ? "h-[54px]" : "h-[60px]";
@@ -158,21 +157,18 @@ export default function TimelineComponent({
     }
   }, [days, isLoading]);
 
-  // Handle Infinite Scrolling (this container now handles BOTH x and y scroll)
   const handleScroll = () => {
     const container = scrollContainerRef.current;
     if (!container || isAddingPast.current || isLoading) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = container;
 
-    // Update the floating sticky year header dynamically
     const centerDayIndex = Math.floor((scrollLeft + clientWidth / 2) / COLUMN_WIDTH);
     const centerDate = days[centerDayIndex]?.date;
     if (centerDate && centerDate.getFullYear() !== visibleYear) {
       setVisibleYear(centerDate.getFullYear());
     }
 
-    // Infinite Scroll Left (Past)
     if (scrollLeft < 500) {
       isAddingPast.current = true;
       previousScrollState.current = { width: scrollWidth, left: scrollLeft };
@@ -183,7 +179,6 @@ export default function TimelineComponent({
         return { ...prev, start: newStart };
       });
     } 
-    // Infinite Scroll Right (Future)
     else if (scrollWidth - (scrollLeft + clientWidth) < 500) {
       setCurrentRange(prev => {
         const newEnd = new Date(prev.end);
@@ -193,7 +188,6 @@ export default function TimelineComponent({
     }
   };
 
-  // Correct scrolling position immediately after adding past dates
   useLayoutEffect(() => {
     const container = scrollContainerRef.current;
     if (container && previousScrollState.current.width > 0 && isAddingPast.current) {
@@ -207,50 +201,48 @@ export default function TimelineComponent({
   }, [days.length]);
 
   return (
-    // SINGLE scroll container for the whole grid (both X and Y).
-    // The name column is a sticky-left child inside THIS same container,
-    // so its vertical scroll position can never drift from the bars.
     <div
       ref={scrollContainerRef}
       onScroll={handleScroll}
-      className="w-full h-full overflow-auto relative bg-white scrollbar-thin"
+      // Added mobile touch scrolling enhancements
+      className="w-full h-full overflow-auto relative bg-white scrollbar-thin [-webkit-overflow-scrolling:touch]"
     >
-      <div className="flex" style={{ minWidth: `${totalWidth + NAME_WIDTH_PX}px` }}>
+      {/* 🔥 Changed inline minWidth math to Tailwind's min-w-max so the browser handles it responsively! */}
+      <div className="flex min-w-max">
 
-        {/* STICKY LEFT NAME COLUMN (sticky left, scrolls vertically with everything else) */}
+        {/* STICKY LEFT NAME COLUMN */}
         <div
-          className={`${nameWidth} flex-shrink-0 sticky left-0 z-20 border-r border-brand-outline flex flex-col bg-white ${compact ? '' : 'shadow-[2px_0_10px_-3px_rgba(0,0,0,0.1)]'}`}
+          className={`${nameWidthClasses} flex-shrink-0 sticky left-0 z-30 border-r border-brand-outline flex flex-col bg-white shadow-[4px_0_12px_-4px_rgba(0,0,0,0.15)]`}
         >
-          {/* Sticky-top header, stacked with sticky-left => stays pinned to top-left corner */}
-          <div className={`${headerHeight} sticky top-0 z-30 flex items-center shrink-0 border-b border-brand-outline ${compact ? 'bg-brand-bg/50 px-4' : 'bg-brand-light text-white p-4'}`}>
-            <h1 className={`${compact ? 'text-[18px] text-brand-dark' : 'text-[22px]'} font-bold leading-tight`}>
+          <div className={`${headerHeight} sticky top-0 z-40 flex items-center shrink-0 border-b border-brand-outline ${compact ? 'bg-brand-bg/50 px-3 md:px-4' : 'bg-brand-light text-white p-3 md:p-4'}`}>
+            <h1 className={`${compact ? 'text-[15px] md:text-[18px] text-brand-dark' : 'text-[16px] md:text-[22px]'} font-bold leading-tight`}>
               Jadwal<br/>Lapangan
             </h1>
           </div>
 
           {isLoading && teams.length === 0 ? (
-            <div className="p-4 text-sm text-black/50 text-center">Memuat jadwal...</div>
+            <div className="p-4 text-xs md:text-sm text-black/50 text-center">Memuat jadwal...</div>
           ) : (
             teams.map((team) => (
               <div key={team.teamId}>
                 <div 
                   onClick={() => !compact && onInspectTarget?.(team.teamId, team.teamName, "team")}
-                  className={`bg-brand-bg px-4 ${teamRowHeight} flex items-center justify-between font-bold ${compact ? 'text-[14px]' : 'text-[15px]'} text-brand-dark border-b border-brand-outline/50 shrink-0 ${!compact && onInspectTarget ? 'cursor-pointer hover:bg-brand-outline/20 transition' : ''}`}
+                  className={`bg-brand-bg px-3 md:px-4 ${teamRowHeight} flex items-center justify-between font-bold ${compact ? 'text-[12px] md:text-[14px]' : 'text-[13px] md:text-[15px]'} text-brand-dark border-b border-brand-outline/50 shrink-0 ${!compact && onInspectTarget ? 'cursor-pointer hover:bg-brand-outline/20 transition' : ''}`}
                 >
-                  <span>{team.teamName}</span>
-                  <span className={`badge bg-brand-primary text-white ${compact ? 'py-0.5 px-2 text-[11px]' : 'py-1 px-2 text-[12px]'}`}>TIM</span>
+                  <span className="truncate pr-2">{team.teamName}</span>
+                  <span className={`badge bg-brand-primary text-white shrink-0 ${compact ? 'py-0.5 px-1.5 text-[9px] md:text-[11px]' : 'py-1 px-2 text-[10px] md:text-[12px]'}`}>TIM</span>
                 </div>
                 {team.members.length === 0 ? (
-                  <div className={`px-4 flex items-center text-xs text-black/40 italic border-b border-gray-100 shrink-0 ${staffRowHeight}`}>Kosong</div>
+                  <div className={`px-3 md:px-4 flex items-center text-xs text-black/40 italic border-b border-gray-100 shrink-0 ${staffRowHeight}`}>Kosong</div>
                 ) : (
                   team.members.map((member) => (
                     <div 
                       key={member.staffId} 
                       onClick={() => !compact && onInspectTarget?.(member.staffId, member.name, "staff", `${member.position} • Tim: ${team.teamName}`)}
-                      className={`px-4 flex items-center justify-between text-black/80 border-b border-gray-100 shrink-0 ${staffRowHeight} ${compact ? 'text-[14px]' : 'text-[15px]'} ${!compact && onInspectTarget ? 'cursor-pointer hover:bg-brand-bg/40 transition' : ''}`}
+                      className={`px-3 md:px-4 flex items-center justify-between text-black/80 border-b border-gray-100 shrink-0 ${staffRowHeight} ${compact ? 'text-[12px] md:text-[14px]' : 'text-[12px] md:text-[15px]'} ${!compact && onInspectTarget ? 'cursor-pointer hover:bg-brand-bg/40 transition' : ''}`}
                     >
-                      <span className="truncate">{member.name}</span>
-                      <span className={`text-black/40 ${compact ? 'text-[12px]' : 'text-[13px]'}`}>{member.position}</span>
+                      <span className="truncate max-w-[65%] md:max-w-[75%] pr-2" title={member.name}>{member.name}</span>
+                      <span className={`text-black/40 text-right truncate ${compact ? 'text-[10px] md:text-[12px]' : 'text-[10px] md:text-[13px]'}`}>{member.position}</span>
                     </div>
                   ))
                 )}
@@ -259,8 +251,8 @@ export default function TimelineComponent({
           )}
         </div>
 
-        {/* CALENDAR GRID (scrolls together with the name column since they share the same parent scroller) */}
-        <div className="flex flex-col flex-1" style={{ width: `${totalWidth}px` }}>
+        {/* CALENDAR GRID */}
+        <div className="flex flex-col flex-shrink-0" style={{ width: `${totalWidth}px` }}>
 
           <div className={`sticky top-0 z-20 bg-white shrink-0 shadow-sm border-b border-brand-outline flex flex-col box-border ${headerHeight}`}>
             

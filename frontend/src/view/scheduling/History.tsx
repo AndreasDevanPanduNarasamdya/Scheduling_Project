@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   History as HistoryIcon, RefreshCw, Filter, X,
-  User, Users, ChevronDown, Calendar, Repeat
+  User, Users, Calendar, Repeat
 } from "lucide-react";
 import { fetchActivityLogs, fetchTeams } from "../../api";
 import type { Team, ActivityLogResponse } from "../../types";
@@ -10,7 +10,7 @@ import type { Team, ActivityLogResponse } from "../../types";
 
 function formatTimeOnly(timeString: string | undefined) {
   if (!timeString) return "";
-  return timeString.slice(0, 5); 
+  return timeString.slice(0, 5);
 }
 
 function formatDayHeader(isoDate: string) {
@@ -34,11 +34,30 @@ const ACTION_META: Record<string, string> = {
   RemovePersonalSchedule: "Menghapus Jadwal Personal",
   CreateTeamSchedule: "Membuat Jadwal Tim Baru",
   EditTeamSchedule: "Mengedit Jadwal Tim",
-  RemoveTeamSchedule: "Menghapus Jadwal Tim"
+  RemoveTeamSchedule: "Menghapus Jadwal Tim",
+  SwitchingTeamMembers: "Menambahkan Staff ke Tim",
 };
 
 function getActionLabel(actionType: string) {
   return ACTION_META[actionType] || actionType;
+}
+
+// Defensive guard: only keep "Label : before → after" segments where
+// before and after actually differ. Protects against a backend that
+// includes unchanged fields in the edit diff string.
+function getActualChanges(editString?: string): string[] {
+  if (!editString) return [];
+  return editString
+    .split(";")
+    .map((seg) => seg.trim())
+    .filter(Boolean)
+    .filter((seg) => {
+      const arrowIdx = seg.indexOf("→");
+      if (arrowIdx === -1) return true;
+      const before = seg.slice(0, arrowIdx).split(":").slice(1).join(":").trim();
+      const after = seg.slice(arrowIdx + 1).trim();
+      return before !== after;
+    });
 }
 
 /* ================= MAIN PAGE ================= */
@@ -52,9 +71,9 @@ export default function History() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [filters, setFilters] = useState({ startDate: "", endDate: "", teamId: "", staffId: "" });
   const [appliedFilters, setAppliedFilters] = useState(filters);
-  
+
   const [collapsedDays, setCollapsedDays] = useState<Set<string>>(new Set());
-  const [collapsedLogs, setCollapsedLogs] = useState<Set<string>>(new Set()); 
+  const [collapsedLogs, setCollapsedLogs] = useState<Set<string>>(new Set());
 
   const loadTeams = async () => {
     try { setTeams(await fetchTeams()); } catch {}
@@ -92,15 +111,15 @@ export default function History() {
 
   const groupedByDay = useMemo(() => {
     const groups = new Map<string, { label: string; entries: ActivityLogResponse[] }>();
-    
+
     for (const log of logs) {
-      const key = log.date; 
+      const key = log.date;
       if (!groups.has(key)) {
         groups.set(key, { label: formatDayHeader(key), entries: [] });
       }
       groups.get(key)!.entries.push(log);
     }
-    
+
     for (const group of groups.values()) {
       group.entries.sort((a, b) => {
         const timeA = a.time || "";
@@ -108,7 +127,7 @@ export default function History() {
         return timeA.localeCompare(timeB);
       });
     }
-    
+
     return Array.from(groups.entries())
       .sort((a, b) => (new Date(a[0]).getTime() < new Date(b[0]).getTime() ? 1 : -1))
       .map(([key, value]) => ({ key, ...value }));
@@ -136,6 +155,80 @@ export default function History() {
       if (next.has(logId)) next.delete(logId); else next.add(logId);
       return next;
     });
+  };
+
+  // Renders ONLY the fields relevant to this specific action type.
+  const renderDynamicFields = (log: ActivityLogResponse) => {
+    const action = log.action;
+
+    const isTeamSchedule = ["CreateTeamSchedule", "EditTeamSchedule", "RemoveTeamSchedule"].includes(action);
+    const isTeamBase = ["CreateTeam", "EditTeam", "RemoveTeam"].includes(action);
+    const isTicket = ["CreateTicket", "ApproveTicket", "DeclineTicket"].includes(action);
+    const isPersonalSchedule = ["CreatePersonalSchedule", "EditPersonalSchedule", "RemovePersonalSchedule"].includes(action);
+    const isSwitch = action === "SwitchingTeamMembers";
+    const isEditStaff = action === "EditStaff";
+
+    return (
+      <div className="flex flex-col items-start gap-2 mb-2">
+
+        {/* Ticket Type Badge (ON/OFF) */}
+        {isTicket && (
+          <div className="font-bold text-black uppercase mb-0.5">
+            {log.type === 1 ? "OFF" : "ON"}
+          </div>
+        )}
+
+        {/* Date range — schedules & tickets */}
+        {(isPersonalSchedule || isTeamSchedule || isTicket) && log.dateRange && (
+          <div className="flex items-center gap-2 text-[14px] font-normal text-gray-600">
+            <Calendar size={16} strokeWidth={2} className="text-gray-600" />
+            {log.dateRange}
+          </div>
+        )}
+
+        {/* Rotation pattern — schedules only */}
+        {(isPersonalSchedule || isTeamSchedule) && log.rotation && (
+          <div className="flex items-center gap-2 text-[14px] font-normal text-gray-600">
+            <Repeat size={16} strokeWidth={2} className="text-gray-600" />
+            {log.rotation}
+          </div>
+        )}
+
+        {/* Team reassignment diff */}
+        {isSwitch && log.rotation && (
+          <div className="flex items-center gap-2 text-[14px] font-semibold text-gray-700">
+            <Users size={16} strokeWidth={2} className="text-gray-700" />
+            {log.rotation}
+          </div>
+        )}
+
+        {/* Primary target */}
+        {(isTeamBase || isTeamSchedule) ? (
+          <div className="flex items-center gap-2 text-[14px] font-semibold text-gray-700">
+            <Users size={16} strokeWidth={2} className="text-gray-700" />
+            {action === "EditTeam" && log.edit ? (getActualChanges(log.edit)[0] ?? log.target) : log.target}
+          </div>
+        ) : (
+          log.target && (
+            <div className="flex items-center gap-2 text-[14px] font-semibold text-gray-700">
+              <User size={16} strokeWidth={2} className="text-gray-700" />
+              {log.target}
+            </div>
+          )
+        )}
+
+        {/* Field-by-field diff — edit staff only, unchanged fields filtered out */}
+        {isEditStaff && (() => {
+          const changes = getActualChanges(log.edit);
+          if (changes.length === 0) return null;
+          return (
+            <div className="flex flex-col gap-1 text-[13px] font-normal text-gray-600 leading-relaxed">
+              {changes.map((diff, i) => <div key={i}>{diff}</div>)}
+            </div>
+          );
+        })()}
+      </div>
+    );
   };
 
   return (
@@ -223,58 +316,29 @@ export default function History() {
 
                               {/* Content Hierarchy */}
                               {isCollapsed ? (
-                                // COLLAPSED STATE (Just Time)
                                 <div className="flex items-center h-[14px]">
                                   <span className="text-[16px] text-gray-500 font-semibold leading-none select-none cursor-pointer" onClick={() => toggleLog(log.logId)}>
                                     {formatTimeOnly(log.time)}
                                   </span>
                                 </div>
                               ) : (
-                                // EXPANDED STATE
                                 <div className="flex flex-col items-start text-left w-full mt-[-2px]">
 
-                                  {/* Time: bold, medium gray */}
                                   <span className="text-[16px] text-gray-500 font-semibold mb-1 leading-none">
                                     {formatTimeOnly(log.time)}
                                   </span>
 
-                                  {/* Actor: bold, near-black */}
                                   <span className="text-[18px] text-gray-900 font-semibold leading-snug mb-0.5">
                                     {log.actor}
                                   </span>
 
-                                  {/* Action: normal weight, medium gray */}
                                   <span className="text-[18px] text-gray-500 font-normal leading-snug mb-3">
                                     {actionLabel}
                                   </span>
 
-                                  <div className="flex flex-col items-start gap-2 mb-2">
-                                    {log.dateRange && (
-                                      <div className="flex items-center gap-2 text-[14px] font-normal text-gray-600">
-                                        <Calendar size={16} strokeWidth={2} className="text-gray-600" />
-                                        {log.dateRange}
-                                      </div>
-                                    )}
+                                  {/* Only the fields this specific action type actually needs */}
+                                  {renderDynamicFields(log)}
 
-                                    {log.rotation && (
-                                      <div className="flex items-center gap-2 text-[14px] font-normal text-gray-600">
-                                        <Repeat size={16} strokeWidth={2} className="text-gray-600" />
-                                        {log.rotation}
-                                      </div>
-                                    )}
-
-                                    {/* Target: bold, darker gray */}
-                                    <div className="flex items-center gap-2 text-[14px] font-semibold text-gray-700">
-                                      {log.target.toLowerCase().includes("tim") ? (
-                                        <Users size={16} strokeWidth={2} className="text-gray-700" />
-                                      ) : (
-                                        <User size={16} strokeWidth={2} className="text-gray-700" />
-                                      )}
-                                      {log.target}
-                                    </div>
-                                  </div>
-
-                                  {/* Description: small, normal weight, light gray */}
                                   {log.description && (
                                     <div className="text-[13px] font-normal text-gray-400 mt-1 leading-snug text-left max-w-[280px] break-words">
                                       {log.description}

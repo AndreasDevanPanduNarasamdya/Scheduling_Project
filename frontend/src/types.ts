@@ -94,14 +94,16 @@ export type LogSourceType = "TeamSchedule" | "PersonalSchedule" | "FromTicket";
 
 export interface ActivityLogResponse {
   logId: string;
-  date: string; 
-  time: string; 
+  date: string;
+  time: string;
   actor: string;
-  action: ActionType;
-  dateRange?: string | null;
-  rotation?: string | null;
+  action: string;
   target: string;
-  description?: string | null;
+  edit?: string; 
+  type?: number | null; 
+  dateRange?: string;
+  rotation?: string;
+  description?: string;
 }
 
 export interface UpdateStaffPayload {
@@ -113,4 +115,10 @@ export interface UpdateStaffPayload {
   phone: string;
   dob: string; // YYYY-MM-DD
   joinDate: string; // YYYY-MM-DD
+}
+
+export enum Clearance {
+  Staff = 0,
+  Supervisor = 1,
+  Admin = 2
 }
