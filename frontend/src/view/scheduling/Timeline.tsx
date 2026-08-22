@@ -5,13 +5,16 @@ import {
   CheckCircle2, Filter, UserPlus, Plus
 } from "lucide-react";
 import type { TimelineTeam, BarType, TimelineHistoryRecord } from "../../types";
+import { Clearance } from "../../types";
 import {
   fetchTimeline, createTimeline, fetchTimelineHistory,
   endActiveTimeline, createTeam, fetchUnassignedStaff, assignStaffToTeam,
-  updateTimeline, deleteTimelineSchedule
+  updateTimeline, deleteTimelineSchedule,
+  getUserClearance
 } from "../../api";
 
 export default function TimelinePage() {
+  const userClearance = getUserClearance();
   const [teams, setTeams] = useState<TimelineTeam[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -268,22 +271,26 @@ export default function TimelinePage() {
             </select>
           </div>
 
-          <button onClick={handleOpenUnassignedModal} className="bg-brand-primary hover:bg-brand-dark text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
-            <UserPlus size={14} /><span>Staf Tanpa Tim</span>
-          </button>
+          {userClearance === Clearance.Admin && (
+            <>
+              <button onClick={handleOpenUnassignedModal} className="bg-brand-primary hover:bg-brand-dark text-white px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer">
+                <UserPlus size={14} /><span>Staf Tanpa Tim</span>
+              </button>
 
-          <div className="action-group ml-2">
-            <button 
-              type="button" 
-              onClick={() => { setErrorMessage(null); setIsAssignModalOpen(true); setTargetHasActiveSchedule(false); }} 
-              className="action-group-btn"
-            >
-              Atur Jadwal <Plus size={15} strokeWidth={2.5} />
-            </button>
-            <button type="button" onClick={() => { setErrorMessage(null); setIsNewTeamModalOpen(true); }} className="action-group-btn">
-              Tim Baru <Plus size={15} strokeWidth={2.5} />
-            </button>
-          </div>
+              <div className="action-group ml-2">
+                <button 
+                  type="button" 
+                  onClick={() => { setErrorMessage(null); setIsAssignModalOpen(true); setTargetHasActiveSchedule(false); }} 
+                  className="action-group-btn"
+                >
+                  Atur Jadwal <Plus size={15} strokeWidth={2.5} />
+                </button>
+                <button type="button" onClick={() => { setErrorMessage(null); setIsNewTeamModalOpen(true); }} className="action-group-btn">
+                  Tim Baru <Plus size={15} strokeWidth={2.5} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -368,7 +375,7 @@ export default function TimelinePage() {
                           : (isActive ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-800"))
                       : (isActive ? "bg-brand-primary text-white" : "bg-amber-100 text-amber-800");
 
-                    const canEditThis = !isTicket; // rule: only schedules (personal/team) are editable, tickets never
+                    const canEditThis = !isTicket && userClearance === Clearance.Admin;
 
                     return (
                       <div
@@ -544,33 +551,36 @@ export default function TimelinePage() {
               )}
             </div>
 
-            <div className="p-4 border-t border-brand-outline bg-brand-bg/30 shrink-0">
-              {(() => {
-                // 🔥 Check if the target already has a blocking active schedule
-                const disableNewSchedule = historyRecords.some(rec => 
-                  rec.status === "Active" && 
-                  (selectedInspection?.type === "team" || rec._source === "Personal")
-                );
+            {/* 🔥 NEW: LOCKED TO ADMINS ONLY */}
+            {userClearance === Clearance.Admin && (
+              <div className="p-4 border-t border-brand-outline bg-brand-bg/30 shrink-0">
+                {(() => {
+                  // 🔥 Check if the target already has a blocking active schedule
+                  const disableNewSchedule = historyRecords.some(rec => 
+                    rec.status === "Active" && 
+                    (selectedInspection?.type === "team" || rec._source === "Personal")
+                  );
 
-                return (
-                  <button 
-                    disabled={disableNewSchedule}
-                    onClick={() => {
-                      if (!selectedInspection) return;
-                      const targetPrefix = selectedInspection.type === "team" ? "team:" : "staff:";
-                      setFormData(prev => ({ ...prev, targetId: targetPrefix + selectedInspection.id }));
-                      setIsAssignModalOpen(true);
-                      setTargetHasActiveSchedule(false);
-                    }} 
-                    className={`btn-primary w-full justify-center py-2 text-sm transition-all ${
-                      disableNewSchedule ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer"
-                    }`}
-                  >
-                    {disableNewSchedule ? "Jadwal Aktif Sudah Ada" : "+ Perbarui / Atur Rotasi Baru"}
-                  </button>
-                );
-              })()}
-            </div>
+                  return (
+                    <button 
+                      disabled={disableNewSchedule}
+                      onClick={() => {
+                        if (!selectedInspection) return;
+                        const targetPrefix = selectedInspection.type === "team" ? "team:" : "staff:";
+                        setFormData(prev => ({ ...prev, targetId: targetPrefix + selectedInspection.id }));
+                        setIsAssignModalOpen(true);
+                        setTargetHasActiveSchedule(false);
+                      }} 
+                      className={`btn-primary w-full justify-center py-2 text-sm transition-all ${
+                        disableNewSchedule ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer"
+                      }`}
+                    >
+                      {disableNewSchedule ? "Jadwal Aktif Sudah Ada" : "+ Perbarui / Atur Rotasi Baru"}
+                    </button>
+                  );
+                })()}
+              </div>
+            )}
           </div>
         </div>
       </div>

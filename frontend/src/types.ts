@@ -109,12 +109,12 @@ export interface ActivityLogResponse {
 export interface UpdateStaffPayload {
   firstName: string;
   lastName: string;
-  sex: number; // 0 for P, 1 for W
+  sex: number;
   position: string;
   email: string;
   phone: string;
-  dob: string; // YYYY-MM-DD
-  joinDate: string; // YYYY-MM-DD
+  dob: string;
+  joinDate: string;
 }
 
 export const Clearance = {

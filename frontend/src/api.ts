@@ -262,10 +262,29 @@ export async function deleteTimelineSchedule(timelineId: string): Promise<void> 
 }
 
 export function getUserClearance(): Clearance {
-  const clearanceStr = localStorage.getItem("clearance");
+  const token = localStorage.getItem("token");
   
-  if (clearanceStr === "Admin" || clearanceStr === "2") return Clearance.Admin;
-  if (clearanceStr === "Supervisor" || clearanceStr === "1") return Clearance.Supervisor;
-  
+  if (!token) return Clearance.Staff;
+
+  try {
+    const base64Url = token.split(".")[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64).split("").map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2)).join("")
+    );
+    
+    const payload = JSON.parse(jsonPayload);
+    
+    // 2. .NET saves the Role under this specific schema URL by default, or just "role"
+    const role = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"] || payload.role;
+
+    // 3. Return the exact Enum value based on the token!
+    if (role === "Admin" || role === "2") return Clearance.Admin;
+    if (role === "Supervisor" || role === "1") return Clearance.Supervisor;
+    
+  } catch (error) {
+    console.error("Failed to parse token for clearance", error);
+  }
+
   return Clearance.Staff; // Default fallback
 }

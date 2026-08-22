@@ -3,6 +3,8 @@ import Accept from "./Accept";
 import Deny from "./Deny";
 import { X, Check, XCircle } from "lucide-react";
 import type { Ticket } from "../../types";
+import { Clearance } from "../../types";
+import { getUserClearance } from "../../api"; 
 
 interface TicketDetailPanelProps {
   ticket: Ticket | null;
@@ -13,8 +15,7 @@ interface TicketDetailPanelProps {
 
 export default function InboxSelected({ ticket, onClose, onActionComplete, className = ""}: TicketDetailPanelProps) {
   const [view, setView] = useState<'detail' | 'accept' | 'deny'>('detail');
-
-  // Updated to match the mockup exactly
+  const userClearance = getUserClearance();
   const typeStyles = ticket?.type === 'On'
     ? { bg: "bg-brand-primary text-white", label: "ON" }
     : { bg: "bg-gray-200 text-gray-600", label: "OFF" };
@@ -85,22 +86,23 @@ export default function InboxSelected({ ticket, onClose, onActionComplete, class
                     <textarea rows={2} value={ticket.description} readOnly className="input-locked resize-none" />
                   </div>
                 </div>
-
-                {/* Footer / Buttons - Now using Blue & Gray */}
-                <div className="p-6 pt-4 flex justify-center gap-4 bg-white">
-                  <button 
-                    onClick={() => setView('accept')}
-                    className="flex items-center gap-1.5 bg-brand-primary hover:bg-brand-dark text-white px-6 py-2.5 rounded-[12px] font-bold shadow-sm transition-colors text-[15px]"
-                  >
-                    Terima <Check size={18} strokeWidth={2.5} />
-                  </button>
-                  <button 
-                    onClick={() => setView('deny')}
-                    className="flex items-center gap-1.5 bg-gray-200 hover:bg-gray-300 text-gray-600 px-6 py-2.5 rounded-[12px] font-bold shadow-sm transition-colors text-[15px]"
-                  >
-                    Tolak <XCircle size={18} strokeWidth={2.5} />
-                  </button>
-                </div>
+                
+                {userClearance === Clearance.Admin && (
+                  <div className="p-6 pt-4 flex justify-center gap-4 bg-white">
+                    <button 
+                      onClick={() => setView('accept')}
+                      className="flex items-center gap-1.5 bg-brand-primary hover:bg-brand-dark text-white px-6 py-2.5 rounded-[12px] font-bold shadow-sm transition-colors text-[15px]"
+                    >
+                      Terima <Check size={18} strokeWidth={2.5} />
+                    </button>
+                    <button 
+                      onClick={() => setView('deny')}
+                      className="flex items-center gap-1.5 bg-gray-200 hover:bg-gray-300 text-gray-600 px-6 py-2.5 rounded-[12px] font-bold shadow-sm transition-colors text-[15px]"
+                    >
+                      Tolak <XCircle size={18} strokeWidth={2.5} />
+                    </button>
+                  </div>
+                )}
               </>
             )}
 

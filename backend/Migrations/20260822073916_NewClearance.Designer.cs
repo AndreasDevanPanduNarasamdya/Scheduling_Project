@@ -12,7 +12,7 @@ using SchedulingMeruap.Api.Data;
 namespace SchedulingMeruap.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260821130430_NewClearance")]
+    [Migration("20260822073916_NewClearance")]
     partial class NewClearance
     {
         /// <inheritdoc />

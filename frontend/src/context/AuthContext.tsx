@@ -9,10 +9,24 @@ interface StaffInfo {
   position?: string;
 }
 
-interface AuthUser {
+export interface AuthUser {
   userId: string;
   email: string;
-  staff?: StaffInfo;
+  clearance?: string | number; // Optional depending on how you use it
+  
+  // 🔥 ADD THESE 4 LINES SO TYPESCRIPT KNOWS THEY EXIST:
+  staffId?: string;
+  firstName?: string;
+  lastName?: string;
+  position?: string;
+  
+  // (Keep whatever else you already have in here, like `staff?: any`)
+  staff?: {
+    staffId: string;
+    firstName: string;
+    lastName: string;
+    position: string;
+  };
 }
 
 interface AuthContextType {
@@ -35,10 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   const login = (userData: AuthUser, rawToken?: string) => {
-    // console.log("LOGIN CALLED");
-    // console.log("USER:", userData);
-    // console.log("TOKEN EXISTS:", !!rawToken);
-
     setUser(userData);
 
     localStorage.setItem(

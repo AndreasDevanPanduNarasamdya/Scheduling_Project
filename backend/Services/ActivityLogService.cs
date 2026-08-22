@@ -21,10 +21,15 @@ public class ActivityLogService : IActivityLogService
         _staffRepository = staffRepository;
     }
 
-    private async Task<string> GetActorNameAsync(string? actorStaffId)
+    // 🔥 FIX 1: Look up by UserId (from the JWT Token) OR StaffId
+    private async Task<string> GetActorNameAsync(string? actorId)
     {
-        if (string.IsNullOrEmpty(actorStaffId)) return "Sistem";
-        var actor = await _staffRepository.GetByIdAsync(actorStaffId);
+        if (string.IsNullOrEmpty(actorId)) return "Sistem";
+
+        // Try getting by UserId first (since Controllers pass the Token ID), fallback to StaffId
+        var actor = await _staffRepository.GetByUserIdAsync(actorId)
+                 ?? await _staffRepository.GetByIdAsync(actorId);
+
         return actor != null ? $"{actor.FirstName} {actor.LastName}".Trim() : "Sistem";
     }
 
@@ -61,11 +66,13 @@ public class ActivityLogService : IActivityLogService
         var dateRange = $"{timeline.StartDate:yyyy-MM-dd} - {(timeline.EndDate.HasValue ? timeline.EndDate.Value.ToString("yyyy-MM-dd") : "Seterusnya")}";
         var rotation = $"{timeline.DaysOn} Hari On - {timeline.DaysOff} Hari Off";
 
+        var nowWib = DateTime.UtcNow.AddHours(7); // 🔥 FIX 2: WIB Time
+
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = actionEnum,
             Target = targetName,
@@ -75,7 +82,6 @@ public class ActivityLogService : IActivityLogService
         });
     }
 
-    // oldTimeline is the row's state BEFORE the update was applied — caller must fetch it first
     public async Task LogScheduleChangedAsync(Timeline oldTimeline, Timeline newTimeline, Staff? staff, Team? team, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
@@ -87,11 +93,13 @@ public class ActivityLogService : IActivityLogService
         var oldRotation = $"{oldTimeline.DaysOn} Hari On - {oldTimeline.DaysOff} Hari Off";
         var newRotation = $"{newTimeline.DaysOn} Hari On - {newTimeline.DaysOff} Hari Off";
 
+        var nowWib = DateTime.UtcNow.AddHours(7);
+
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = actionEnum,
             Target = targetName,
@@ -110,11 +118,13 @@ public class ActivityLogService : IActivityLogService
         var dateRange = $"{deleted.StartDate:yyyy-MM-dd} - {(deleted.EndDate.HasValue ? deleted.EndDate.Value.ToString("yyyy-MM-dd") : "Seterusnya")}";
         var rotation = $"{deleted.DaysOn} Hari On - {deleted.DaysOff} Hari Off";
 
+        var nowWib = DateTime.UtcNow.AddHours(7);
+
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = actionEnum,
             Target = targetName,
@@ -134,15 +144,17 @@ public class ActivityLogService : IActivityLogService
         var targetName = $"{staff.FirstName} {staff.LastName}".Trim();
         var dateRange = $"{ticket.StartDate:yyyy-MM-dd} - {ticket.EndDate:yyyy-MM-dd}";
 
+        var nowWib = DateTime.UtcNow.AddHours(7);
+
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = Action.CreateTicket,
             Target = targetName,
-            Type = ticket.Type,   // 0 = On, 1 = Off — populates the ON/OFF badge
+            Type = ticket.Type,
             DateRange = dateRange,
             Description = ticket.Reason ?? ticket.Title
         });
@@ -154,11 +166,13 @@ public class ActivityLogService : IActivityLogService
         var targetName = $"{staff.FirstName} {staff.LastName}".Trim();
         var dateRange = $"{ticket.StartDate:yyyy-MM-dd} - {ticket.EndDate:yyyy-MM-dd}";
 
+        var nowWib = DateTime.UtcNow.AddHours(7);
+
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = Action.ApproveTicket,
             Target = targetName,
@@ -174,11 +188,13 @@ public class ActivityLogService : IActivityLogService
         var targetName = $"{staff.FirstName} {staff.LastName}".Trim();
         var dateRange = $"{ticket.StartDate:yyyy-MM-dd} - {ticket.EndDate:yyyy-MM-dd}";
 
+        var nowWib = DateTime.UtcNow.AddHours(7);
+
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = Action.DeclineTicket,
             Target = targetName,
@@ -195,12 +211,13 @@ public class ActivityLogService : IActivityLogService
     public async Task LogStaffCreatedAsync(Staff staff, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
+        var nowWib = DateTime.UtcNow.AddHours(7);
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = Action.CreateStaff,
             Target = $"{staff.FirstName} {staff.LastName}".Trim(),
@@ -208,7 +225,6 @@ public class ActivityLogService : IActivityLogService
         });
     }
 
-    // oldStaff must be captured BEFORE applying the update
     public async Task LogStaffEditedAsync(Staff oldStaff, Staff newStaff, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
@@ -229,15 +245,14 @@ public class ActivityLogService : IActivityLogService
         if (oldStaff.Dob != newStaff.Dob)
             diffs.Add($"DOB: {oldStaff.Dob:yyyy-MM-dd} → {newStaff.Dob:yyyy-MM-dd}");
 
-        // NOTE: joined with ';' — Edit column is 150 chars, several diffs can overflow.
-        // If that's a real risk, this column needs widening in a future migration.
         var editSummary = string.Join("; ", diffs);
+        var nowWib = DateTime.UtcNow.AddHours(7);
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = Action.EditStaff,
             Target = $"{newStaff.FirstName} {newStaff.LastName}".Trim(),
@@ -249,12 +264,13 @@ public class ActivityLogService : IActivityLogService
     public async Task LogStaffDeletedAsync(string staffName, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
+        var nowWib = DateTime.UtcNow.AddHours(7);
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = Action.RemoveStaff,
             Target = staffName,
@@ -265,12 +281,13 @@ public class ActivityLogService : IActivityLogService
     public async Task LogAccountActivatedAsync(Staff staff)
     {
         var staffName = $"{staff.FirstName} {staff.LastName}".Trim();
+        var nowWib = DateTime.UtcNow.AddHours(7);
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = staffName,
             Action = Action.AccountActivation,
             Target = staffName,
@@ -285,15 +302,16 @@ public class ActivityLogService : IActivityLogService
     public async Task LogTeamCreatedAsync(Team team, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
+        var nowWib = DateTime.UtcNow.AddHours(7);
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = Action.CreateTeam,
-            Target = team.TeamName,   // dropped "Tim " prefix — icon in UI conveys type
+            Target = team.TeamName,
             Description = note ?? "Membuat tim lapangan baru"
         });
     }
@@ -301,12 +319,13 @@ public class ActivityLogService : IActivityLogService
     public async Task LogTeamEditedAsync(string oldTeamName, Team newTeam, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
+        var nowWib = DateTime.UtcNow.AddHours(7);
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = Action.EditTeam,
             Target = newTeam.TeamName,
@@ -318,12 +337,13 @@ public class ActivityLogService : IActivityLogService
     public async Task LogTeamDeletedAsync(string teamName, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
+        var nowWib = DateTime.UtcNow.AddHours(7);
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = Action.RemoveTeam,
             Target = teamName,
@@ -331,24 +351,23 @@ public class ActivityLogService : IActivityLogService
         });
     }
 
-    // #17 — new
     public async Task LogTeamMemberSwitchedAsync(Staff staff, Team? oldTeam, Team newTeam, string? actorStaffId, string? note = null)
     {
         var actorName = await GetActorNameAsync(actorStaffId);
         var staffName = $"{staff.FirstName} {staff.LastName}".Trim();
-
-        // No old team → first assignment, plain name. Had an old team → reassignment, arrow diff.
         var teamInfo = oldTeam == null ? newTeam.TeamName : $"{oldTeam.TeamName} → {newTeam.TeamName}";
+
+        var nowWib = DateTime.UtcNow.AddHours(7);
 
         await _activityLogRepository.AddAsync(new ActivityLog
         {
             LogId = Guid.NewGuid().ToString(),
-            Date = DateTime.UtcNow.Date,
-            Time = DateTime.UtcNow.TimeOfDay,
+            Date = nowWib.Date,
+            Time = nowWib.TimeOfDay,
             Actor = actorName,
             Action = Action.SwitchingTeamMembers,
             Target = staffName,
-            Rotation = teamInfo,   // repurposed field — see mapping table above
+            Rotation = teamInfo,
             Description = note
         });
     }

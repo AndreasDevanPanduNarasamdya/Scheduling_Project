@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Upload, Send } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchWithToken, fetchStaffById } from "../../api";
+import { fetchWithToken, fetchStaffById, fetchTeams } from "../../api";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
@@ -14,27 +14,52 @@ export default function Form() {
   const [description, setDescription] = useState("");
   const { user } = useAuth();
   const [liveStaff, setLiveStaff] = useState<any>(null);
+  const [teamName, setTeamName] = useState<string>("Memuat...");
+
+  const currentStaffId = user?.staffId || user?.staff?.staffId;
 
   useEffect(() => {
-    if (user?.staff?.staffId) {
-      fetchStaffById(user.staff.staffId)
-        .then((data) => setLiveStaff(data))
-        .catch((err) => console.error("Failed to fetch live staff profile:", err));
-    }
-  }, [user?.staff?.staffId]);
+    const loadProfileAndTeam = async () => {
+      const staffId = user?.staffId || user?.staff?.staffId;
+      if (!staffId) {
+        setTeamName("-");
+        return;
+      }
 
-  // Use live data if we have it, otherwise fallback to the auth token data
-  const displayFirstName = liveStaff?.firstName ?? user?.staff?.firstName ?? "";
-  const displayLastName = liveStaff?.lastName ?? user?.staff?.lastName ?? "";
-  const displayPosition = liveStaff?.position ?? user?.staff?.position ?? "";
+      // 1. Fetch Staff Profile
+      try {
+        const data = await fetchStaffById(staffId);
+        setLiveStaff(data);
+      } catch (err) {
+        console.error("Failed to fetch live staff profile:", err);
+      }
+
+      // 2. 🔥 Fetch Teams to find out where this staff belongs
+      try {
+        const teams = await fetchTeams();
+        const userTeam = teams.find((t: any) => t.members.some((m: any) => m.staffId === staffId));
+        setTeamName(userTeam ? userTeam.teamName : "-");
+      } catch (err) {
+        console.error("Failed to fetch teams:", err);
+        setTeamName("-");
+      }
+    };
+
+    loadProfileAndTeam();
+  }, [user?.staffId, user?.staff?.staffId]);
+
+  const displayFirstName = liveStaff?.firstName ?? (user as any)?.firstName ?? user?.staff?.firstName ?? "";
+  const displayLastName = liveStaff?.lastName ?? (user as any)?.lastName ?? user?.staff?.lastName ?? "";
+  const displayPosition = liveStaff?.position ?? (user as any)?.position ?? user?.staff?.position ?? "";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const staffId = user?.staff?.staffId;
+    // 🔥 3. Grab the ID safely
+    const staffId = user?.staffId || user?.staff?.staffId;
 
     if (!staffId) {
-      alert("Error: User ID not found.");
+      alert("Error: Akun ini tidak memiliki Profil Staff yang terhubung di database. Anda tidak dapat mengirim tiket.");
       return;
     }
 
@@ -44,7 +69,7 @@ export default function Form() {
     }
 
     const payload = {
-      staffId: user?.staff?.staffId,
+      staffId: staffId,
       startDate: startDate.toISOString().split('T')[0], 
       endDate: endDate.toISOString().split('T')[0],
       type: isTicketOn ? "On" : "Off",
@@ -111,7 +136,12 @@ export default function Form() {
 
           <div>
             <label className="form-label">Tim Shift</label>
-            <input type="text" defaultValue="Tim A" className="input-field" />
+            <input 
+              type="text" 
+              value={teamName} 
+              readOnly 
+              className="input-locked" 
+            />
           </div>
 
           <div>
