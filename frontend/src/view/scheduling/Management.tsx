@@ -21,7 +21,7 @@ export default function ManagementPage() {
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [staffForm, setStaffForm] = useState({
     firstName: "", lastName: "", sex: "P", position: "",
-    email: "", phone: "", dob: "", joinDate: ""
+    email: "", phone: "", dob: "", joinDate: "", clearance: 0 // 🔥 ADDED
   });
 
   // --- STAFF FORM STATE (EDIT/INFO) ---
@@ -30,7 +30,7 @@ export default function ManagementPage() {
   const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
   const [editStaffForm, setEditStaffForm] = useState({
     firstName: "", lastName: "", sex: "P", position: "",
-    email: "", phone: "", dob: "", joinDate: ""
+    email: "", phone: "", dob: "", joinDate: "", clearance: 0 // 🔥 ADDED
   });
 
   // --- TEAM FORM STATE (CREATE) ---
@@ -116,7 +116,8 @@ export default function ManagementPage() {
         email: realData.email || "", 
         phone: realData.phone || "",
         dob: realData.dob ? realData.dob.split("T")[0] : "",
-        joinDate: realData.joinDate ? realData.joinDate.split("T")[0] : ""
+        joinDate: realData.joinDate ? realData.joinDate.split("T")[0] : "",
+        clearance: realData.clearance ?? 0 // 🔥 ADDED
       });
       
       setSelectedStaffId(staff.staffId);
@@ -141,12 +142,13 @@ export default function ManagementPage() {
         email: staffForm.email,
         phone: staffForm.phone,
         dob: staffForm.dob,
-        joinDate: staffForm.joinDate
+        joinDate: staffForm.joinDate,
+        clearance: Number(staffForm.clearance)
       };
       const result = await createNewHire(payload);
       alert(`Staff added to staging successfully! Token: ${result.tokenId}`);
       setIsAddStaffOpen(false);
-      setStaffForm({ firstName: "", lastName: "", sex: "P", position: "", email: "", phone: "", dob: "", joinDate: "" });
+      setStaffForm({ firstName: "", lastName: "", sex: "P", position: "", email: "", phone: "", dob: "", joinDate: "", clearance: 0 });
       loadData();
     } catch (err: any) {
       alert(err.message || "Failed to add new hire");
@@ -169,7 +171,8 @@ export default function ManagementPage() {
         email: editStaffForm.email,
         phone: editStaffForm.phone,
         dob: editStaffForm.dob,
-        joinDate: editStaffForm.joinDate
+        joinDate: editStaffForm.joinDate,
+        clearance: Number(editStaffForm.clearance)
       };
 
       await editStaff(selectedStaffId, payload);
@@ -446,6 +449,18 @@ export default function ManagementPage() {
                     required
                   />
                 </div>
+                <div>
+                  <label className="form-label">Tingkat Akses (Clearance)</label>
+                  <select
+                    className="input-field cursor-pointer"
+                    value={staffForm.clearance}
+                    onChange={e => setStaffForm({ ...staffForm, clearance: parseInt(e.target.value) })}
+                  >
+                    <option value={0}>Staff (Level 0)</option>
+                    <option value={1}>Supervisor (Level 1)</option>
+                    <option value={2}>Admin (Level 2)</option>
+                  </select>
+                </div>
               </div>
               <div className="flex justify-end gap-3 pt-6 border-t border-brand-outline/40 mt-4">
                 <button
@@ -577,6 +592,19 @@ export default function ManagementPage() {
                     required
                     disabled={!isEditingStaff}
                   />
+                </div>
+                <div>
+                  <label className="form-label">Tingkat Akses (Clearance)</label>
+                  <select
+                    className="input-field disabled:bg-brand-bg/60 disabled:text-black/60 disabled:border-transparent disabled:cursor-not-allowed"
+                    value={editStaffForm.clearance}
+                    onChange={e => setEditStaffForm({ ...editStaffForm, clearance: parseInt(e.target.value) })}
+                    disabled={!isEditingStaff}
+                  >
+                    <option value={0}>Staff (Level 0)</option>
+                    <option value={1}>Supervisor (Level 1)</option>
+                    <option value={2}>Admin (Level 2)</option>
+                  </select>
                 </div>
               </div>
               

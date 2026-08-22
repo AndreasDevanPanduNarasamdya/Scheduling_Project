@@ -6,7 +6,7 @@ using SchedulingMeruap.Api.Services.Interfaces;
 
 namespace SchedulingMeruap.Api.Controllers;
 
-[Authorize]
+[Authorize] // 👈 Base requirement: Must be logged in
 [ApiController]
 [Route("api/[controller]")]
 public class StaffController : ControllerBase
@@ -18,11 +18,15 @@ public class StaffController : ControllerBase
         _staffService = staffService;
     }
 
-    // 🔥 1. Add the helper to get the logged-in user
+    // Helper to get the logged-in user
     private string? GetCurrentActorId()
     {
         return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
     }
+
+    // =========================================================
+    // VIEWING (Open to Staff, Supervisor, Admin)
+    // =========================================================
 
     [HttpGet]
     public async Task<IActionResult> GetAll()
@@ -46,12 +50,15 @@ public class StaffController : ControllerBase
         return Ok(unassigned);
     }
 
+    // =========================================================
+    // EDITING (Strictly locked to Admin ONLY)
+    // =========================================================
+
     [HttpPost("assign")]
+    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
     public async Task<IActionResult> AssignStaff([FromBody] StaffRequest dto)
     {
         var actorId = GetCurrentActorId();
-
-        // 🔥 Pass it down to the Service
         var success = await _staffService.AssignStaffAsync(dto, actorId);
 
         if (!success) return NotFound(new { message = "Staff member not found" });
@@ -59,14 +66,14 @@ public class StaffController : ControllerBase
         return Ok(new { message = "Staff assigned successfully!" });
     }
 
-    // 🔥 2. Update Edit Staff Endpoint
     [HttpPut("{staffId}")]
+    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
     public async Task<IActionResult> EditStaff(string staffId, [FromBody] UpdateStaffRequest request)
     {
         try
         {
-            var actorId = GetCurrentActorId(); // 🔥 Grab the admin editing the staff
-            await _staffService.UpdateStaffAsync(staffId, request, actorId); // 🔥 Pass it down
+            var actorId = GetCurrentActorId();
+            await _staffService.UpdateStaffAsync(staffId, request, actorId);
             return Ok(new { message = "Staff updated successfully" });
         }
         catch (ArgumentException ex)
@@ -79,14 +86,14 @@ public class StaffController : ControllerBase
         }
     }
 
-    // 🔥 3. Update Delete Staff Endpoint
     [HttpDelete("{staffId}")]
+    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
     public async Task<IActionResult> DeleteStaff(string staffId)
     {
         try
         {
-            var actorId = GetCurrentActorId(); // 🔥 Grab the admin deleting the staff
-            await _staffService.DeleteStaffAsync(staffId, actorId); // 🔥 Pass it down
+            var actorId = GetCurrentActorId();
+            await _staffService.DeleteStaffAsync(staffId, actorId);
             return Ok(new { message = "Staff deleted successfully" });
         }
         catch (ArgumentException ex)

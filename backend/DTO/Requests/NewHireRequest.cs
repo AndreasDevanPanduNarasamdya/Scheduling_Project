@@ -12,6 +12,7 @@ public class NewHireRequest
     public string Phone { get; set; } = null!;
     public DateTime Dob { get; set; }
     public DateTime JoinDate { get; set; }
+    public Clearance Clearance { get; set; }
 }
 
 public class ActivateAccountRequest

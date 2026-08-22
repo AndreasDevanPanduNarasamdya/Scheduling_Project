@@ -50,12 +50,13 @@ public class StaffService : IStaffService
             StaffId = staff.StaffId,
             FirstName = staff.FirstName,
             LastName = staff.LastName,
-            Sex = (byte)staff.Sex,
+            Sex = staff.Sex,
             Position = staff.Position,
             Phone = staff.Phone,
             Dob = staff.Dob,
             JoinDate = staff.JoinDate,
-            Email = staff.User?.Email
+            Email = staff.User?.Email,
+            Clearance = staff.User?.Clearance ?? Clearance.Staff
         };
     }
 
@@ -150,6 +151,7 @@ public class StaffService : IStaffService
         if (staff.User != null)
         {
             staff.User.Email = request.Email;
+            staff.User.Clearance = request.Clearance;
         }
 
         // 5. Save to database

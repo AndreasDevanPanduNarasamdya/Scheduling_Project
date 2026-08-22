@@ -13,7 +13,6 @@ public class ActivityLogResponse
     public Action Action { get; set; }
     public string Target { get; set; } = null!;
 
-    // 🔥 Added the two missing ones from your database model!
     public TicketType? Type { get; set; }
     public string? Edit { get; set; }
 

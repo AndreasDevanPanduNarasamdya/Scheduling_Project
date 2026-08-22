@@ -19,6 +19,13 @@ public enum Sex : byte
     Female
 }
 
+public enum Clearance : byte
+{
+    Staff,
+    Supervisor,
+    Admin
+}
+
 public enum Action : byte
 {
     CreateStaff,

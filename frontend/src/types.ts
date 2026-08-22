@@ -117,8 +117,10 @@ export interface UpdateStaffPayload {
   joinDate: string; // YYYY-MM-DD
 }
 
-export enum Clearance {
-  Staff = 0,
-  Supervisor = 1,
-  Admin = 2
-}
+export const Clearance = {
+  Staff: 0,
+  Supervisor: 1,
+  Admin: 2
+} as const;
+
+export type Clearance = typeof Clearance[keyof typeof Clearance];

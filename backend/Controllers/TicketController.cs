@@ -9,7 +9,7 @@ using System.Security.Claims;
 
 namespace SchedulingMeruap.Api.Controllers;
 
-[Authorize]
+[Authorize] // Base requirement: Must be logged in
 [ApiController]
 [Route("api/[controller]")]
 public class TicketController : ControllerBase
@@ -27,7 +27,11 @@ public class TicketController : ControllerBase
         return User.FindFirstValue(ClaimTypes.NameIdentifier);
     }
 
+    // =========================================================
+    // INBOX VIEWING (Staff locked out, Supervisor/Admin only)
+    // =========================================================
     [HttpGet]
+    [Authorize(Roles = "Admin,Supervisor")] // 🔥 Lock out Level 0 Staff
     public async Task<IActionResult> GetAllTickets()
     {
         try
@@ -57,7 +61,11 @@ public class TicketController : ControllerBase
         }
     }
 
+    // =========================================================
+    // PENGAJUAN (Free for All - Staff, Supervisor, Admin)
+    // =========================================================
     [HttpPost("{userId}")]
+    // No role restriction needed here!
     public async Task<IActionResult> SubmitTicket(string userId, [FromBody] SubmitTicketRequest request)
     {
         if (string.IsNullOrEmpty(userId))
@@ -86,13 +94,17 @@ public class TicketController : ControllerBase
         }
     }
 
+    // =========================================================
+    // INBOX EDITING (Admin ONLY)
+    // =========================================================
     [HttpPut("{id}/approve")]
+    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
     public async Task<IActionResult> ApproveTicket(string id, [FromBody] TicketActionRequest request)
     {
         try
         {
-            var actorId = GetCurrentActorId(); // 🔥 1. Grab the admin who clicked approve
-            await _ticketService.ApproveTicketAsync(id, request.Reason, actorId); // 🔥 2. Pass it down
+            var actorId = GetCurrentActorId();
+            await _ticketService.ApproveTicketAsync(id, request.Reason, actorId);
             return Ok(new { message = "Ticket approved successfully" });
         }
         catch (KeyNotFoundException)
@@ -102,12 +114,13 @@ public class TicketController : ControllerBase
     }
 
     [HttpPut("{id}/reject")]
+    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
     public async Task<IActionResult> RejectTicket(string id, [FromBody] TicketActionRequest request)
     {
         try
         {
-            var actorId = GetCurrentActorId(); // 🔥 1. Grab the admin who clicked reject
-            await _ticketService.RejectTicketAsync(id, request.Reason, actorId); // 🔥 2. Pass it down
+            var actorId = GetCurrentActorId();
+            await _ticketService.RejectTicketAsync(id, request.Reason, actorId);
             return Ok(new { message = "Ticket rejected successfully" });
         }
         catch (KeyNotFoundException)

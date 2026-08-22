@@ -10,7 +10,7 @@ using SchedulingMeruap.Api.Services.Interfaces;
 
 namespace SchedulingMeruap.Api.Controllers
 {
-    [Authorize]
+    [Authorize] // 👈 Base requirement: Must be logged in
     [Route("api/teams")]
     [ApiController]
     public class TeamsController : ControllerBase
@@ -22,12 +22,15 @@ namespace SchedulingMeruap.Api.Controllers
             _teamService = teamService;
         }
 
-        // 🔥 1. Add the helper to get the logged-in user
+        // Helper to get the logged-in user
         private string? GetCurrentActorId()
         {
             return User.FindFirstValue(ClaimTypes.NameIdentifier);
         }
 
+        // =========================================================
+        // VIEWING (Open to Staff, Supervisor, Admin)
+        // =========================================================
         [HttpGet]
         public async Task<IActionResult> GetTeams()
         {
@@ -42,7 +45,11 @@ namespace SchedulingMeruap.Api.Controllers
             }
         }
 
+        // =========================================================
+        // EDITING (Strictly locked to Admin ONLY)
+        // =========================================================
         [HttpPost]
+        [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
         public async Task<IActionResult> CreateTeam([FromBody] TeamRequest dto)
         {
             if (!ModelState.IsValid)
@@ -52,9 +59,9 @@ namespace SchedulingMeruap.Api.Controllers
 
             try
             {
-                var actorId = GetCurrentActorId(); // 🔥 2. Grab the admin creating the team
-                var result = await _teamService.CreateTeamAsync(dto, actorId); // 🔥 3. Pass it down
-                return Ok(result); // Returns the new TeamResponse
+                var actorId = GetCurrentActorId();
+                var result = await _teamService.CreateTeamAsync(dto, actorId);
+                return Ok(result);
             }
             catch (ArgumentException ex)
             {
@@ -67,6 +74,7 @@ namespace SchedulingMeruap.Api.Controllers
         }
 
         [HttpPut("{teamId}")]
+        [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
         public async Task<IActionResult> EditTeam(string teamId, [FromBody] TeamRequest dto)
         {
             if (!ModelState.IsValid)
@@ -76,8 +84,8 @@ namespace SchedulingMeruap.Api.Controllers
 
             try
             {
-                var actorId = GetCurrentActorId(); // 🔥 4. Grab the admin editing the team
-                await _teamService.UpdateTeamAsync(teamId, dto.TeamName, actorId); // 🔥 5. Pass it down
+                var actorId = GetCurrentActorId();
+                await _teamService.UpdateTeamAsync(teamId, dto.TeamName, actorId);
                 return Ok(new { message = "Team updated successfully" });
             }
             catch (ArgumentException ex)
@@ -91,12 +99,13 @@ namespace SchedulingMeruap.Api.Controllers
         }
 
         [HttpDelete("{teamId}")]
+        [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
         public async Task<IActionResult> DeleteTeam(string teamId)
         {
             try
             {
-                var actorId = GetCurrentActorId(); // 🔥 6. Grab the admin deleting the team
-                await _teamService.DeleteTeamAsync(teamId, actorId); // 🔥 7. Pass it down
+                var actorId = GetCurrentActorId();
+                await _teamService.DeleteTeamAsync(teamId, actorId);
                 return Ok(new { message = "Team deleted successfully" });
             }
             catch (ArgumentException ex)

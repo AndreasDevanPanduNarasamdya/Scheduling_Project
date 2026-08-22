@@ -325,8 +325,6 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnName("START_DATE");
 
                     b.Property<byte>("Status")
-                        .HasMaxLength(1)
-                        .IsUnicode(false)
                         .HasColumnType("tinyint")
                         .HasColumnName("STATUS");
 
@@ -338,8 +336,6 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnName("TITLE");
 
                     b.Property<byte>("Type")
-                        .HasMaxLength(1)
-                        .IsUnicode(false)
                         .HasColumnType("tinyint")
                         .HasColumnName("TYPE");
 
@@ -404,6 +400,10 @@ namespace SchedulingMeruap.Api.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(36)")
                         .HasColumnName("USER_ID");
+
+                    b.Property<byte>("Clearance")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("CLEARANCE");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("datetime")

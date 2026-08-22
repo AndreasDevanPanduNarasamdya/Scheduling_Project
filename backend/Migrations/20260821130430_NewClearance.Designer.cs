@@ -12,8 +12,8 @@ using SchedulingMeruap.Api.Data;
 namespace SchedulingMeruap.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260821070523_NewDatabaseHistory")]
-    partial class NewDatabaseHistory
+    [Migration("20260821130430_NewClearance")]
+    partial class NewClearance
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -328,8 +328,6 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnName("START_DATE");
 
                     b.Property<byte>("Status")
-                        .HasMaxLength(1)
-                        .IsUnicode(false)
                         .HasColumnType("tinyint")
                         .HasColumnName("STATUS");
 
@@ -341,8 +339,6 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnName("TITLE");
 
                     b.Property<byte>("Type")
-                        .HasMaxLength(1)
-                        .IsUnicode(false)
                         .HasColumnType("tinyint")
                         .HasColumnName("TYPE");
 
@@ -407,6 +403,10 @@ namespace SchedulingMeruap.Api.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(36)")
                         .HasColumnName("USER_ID");
+
+                    b.Property<byte>("Clearance")
+                        .HasColumnType("tinyint")
+                        .HasColumnName("CLEARANCE");
 
                     b.Property<DateTime>("Created")
                         .HasColumnType("datetime")

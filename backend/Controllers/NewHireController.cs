@@ -10,6 +10,7 @@ using SchedulingMeruap.Api.DTO.Responses;
 
 namespace SchedulingMeruap.Api.Controllers;
 
+[Authorize] // 👈 Base requirement: Must be logged in by default
 [ApiController]
 [Route("api/[controller]")]
 public class NewHireController : ControllerBase
@@ -23,7 +24,11 @@ public class NewHireController : ControllerBase
         _newHireService = newHireService;
     }
 
+    // =========================================================
+    // MANAGEMENT (Strictly locked to Admin ONLY)
+    // =========================================================
     [HttpPost("new-hire")]
+    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK: Only Admins can invite new staff
     public async Task<IActionResult> AddNewHire([FromBody] NewHireRequest request)
     {
         // 1. Generate the security token and ID
@@ -61,7 +66,11 @@ public class NewHireController : ControllerBase
         });
     }
 
-    [AllowAnonymous]
+    // =========================================================
+    // ACCOUNT ACTIVATION (Open to the public/unauthenticated users)
+    // =========================================================
+
+    [AllowAnonymous] // 🔥 Keep this open so the unlogged user can validate their link
     [HttpGet("activate/validate")]
     public async Task<IActionResult> ValidateActivationToken([FromQuery] string token)
     {
@@ -74,7 +83,7 @@ public class NewHireController : ControllerBase
         return Ok(response);
     }
 
-    [AllowAnonymous]
+    [AllowAnonymous] // 🔥 Keep this open so they can submit their new password
     [HttpPost("activate")]
     public async Task<IActionResult> ActivateAccount([FromBody] ActivateAccountRequest request)
     {

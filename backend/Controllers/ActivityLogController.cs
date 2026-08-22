@@ -5,7 +5,7 @@ using SchedulingMeruap.Api.Services.Interfaces;
 
 namespace SchedulingMeruap.Api.Controllers;
 
-[Authorize]
+[Authorize] // Base requirement: Must be logged in
 [ApiController]
 [Route("api/[controller]")]
 public class ActivityLogController : ControllerBase
@@ -17,7 +17,11 @@ public class ActivityLogController : ControllerBase
         _activityLogService = activityLogService;
     }
 
+    // =========================================================
+    // VIEWING (Locked for Staff, Open to Supervisor & Admin)
+    // =========================================================
     [HttpGet]
+    [Authorize(Roles = "Admin,Supervisor")] // 🔥 STRICT LOCK: Kicks out Level 0 Staff
     public async Task<IActionResult> GetLogs(
         [FromQuery] DateTime? startDate,
         [FromQuery] DateTime? endDate,

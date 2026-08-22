@@ -3,10 +3,13 @@ import { useAuth } from "./context/AuthContext";
 import { Menu, Home, Calendar, Mail, FileText, Accessibility, Clock, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import LogoImage from '../src/assets/MeruapLogo.png';
+import { getUserClearance } from "./api";
+import { Clearance } from "./types";
 
 export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsOpen: (val: boolean) => void }) {
   const { logout } = useAuth();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const userClearance = getUserClearance(); // 🔥 NEW: Grab the clearance
   return (
     <>
       {/* The Sidebar - Slides off-screen, pulling the button with it */}
@@ -37,10 +40,20 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
           <nav className="flex flex-col flex-grow mt-4">
             <SidebarItem icon={<Home size={22} />} text="Dasbor" path="/dashboard" />
             <SidebarItem icon={<Calendar size={22} />} text="Jadwal" path="/timeline" />
-            <SidebarItem icon={<Mail size={22} />} text="Inbox" path="/inbox" />
+            
+            {userClearance !== Clearance.Staff && (
+              <SidebarItem icon={<Mail size={22} />} text="Inbox" path="/inbox" />
+            )}
+            
             <SidebarItem icon={<FileText size={22} />} text="Pengajuan" path="/form" />
-            <SidebarItem icon={<Accessibility size={22} />} text="Management" path="/management" />
-            <SidebarItem icon={<Clock size={22} />} text="Riwayat" path="/history" />
+            
+            {userClearance !== Clearance.Staff && (
+              <SidebarItem icon={<Accessibility size={22} />} text="Management" path="/management" />
+            )}
+            
+            {userClearance !== Clearance.Staff && (
+              <SidebarItem icon={<Clock size={22} />} text="Riwayat" path="/history" />
+            )}
           </nav>
 
           <div className="mb-8 mt-4">

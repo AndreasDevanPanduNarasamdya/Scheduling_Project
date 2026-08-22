@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SchedulingMeruap.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class NewDatabaseHistory : Migration
+    public partial class NewClearance : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -71,6 +71,7 @@ namespace SchedulingMeruap.Api.Migrations
                 columns: table => new
                 {
                     USER_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
+                    CLEARANCE = table.Column<byte>(type: "tinyint", nullable: false),
                     EMAIL = table.Column<string>(type: "varchar(70)", unicode: false, maxLength: 70, nullable: false),
                     PASSWORD = table.Column<string>(type: "varchar(60)", unicode: false, maxLength: 60, nullable: false),
                     CREATED = table.Column<DateTime>(type: "datetime", nullable: false),
@@ -138,8 +139,8 @@ namespace SchedulingMeruap.Api.Migrations
                     STAFF_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: true),
                     START_DATE = table.Column<DateTime>(type: "datetime", nullable: false),
                     END_DATE = table.Column<DateTime>(type: "datetime", nullable: false),
-                    TYPE = table.Column<byte>(type: "tinyint", unicode: false, maxLength: 1, nullable: false),
-                    STATUS = table.Column<byte>(type: "tinyint", unicode: false, maxLength: 1, nullable: false),
+                    TYPE = table.Column<byte>(type: "tinyint", nullable: false),
+                    STATUS = table.Column<byte>(type: "tinyint", nullable: false),
                     TITLE = table.Column<string>(type: "varchar(20)", unicode: false, maxLength: 20, nullable: false),
                     DESCRIPTION = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: false),
                     REASON = table.Column<string>(type: "varchar(100)", unicode: false, maxLength: 100, nullable: true)
