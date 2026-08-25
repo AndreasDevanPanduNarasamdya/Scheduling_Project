@@ -28,13 +28,13 @@ public class StaffService : IStaffService
     public async Task<StaffResponse?> GetByIdAsync(string staffId)
     {
         var staff = await _staffRepository.GetByIdAsync(staffId);
-        return staff == null ? null : MapToDto(staff);
+        return staff is null ? null : MapToDto(staff);
     }
 
     public async Task<StaffResponse?> GetByUserIdAsync(string userId)
     {
         var staff = await _staffRepository.GetByUserIdAsync(userId);
-        return staff == null ? null : MapToDto(staff);
+        return staff is null ? null : MapToDto(staff);
     }
 
     public async Task<List<StaffResponse>> GetAllAsync()
@@ -43,22 +43,20 @@ public class StaffService : IStaffService
         return staffList.Select(MapToDto).ToList();
     }
 
-    private static StaffResponse MapToDto(Staff staff)
+    // 🔥 OPTIMIZATION: Expression-bodied mapper with target-typed new()
+    private static StaffResponse MapToDto(Staff staff) => new()
     {
-        return new StaffResponse
-        {
-            StaffId = staff.StaffId,
-            FirstName = staff.FirstName,
-            LastName = staff.LastName,
-            Sex = staff.Sex,
-            Position = staff.Position,
-            Phone = staff.Phone,
-            Dob = staff.Dob,
-            JoinDate = staff.JoinDate,
-            Email = staff.User?.Email,
-            Clearance = staff.User?.Clearance ?? Clearance.Staff
-        };
-    }
+        StaffId = staff.StaffId,
+        FirstName = staff.FirstName,
+        LastName = staff.LastName,
+        Sex = staff.Sex,
+        Position = staff.Position,
+        Phone = staff.Phone,
+        Dob = staff.Dob,
+        JoinDate = staff.JoinDate,
+        Email = staff.User?.Email,
+        Clearance = staff.User?.Clearance ?? Clearance.Staff
+    };
 
     public async Task<List<TeamMemberResponse>> GetUnassignedStaffAsync()
     {
@@ -67,7 +65,7 @@ public class StaffService : IStaffService
         return staffList.Select(s => new TeamMemberResponse
         {
             StaffId = s.StaffId,
-            Name = $"{s.FirstName} {s.LastName}",
+            Name = $"{s.FirstName} {s.LastName}".Trim(),
             Position = s.Position,
             Status = "OFF",
             Note = null
@@ -77,23 +75,21 @@ public class StaffService : IStaffService
     public async Task<bool> AssignStaffAsync(StaffRequest dto, string? actorStaffId)
     {
         var staff = await _staffRepository.GetByIdAsync(dto.StaffId);
-        if (staff == null) return false;
+        if (staff is null) return false;
 
+        // Note: Pulling ALL teams into memory here is a heavy DB hit. 
+        // If the app gets slow later, write a Repo method to fetch just the ONE old team.
         var allTeams = await _teamRepository.GetAllTeamsWithStaffAsync();
         var oldTeam = allTeams.FirstOrDefault(t => t.StaffTeams.Any(st => st.StaffId == dto.StaffId));
 
         await _staffRepository.AssignStaffToTeamAsync(dto.StaffId, dto.TeamId);
 
-        Team newTeam;
-        if (dto.TeamId == "unassigned" || string.IsNullOrWhiteSpace(dto.TeamId))
-        {
-            newTeam = new Team { TeamName = "Unassigned" }; // Dummy team for the log
-        }
-        else
-        {
-            newTeam = await _teamRepository.GetByIdAsync(dto.TeamId)
-                      ?? new Team { TeamName = "Unknown Team" };
-        }
+        var isUnassigned = string.IsNullOrWhiteSpace(dto.TeamId) || dto.TeamId == "unassigned";
+
+        // 🔥 OPTIMIZATION: Clean ternary flow with target-typed objects
+        Team newTeam = isUnassigned
+            ? new() { TeamName = "Unassigned" }
+            : await _teamRepository.GetByIdAsync(dto.TeamId) ?? new() { TeamName = "Unknown Team" };
 
         await _activityLogService.LogTeamMemberSwitchedAsync(staff, oldTeam, newTeam, actorStaffId, "Memperbarui penugasan tim");
 
@@ -102,32 +98,25 @@ public class StaffService : IStaffService
 
     public async Task DeleteStaffAsync(string staffId, string? actorStaffId)
     {
-        if (string.IsNullOrEmpty(staffId))
+        if (string.IsNullOrWhiteSpace(staffId))
             throw new ArgumentException("Staff ID is required.");
 
-        // 🔥 Grab the staff info BEFORE deleting so we can log their name!
         var staff = await _staffRepository.GetByIdAsync(staffId);
-        if (staff == null) throw new ArgumentException("Staff not found.");
+        if (staff is null) throw new ArgumentException("Staff not found.");
 
         string staffName = $"{staff.FirstName} {staff.LastName}".Trim();
 
         await _staffRepository.DeleteStaffAsync(staffId);
-
-        // 🔥 Trigger the log!
         await _activityLogService.LogStaffDeletedAsync(staffName, actorStaffId);
     }
 
     public async Task UpdateStaffAsync(string staffId, UpdateStaffRequest request, string? actorStaffId)
     {
-        // 1. Fetch the existing staff member (Includes the User navigation property)
         var staff = await _staffRepository.GetByIdAsync(staffId);
-        if (staff == null)
-        {
-            throw new ArgumentException("Staff member not found.");
-        }
+        if (staff is null) throw new ArgumentException("Staff member not found.");
 
-        // 🔥 2. SNAPSHOT THE OLD STATE before we overwrite it!
-        var oldStaffSnapshot = new Staff
+        // 🔥 OPTIMIZATION: Target-typed snapshot creation
+        Staff oldStaffSnapshot = new()
         {
             FirstName = staff.FirstName,
             LastName = staff.LastName,
@@ -138,7 +127,6 @@ public class StaffService : IStaffService
             JoinDate = staff.JoinDate
         };
 
-        // 3. Update the pure STAFF properties (staff now becomes the "newStaff")
         staff.FirstName = request.FirstName;
         staff.LastName = request.LastName;
         staff.Sex = (Sex)request.Sex;
@@ -147,17 +135,13 @@ public class StaffService : IStaffService
         staff.Dob = request.Dob;
         staff.JoinDate = request.JoinDate;
 
-        // 4. Update the linked USER property (The Email)
         if (staff.User != null)
         {
             staff.User.Email = request.Email;
             staff.User.Clearance = request.Clearance;
         }
 
-        // 5. Save to database
         await _staffRepository.UpdateAsync(staff);
-
-        // 6. 🔥 Pass BOTH the old snapshot and the newly updated staff!
         await _activityLogService.LogStaffEditedAsync(oldStaffSnapshot, staff, actorStaffId, "Memperbarui informasi profil staf");
     }
 }

@@ -9,7 +9,7 @@ using System.Security.Claims;
 
 namespace SchedulingMeruap.Api.Controllers;
 
-[Authorize] // Base requirement: Must be logged in
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class TicketController : ControllerBase
@@ -21,17 +21,13 @@ public class TicketController : ControllerBase
         _ticketService = ticketService;
     }
 
-    // Helper to get the logged-in user from the JWT token
     private string? GetCurrentActorId()
     {
         return User.FindFirstValue(ClaimTypes.NameIdentifier);
     }
 
-    // =========================================================
-    // INBOX VIEWING (Staff locked out, Supervisor/Admin only)
-    // =========================================================
     [HttpGet]
-    [Authorize(Roles = "Admin,Supervisor")] // 🔥 Lock out Level 0 Staff
+    [Authorize(Roles = "Admin,Supervisor")]
     public async Task<IActionResult> GetAllTickets()
     {
         try
@@ -61,11 +57,7 @@ public class TicketController : ControllerBase
         }
     }
 
-    // =========================================================
-    // PENGAJUAN (Free for All - Staff, Supervisor, Admin)
-    // =========================================================
     [HttpPost("{userId}")]
-    // No role restriction needed here!
     public async Task<IActionResult> SubmitTicket(string userId, [FromBody] SubmitTicketRequest request)
     {
         if (string.IsNullOrEmpty(userId))

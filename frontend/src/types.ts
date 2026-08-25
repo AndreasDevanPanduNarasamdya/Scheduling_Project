@@ -2,12 +2,24 @@ export type TicketStatus = "Pending" | "Approved" | "Declined";
 export type TicketType = "On" | "Off";
 export type BarType = "None" | "OffDuty" | "Leave" | "Transition";
 export type ScheduleVersionStatus = "Active" | "Historical" | "Future";
-export type ActionType = 
-  | "CreateStaff" | "EditStaff" | "RemoveStaff" | "AccountActivation"
-  | "CreateTicket" | "ApproveTicket" | "DeclineTicket"
-  | "CreateTeam" | "EditTeam" | "RemoveTeam"
-  | "CreatePersonalSchedule" | "EditPersonalSchedule" | "RemovePersonalSchedule"
-  | "CreateTeamSchedule" | "EditTeamSchedule" | "RemoveTeamSchedule";
+export type ActivityLogAction = 
+  | "CreateStaff" 
+  | "EditStaff" 
+  | "RemoveStaff" 
+  | "AccountActivation" 
+  | "CreateTicket" 
+  | "ApproveTicket" 
+  | "DeclineTicket"
+  | "CreateTeam"
+  | "EditTeam"
+  | "RemoveTeam"
+  | "CreatePersonalSchedule"
+  | "EditPersonalSchedule"
+  | "RemovePersonalSchedule"
+  | "CreateTeamSchedule"
+  | "EditTeamSchedule"
+  | "RemoveTeamSchedule"
+  | "SwitchingTeamMembers";
 
 export interface EndTimelinePayload {
   teamId: string | null;
@@ -97,10 +109,10 @@ export interface ActivityLogResponse {
   date: string;
   time: string;
   actor: string;
-  action: string;
-  target: string;
-  edit?: string; 
-  type?: number | null; 
+  action: ActivityLogAction; 
+  target?: string;
+  type?: number;
+  edit?: string;
   dateRange?: string;
   rotation?: string;
   description?: string;

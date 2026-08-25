@@ -1,5 +1,5 @@
 import { useMemo, useRef, useLayoutEffect, useState, useEffect } from "react";
-import type { TimelineTeam, BarType } from "../../types";
+import type { TimelineTeam, BarType } from "../../../../types";
 
 const MONTH_NAMES = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni", 

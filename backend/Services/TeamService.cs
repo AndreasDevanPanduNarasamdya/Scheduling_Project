@@ -10,7 +10,7 @@ namespace SchedulingMeruap.Api.Services;
 public class TeamService : ITeamService
 {
     private readonly ITeamRepository _repository;
-    private readonly IActivityLogService _activityLogService; // 🔥 Swapped to Service!
+    private readonly IActivityLogService _activityLogService;
 
     public TeamService(ITeamRepository repository, IActivityLogService activityLogService)
     {
@@ -29,7 +29,7 @@ public class TeamService : ITeamService
             Members = t.StaffTeams.Select(st => new TeamMemberResponse
             {
                 StaffId = st.Staff.StaffId,
-                Name = $"{st.Staff.FirstName} {st.Staff.LastName}",
+                Name = $"{st.Staff.FirstName} {st.Staff.LastName}".Trim(),
                 Position = st.Staff.Position,
                 Status = "ON",
                 Note = null
@@ -39,7 +39,8 @@ public class TeamService : ITeamService
 
     public async Task<TeamResponse> CreateTeamAsync(TeamRequest dto, string? actorStaffId)
     {
-        var newTeam = new Team
+        // 🔥 OPTIMIZATION: Target-typed new()
+        Team newTeam = new()
         {
             TeamId = Guid.NewGuid().ToString(),
             TeamName = dto.TeamName,
@@ -47,48 +48,43 @@ public class TeamService : ITeamService
         };
 
         await _repository.AddTeamAsync(newTeam);
-
-        // 🔥 Call your new centralized log method!
         await _activityLogService.LogTeamCreatedAsync(newTeam, actorStaffId);
 
-        return new TeamResponse
+        return new()
         {
             TeamId = newTeam.TeamId,
             TeamName = newTeam.TeamName,
-            Members = new List<TeamMemberResponse>()
+            // 🔥 OPTIMIZATION: Zero-allocation empty list
+            Members = []
         };
     }
 
     public async Task DeleteTeamAsync(string teamId, string? actorStaffId)
     {
-        if (string.IsNullOrEmpty(teamId))
+        // 🔥 OPTIMIZATION: Catch blank spaces, not just nulls
+        if (string.IsNullOrWhiteSpace(teamId))
             throw new ArgumentException("Team ID is required.");
 
         var team = await _repository.GetByIdAsync(teamId);
-        if (team == null) return;
+        if (team is null) return;
 
         string teamName = team.TeamName;
 
         await _repository.DeleteTeamAsync(teamId);
-
-        // 🔥 Call your new centralized log method!
         await _activityLogService.LogTeamDeletedAsync(teamName, actorStaffId);
     }
 
     public async Task UpdateTeamAsync(string teamId, string newTeamName, string? actorStaffId)
     {
         var team = await _repository.GetByIdAsync(teamId);
-        if (team == null)
-        {
+        if (team is null)
             throw new ArgumentException("Team not found.");
-        }
 
         string oldName = team.TeamName;
         team.TeamName = newTeamName;
 
         await _repository.UpdateTeamAsync(team);
 
-        // 🔥 Call your new centralized log method!
         string summary = $"Mengubah nama tim dari {oldName} menjadi {newTeamName}";
         await _activityLogService.LogTeamEditedAsync(oldName, team, actorStaffId, summary);
     }

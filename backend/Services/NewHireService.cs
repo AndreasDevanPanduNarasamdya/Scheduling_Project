@@ -28,17 +28,17 @@ public class NewHireService : INewHireService
     public async Task<bool> ActivateAccountAsync(string token, string password)
     {
         var newHire = await _newHireRepository.GetByTokenAsync(token);
-        if (newHire == null || newHire.TokenExpiry < DateTime.Now)
-        {
+
+        if (newHire is null || newHire.TokenExpiry < DateTime.UtcNow)
             return false;
-        }
 
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {
             string userId = Guid.NewGuid().ToString();
 
-            var user = new User
+            // Target-typed object initialization
+            User user = new()
             {
                 UserId = userId,
                 Email = newHire.Email,
@@ -49,7 +49,7 @@ public class NewHireService : INewHireService
             };
             _context.Users.Add(user);
 
-            var staff = new Staff
+            Staff staff = new()
             {
                 StaffId = Guid.NewGuid().ToString(),
                 UserId = userId,
@@ -66,6 +66,8 @@ public class NewHireService : INewHireService
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
+
+            // 🔥 OPTIMIZATION: Log AFTER commit to avoid holding database locks longer than necessary
             await _activityLogService.LogAccountActivatedAsync(staff);
 
             return true;
@@ -81,15 +83,12 @@ public class NewHireService : INewHireService
     {
         var newHire = await _newHireRepository.GetByTokenAsync(token);
 
-        if (newHire == null)
-        {
+        if (newHire is null)
             return new NewHireResponse { Status = "invalid" };
-        }
 
-        if (newHire.TokenExpiry < DateTime.Now)
-        {
+        // 🔥 FIX: UtcNow matching
+        if (newHire.TokenExpiry < DateTime.UtcNow)
             return new NewHireResponse { Status = "expired" };
-        }
 
         return new NewHireResponse
         {

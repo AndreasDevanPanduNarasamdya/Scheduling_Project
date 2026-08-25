@@ -5,7 +5,7 @@ using SchedulingMeruap.Api.Services.Interfaces;
 
 namespace SchedulingMeruap.Api.Controllers;
 
-[Authorize] // Base requirement: Must be logged in
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class ActivityLogController : ControllerBase

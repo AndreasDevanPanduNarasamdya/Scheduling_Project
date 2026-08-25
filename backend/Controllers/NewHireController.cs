@@ -10,7 +10,7 @@ using SchedulingMeruap.Api.DTO.Responses;
 
 namespace SchedulingMeruap.Api.Controllers;
 
-[Authorize] // 👈 Base requirement: Must be logged in by default
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class NewHireController : ControllerBase
@@ -28,20 +28,18 @@ public class NewHireController : ControllerBase
     // MANAGEMENT (Strictly locked to Admin ONLY)
     // =========================================================
     [HttpPost("new-hire")]
-    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK: Only Admins can invite new staff
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AddNewHire([FromBody] NewHireRequest request)
     {
-        // 1. Generate the security token and ID
         string generatedToken = Guid.NewGuid().ToString();
-        string generatedId = Guid.NewGuid().ToString();
 
-        // 2. Map the incoming React data to your Database Model
-        var newHire = new NewHire
+        // 🔥 OPTIMIZATION: Target-typed new() and direct Guid generation
+        NewHire newHire = new()
         {
-            NewHireId = generatedId,
+            NewHireId = Guid.NewGuid().ToString(),
             ActivationToken = generatedToken,
-            TokenExpiry = DateTime.Now.AddHours(48), // Token valid for 2 days
-
+            // 🔥 CRITICAL FIX: Matched this to UtcNow so your Service doesn't instantly reject it!
+            TokenExpiry = DateTime.UtcNow.AddHours(48),
             FirstName = request.FirstName,
             LastName = request.LastName,
             Sex = request.Sex,
@@ -52,17 +50,13 @@ public class NewHireController : ControllerBase
             JoinDate = request.JoinDate
         };
 
-        // 3. Save to the NEW_HIRE database table
         _context.NewHires.Add(newHire);
         await _context.SaveChangesAsync();
-
-        // 4. (Future Step) Here is where you would send the email to request.Email 
-        // with a link like: https://yourfrontend.com/activate?token=generatedToken
 
         return Ok(new
         {
             message = "Staff added to staging successfully",
-            tokenId = generatedToken // Returning this just for testing purposes!
+            tokenId = generatedToken
         });
     }
 
@@ -70,20 +64,18 @@ public class NewHireController : ControllerBase
     // ACCOUNT ACTIVATION (Open to the public/unauthenticated users)
     // =========================================================
 
-    [AllowAnonymous] // 🔥 Keep this open so the unlogged user can validate their link
+    [AllowAnonymous]
     [HttpGet("activate/validate")]
     public async Task<IActionResult> ValidateActivationToken([FromQuery] string token)
     {
         if (string.IsNullOrWhiteSpace(token))
             return Ok(new NewHireResponse { Status = "invalid" });
 
-        var response = await _newHireService.ValidateTokenAsync(token);
-
-        // This will send back JSON like: { "status": "valid", "name": "Andreas Devan" }
-        return Ok(response);
+        // 🔥 OPTIMIZATION: Direct return
+        return Ok(await _newHireService.ValidateTokenAsync(token));
     }
 
-    [AllowAnonymous] // 🔥 Keep this open so they can submit their new password
+    [AllowAnonymous]
     [HttpPost("activate")]
     public async Task<IActionResult> ActivateAccount([FromBody] ActivateAccountRequest request)
     {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from "../../context/AuthContext";
 import { fetchTimeline, fetchStaffById } from "../../api";
-import TimelineComponent from "../components/TimelineComponent";
+import TimelineComponent from "../scheduling/Timeline/components/TimelineComponent";
 import type { TimelineTeam } from "../../types";
 
 export default function Dashboard() {

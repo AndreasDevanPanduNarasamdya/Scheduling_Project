@@ -23,7 +23,8 @@ public class TicketService : ITicketService
 
     public async Task<Ticket> SubmitTicketAsync(SubmitTicketRequest request, string userId, string? actorStaffId)
     {
-        var newTicket = new Ticket
+        // 🔥 OPTIMIZATION: Target-typed new()
+        Ticket newTicket = new()
         {
             TicketId = Guid.NewGuid().ToString(),
             StaffId = userId,
@@ -38,9 +39,10 @@ public class TicketService : ITicketService
 
         await _ticketRepository.CreateAsync(newTicket);
 
-        // 🔥 Logs the ticket creation
         var staff = await _staffRepository.GetByIdAsync(userId);
-        if (staff != null)
+
+        // 🔥 OPTIMIZATION: 'is not null' IL-level check
+        if (staff is not null)
         {
             await _activityLogService.LogTicketCreatedAsync(newTicket, staff, actorStaffId);
         }
@@ -48,24 +50,24 @@ public class TicketService : ITicketService
         return newTicket;
     }
 
-    public async Task<IEnumerable<Ticket>> GetAllTicketsAsync()
-    {
-        return await _ticketRepository.GetAllTicketsAsync();
-    }
+    public async Task<IEnumerable<Ticket>> GetAllTicketsAsync() =>
+        await _ticketRepository.GetAllTicketsAsync();
 
     public async Task ApproveTicketAsync(string id, string reason, string? actorStaffId)
     {
         var ticket = await _ticketRepository.GetByIdAsync(id);
-        if (ticket == null) throw new KeyNotFoundException("Ticket not found");
+
+        // 🔥 OPTIMIZATION: 'is null' check
+        if (ticket is null)
+            throw new KeyNotFoundException("Ticket not found");
 
         ticket.Status = TicketStatus.Approved;
         ticket.Reason = reason;
 
         await _ticketRepository.UpdateAsync(ticket);
 
-        // 🔥 Fetch the staff member who owns the ticket, then log the approval!
         var staff = await _staffRepository.GetByIdAsync(ticket.StaffId);
-        if (staff != null)
+        if (staff is not null)
         {
             await _activityLogService.LogTicketApprovedAsync(ticket, staff, actorStaffId);
         }
@@ -74,16 +76,17 @@ public class TicketService : ITicketService
     public async Task RejectTicketAsync(string id, string reason, string? actorStaffId)
     {
         var ticket = await _ticketRepository.GetByIdAsync(id);
-        if (ticket == null) throw new KeyNotFoundException("Ticket not found");
+
+        if (ticket is null)
+            throw new KeyNotFoundException("Ticket not found");
 
         ticket.Status = TicketStatus.Declined;
         ticket.Reason = reason;
 
         await _ticketRepository.UpdateAsync(ticket);
 
-        // 🔥 Fetch the staff member who owns the ticket, then log the rejection!
         var staff = await _staffRepository.GetByIdAsync(ticket.StaffId);
-        if (staff != null)
+        if (staff is not null)
         {
             await _activityLogService.LogTicketDeclinedAsync(ticket, staff, actorStaffId, reason);
         }

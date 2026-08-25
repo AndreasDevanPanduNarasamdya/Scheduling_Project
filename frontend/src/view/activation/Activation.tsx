@@ -118,7 +118,7 @@ export default function Activation() {
     const messages: Record<Exclude<TokenStatus, "checking" | "valid">, { title: string; body: string }> = {
       invalid: {
         title: "Akses Ditolak",
-        body: "Link aktivasi tidak valid atau token hilang dari URL.",
+        body: "Link aktivasi tidak valid atau token hilang dari URL. Mohon aktivasi melalui Admin atau IT",
       },
       expired: {
         title: "Link Kedaluwarsa",

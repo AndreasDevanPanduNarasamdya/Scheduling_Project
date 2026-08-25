@@ -6,11 +6,11 @@ import Form from "./view/form/form";
 import { useAuth } from "./context/AuthContext";
 import MainLayout from './MainLayout';
 import ProtectedRoute from './SecureRoute';
-import Management from "./view/scheduling/Management";
+import Management from "./view/scheduling/Management/Management";
 import InboxList from "./view/inbox/InboxList";
-import Timeline from "./view/scheduling/Timeline";
+import Timeline from "./view/scheduling/Timeline/Timeline";
 import ActivationPage from "./view/activation/Activation";
-import History from "./view/scheduling/History";
+import History from "./view/scheduling/ActivityLog/History";
 
 export default function App() {
   const { user } = useAuth();

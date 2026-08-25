@@ -13,27 +13,30 @@ namespace SchedulingMeruap.Api.Services;
 public class AuthService : IAuthService
 {
     private readonly IAuthRepository _authRepository;
-    private readonly IConfiguration _configuration;
+    private readonly SigningCredentials _credentials;
+    private readonly string _issuer;
+    private readonly string _audience;
+
+    // Static handler prevents heavy per-request object creation
+    private static readonly JwtSecurityTokenHandler _tokenHandler = new JwtSecurityTokenHandler();
 
     public AuthService(IAuthRepository authRepository, IConfiguration configuration)
     {
         _authRepository = authRepository;
-        _configuration = configuration;
+
+        _issuer = configuration["Jwt:Issuer"];
+        _audience = configuration["Jwt:Audience"];
+
+        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]));
+        _credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
     }
 
     public async Task<(User User, string Token)?> LoginAsync(AuthRequest request)
     {
-        var email = request.Email.Trim();
+        var user = await _authRepository.GetByEmailAsync(request.Email.Trim());
 
-        var user = await _authRepository.GetByEmailAsync(email);
-        if (user == null) return null;
-
-        if (user.Locked) return null;
-
-        if (user.Password != request.Password) return null;
-
-        var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
-        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
+        if (user == null || user.Locked || user.Password != request.Password)
+            return null;
 
         var claims = new[]
         {
@@ -43,14 +46,12 @@ public class AuthService : IAuthService
         };
 
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: _issuer,
+            audience: _audience,
             claims: claims,
-            expires: DateTime.Now.AddSeconds(15),
-            signingCredentials: credentials);
+            expires: DateTime.UtcNow.AddMinutes(15),
+            signingCredentials: _credentials);
 
-        var generatedToken = new JwtSecurityTokenHandler().WriteToken(token);
-
-        return (user, generatedToken);
+        return (user, _tokenHandler.WriteToken(token));
     }
 }

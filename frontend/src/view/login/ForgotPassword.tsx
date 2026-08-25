@@ -9,17 +9,6 @@ export default function ForgotPassword() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center bg-gray-900">
-      {/* <style>{`
-        @keyframes seamlessSlide {
-          0% { transform: translate3d(0, 0, 0); }
-          100% { transform: translate3d(-50%, 0, 0); }
-        }
-        .animate-seamless {
-          animation: seamlessSlide 40s linear infinite;
-          width: max-content;
-        }
-      `}</style> */}
-
       <div className="absolute inset-0 z-0 overflow-hidden">
         <img
           src={BG_IMAGE_URL}

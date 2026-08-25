@@ -24,14 +24,12 @@ public class ActivityLogRepository : IActivityLogRepository
     {
         var query = _context.ActivityLogs.AsQueryable();
 
-        // 1. Filter strictly by the new Date column
         if (startDate.HasValue)
             query = query.Where(l => l.Date >= startDate.Value.Date);
 
         if (endDate.HasValue)
             query = query.Where(l => l.Date <= endDate.Value.Date);
 
-        // 2. Filter by Target Name (since we dropped the UUID columns)
         if (!string.IsNullOrEmpty(staffId))
         {
             var staff = await _context.Set<Staff>().FindAsync(staffId);

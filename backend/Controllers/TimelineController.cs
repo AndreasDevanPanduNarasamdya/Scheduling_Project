@@ -11,146 +11,129 @@ using SchedulingMeruap.Api.Services.Interfaces;
 using SchedulingMeruap.Api.DTO.Requests;
 
 
-namespace SchedulingMeruap.Api.Controllers
+namespace SchedulingMeruap.Api.Controllers;
+
+[Authorize]
+[ApiController]
+[Route("api/[controller]")]
+public class TimelineController : ControllerBase
 {
-    [Authorize] // 👈 Base requirement: Must be logged in (Staff, Supervisor, Admin)
-    [ApiController]
-    [Route("api/[controller]")]
-    public class TimelineController : ControllerBase
+    private readonly ITimelineService _timelineService;
+
+    public TimelineController(ITimelineService timelineService)
     {
-        private readonly ITimelineService _timelineService;
+        _timelineService = timelineService;
+    }
 
-        public TimelineController(ITimelineService timelineService)
+    // 🔥 OPTIMIZATION: Expression-bodied helper
+    private string? GetCurrentActorId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+    // =========================================================
+    // VIEWING ENDPOINTS (Allowed for Staff, Supervisor, Admin)
+    // =========================================================
+
+    [HttpGet]
+    public async Task<IActionResult> GetTimeline([FromQuery] TimelineRequest request)
+    {
+        // 🔥 OPTIMIZATION: Removed ModelState.IsValid block (handled by [ApiController])
+
+        if (request.StartDate == default)
         {
-            _timelineService = timelineService;
+            request.StartDate = new DateTime(DateTime.UtcNow.Year, 1, 1);
+        }
+        if (request.EndDate == default)
+        {
+            request.EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31);
         }
 
-        private string? GetCurrentActorId()
+        // 🔥 OPTIMIZATION: Direct return
+        return Ok(await _timelineService.GetTimelineDataAsync(request));
+    }
+
+    [HttpGet("history")]
+    public async Task<IActionResult> GetTimelineHistory([FromQuery] string? teamId, [FromQuery] string? staffId)
+    {
+        try
         {
-            return User.FindFirstValue(ClaimTypes.NameIdentifier);
+            // 🔥 OPTIMIZATION: Direct return
+            return Ok(await _timelineService.GetTimelineHistoryAsync(teamId, staffId));
         }
-
-        // =========================================================
-        // VIEWING ENDPOINTS (Allowed for Staff, Supervisor, Admin)
-        // =========================================================
-
-        [HttpGet]
-        public async Task<IActionResult> GetTimeline([FromQuery] TimelineRequest request)
+        catch (ArgumentException ex)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            if (request.StartDate == default)
-            {
-                request.StartDate = new DateTime(DateTime.UtcNow.Year, 1, 1);
-            }
-            if (request.EndDate == default)
-            {
-                request.EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31);
-            }
-
-            var data = await _timelineService.GetTimelineDataAsync(request);
-            return Ok(data);
+            return BadRequest(new { message = ex.Message });
         }
+    }
 
-        [HttpGet("history")]
-        public async Task<IActionResult> GetTimelineHistory([FromQuery] string? teamId, [FromQuery] string? staffId)
+    // =========================================================
+    // EDITING ENDPOINTS (Strictly locked to Admin ONLY)
+    // =========================================================
+
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> CreateTimeline([FromBody] CreateTimelineRequest request)
+    {
+        try
         {
-            try
-            {
-                var history = await _timelineService.GetTimelineHistoryAsync(teamId, staffId);
-                return Ok(history);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            // 🔥 OPTIMIZATION: Inlined ActorId
+            await _timelineService.CreateTimelineAsync(request, GetCurrentActorId());
+            return Ok(new { message = "Jadwal berhasil dibuat." });
         }
-
-        // =========================================================
-        // EDITING ENDPOINTS (Strictly locked to Admin ONLY)
-        // =========================================================
-
-        [HttpPost]
-        [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
-        public async Task<IActionResult> CreateTimeline([FromBody] CreateTimelineRequest request)
+        catch (ArgumentException ex)
         {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            try
-            {
-                var actorId = GetCurrentActorId();
-                var result = await _timelineService.CreateTimelineAsync(request, actorId);
-                return Ok(new { message = "Jadwal berhasil dibuat." });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            return BadRequest(new { message = ex.Message });
         }
+    }
 
-        [HttpPost("end")]
-        [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
-        public async Task<IActionResult> EndTimeline([FromBody] EndTimelineRequest request)
+    [HttpPost("end")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> EndTimeline([FromBody] EndTimelineRequest request)
+    {
+        try
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-            try
-            {
-                var actorId = GetCurrentActorId();
-                await _timelineService.EndActiveTimelineAsync(request, actorId);
-                return Ok(new { message = "Schedule successfully closed." });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
+            await _timelineService.EndActiveTimelineAsync(request, GetCurrentActorId());
+            return Ok(new { message = "Schedule successfully closed." });
         }
-
-        [HttpPut("{timelineId}")]
-        [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
-        public async Task<IActionResult> UpdateTimeline(string timelineId, [FromBody] UpdateTimelineRequest request)
+        catch (ArgumentException ex)
         {
-            if (!ModelState.IsValid) return BadRequest(ModelState);
-
-            try
-            {
-                var actorId = GetCurrentActorId();
-                await _timelineService.UpdateTimelineAsync(timelineId, request, actorId);
-                return Ok(new { message = "Jadwal berhasil diperbarui." });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Gagal memperbarui jadwal.", details = ex.Message });
-            }
+            return BadRequest(new { message = ex.Message });
         }
+    }
 
-        [HttpDelete("{timelineId}")]
-        [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
-        public async Task<IActionResult> DeleteTimeline(string timelineId)
+    [HttpPut("{timelineId}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> UpdateTimeline(string timelineId, [FromBody] UpdateTimelineRequest request)
+    {
+        try
         {
-            try
-            {
-                var actorId = GetCurrentActorId();
-                await _timelineService.DeleteTimelineAsync(timelineId, actorId);
-                return Ok(new { message = "Jadwal berhasil dihapus." });
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(new { message = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "Gagal menghapus jadwal.", details = ex.Message });
-            }
+            await _timelineService.UpdateTimelineAsync(timelineId, request, GetCurrentActorId());
+            return Ok(new { message = "Jadwal berhasil diperbarui." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Gagal memperbarui jadwal.", details = ex.Message });
+        }
+    }
+
+    [HttpDelete("{timelineId}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> DeleteTimeline(string timelineId)
+    {
+        try
+        {
+            await _timelineService.DeleteTimelineAsync(timelineId, GetCurrentActorId());
+            return Ok(new { message = "Jadwal berhasil dihapus." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = "Gagal menghapus jadwal.", details = ex.Message });
         }
     }
 }

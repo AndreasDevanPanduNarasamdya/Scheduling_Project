@@ -18,15 +18,16 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    public async Task<IActionResult> Login(AuthRequest request)
+    public async Task<IActionResult> Login([FromBody] AuthRequest request)
     {
         var loginResult = await _authService.LoginAsync(request);
 
-        if (loginResult == null)
+        if (loginResult is null)
             return Unauthorized(new { message = "Invalid credentials" });
 
-        var user = loginResult.Value.User;
-        var token = loginResult.Value.Token;
+        // Unpack the tuple directly
+        var (user, token) = loginResult.Value;
+
         var staff = await _staffService.GetByUserIdAsync(user.UserId);
 
         return Ok(new
@@ -34,7 +35,7 @@ public class AuthController : ControllerBase
             token,
             user.UserId,
             user.Email,
-            clearance = user.Clearance.ToString(), // 🔥 NEW: Send "Admin", "Supervisor", or "Staff" to React!
+            clearance = user.Clearance.ToString(),
             staffId = staff?.StaffId,
             staff?.FirstName,
             staff?.LastName,

@@ -6,7 +6,7 @@ using SchedulingMeruap.Api.Services.Interfaces;
 
 namespace SchedulingMeruap.Api.Controllers;
 
-[Authorize] // 👈 Base requirement: Must be logged in
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class StaffController : ControllerBase
@@ -18,62 +18,41 @@ public class StaffController : ControllerBase
         _staffService = staffService;
     }
 
-    // Helper to get the logged-in user
-    private string? GetCurrentActorId()
-    {
-        return User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-    }
-
-    // =========================================================
-    // VIEWING (Open to Staff, Supervisor, Admin)
-    // =========================================================
+    private string? GetCurrentActorId() => User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
 
     [HttpGet]
-    public async Task<IActionResult> GetAll()
-    {
-        var staff = await _staffService.GetAllAsync();
-        return Ok(staff);
-    }
+    public async Task<IActionResult> GetAll() =>
+        Ok(await _staffService.GetAllAsync()); // 🔥 OPTIMIZATION: Direct return
 
     [HttpGet("{staffId}")]
     public async Task<IActionResult> GetById(string staffId)
     {
         var staff = await _staffService.GetByIdAsync(staffId);
-        if (staff == null) return NotFound();
-        return Ok(staff);
+        return staff is null ? NotFound() : Ok(staff);
     }
 
     [HttpGet("unassigned")]
-    public async Task<IActionResult> GetUnassignedStaff()
-    {
-        var unassigned = await _staffService.GetUnassignedStaffAsync();
-        return Ok(unassigned);
-    }
-
-    // =========================================================
-    // EDITING (Strictly locked to Admin ONLY)
-    // =========================================================
+    public async Task<IActionResult> GetUnassignedStaff() =>
+        Ok(await _staffService.GetUnassignedStaffAsync());
 
     [HttpPost("assign")]
-    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> AssignStaff([FromBody] StaffRequest dto)
     {
-        var actorId = GetCurrentActorId();
-        var success = await _staffService.AssignStaffAsync(dto, actorId);
+        var success = await _staffService.AssignStaffAsync(dto, GetCurrentActorId());
 
-        if (!success) return NotFound(new { message = "Staff member not found" });
-
-        return Ok(new { message = "Staff assigned successfully!" });
+        return success
+            ? Ok(new { message = "Staff assigned successfully!" })
+            : NotFound(new { message = "Staff member not found" });
     }
 
     [HttpPut("{staffId}")]
-    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> EditStaff(string staffId, [FromBody] UpdateStaffRequest request)
     {
         try
         {
-            var actorId = GetCurrentActorId();
-            await _staffService.UpdateStaffAsync(staffId, request, actorId);
+            await _staffService.UpdateStaffAsync(staffId, request, GetCurrentActorId());
             return Ok(new { message = "Staff updated successfully" });
         }
         catch (ArgumentException ex)
@@ -87,13 +66,12 @@ public class StaffController : ControllerBase
     }
 
     [HttpDelete("{staffId}")]
-    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
+    [Authorize(Roles = "Admin")]
     public async Task<IActionResult> DeleteStaff(string staffId)
     {
         try
         {
-            var actorId = GetCurrentActorId();
-            await _staffService.DeleteStaffAsync(staffId, actorId);
+            await _staffService.DeleteStaffAsync(staffId, GetCurrentActorId());
             return Ok(new { message = "Staff deleted successfully" });
         }
         catch (ArgumentException ex)
