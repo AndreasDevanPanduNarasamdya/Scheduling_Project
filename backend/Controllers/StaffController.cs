@@ -36,7 +36,7 @@ public class StaffController : ControllerBase
         Ok(await _staffService.GetUnassignedStaffAsync());
 
     [HttpPost("assign")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> AssignStaff([FromBody] StaffRequest dto)
     {
         var success = await _staffService.AssignStaffAsync(dto, GetCurrentActorId());
@@ -47,7 +47,7 @@ public class StaffController : ControllerBase
     }
 
     [HttpPut("{staffId}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> EditStaff(string staffId, [FromBody] UpdateStaffRequest request)
     {
         try
@@ -66,7 +66,7 @@ public class StaffController : ControllerBase
     }
 
     [HttpDelete("{staffId}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> DeleteStaff(string staffId)
     {
         try

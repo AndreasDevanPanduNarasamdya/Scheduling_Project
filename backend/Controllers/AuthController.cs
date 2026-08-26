@@ -35,7 +35,7 @@ public class AuthController : ControllerBase
             token,
             user.UserId,
             user.Email,
-            clearance = user.Clearance.ToString(),
+            clearance = (int)user.Clearance,
             staffId = staff?.StaffId,
             staff?.FirstName,
             staff?.LastName,

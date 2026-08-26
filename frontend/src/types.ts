@@ -127,6 +127,7 @@ export interface UpdateStaffPayload {
   phone: string;
   dob: string;
   joinDate: string;
+  clearance: number;
 }
 
 export const Clearance = {

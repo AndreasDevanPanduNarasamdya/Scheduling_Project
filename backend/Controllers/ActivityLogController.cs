@@ -21,7 +21,7 @@ public class ActivityLogController : ControllerBase
     // VIEWING (Locked for Staff, Open to Supervisor & Admin)
     // =========================================================
     [HttpGet]
-    [Authorize(Roles = "Admin,Supervisor")] // 🔥 STRICT LOCK: Kicks out Level 0 Staff
+    [Authorize(Roles = "2,1")]
     public async Task<IActionResult> GetLogs(
         [FromQuery] DateTime? startDate,
         [FromQuery] DateTime? endDate,

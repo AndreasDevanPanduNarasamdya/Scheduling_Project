@@ -27,7 +27,7 @@ public class TicketController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin,Supervisor")]
+    [Authorize(Roles = "2,1")]
     public async Task<IActionResult> GetAllTickets()
     {
         try
@@ -90,7 +90,7 @@ public class TicketController : ControllerBase
     // INBOX EDITING (Admin ONLY)
     // =========================================================
     [HttpPut("{id}/approve")]
-    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> ApproveTicket(string id, [FromBody] TicketActionRequest request)
     {
         try
@@ -106,7 +106,7 @@ public class TicketController : ControllerBase
     }
 
     [HttpPut("{id}/reject")]
-    [Authorize(Roles = "Admin")] // 🔥 STRICT LOCK
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> RejectTicket(string id, [FromBody] TicketActionRequest request)
     {
         try

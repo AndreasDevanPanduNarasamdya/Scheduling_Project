@@ -12,15 +12,12 @@ interface StaffInfo {
 export interface AuthUser {
   userId: string;
   email: string;
-  clearance?: string | number; // Optional depending on how you use it
-  
-  // 🔥 ADD THESE 4 LINES SO TYPESCRIPT KNOWS THEY EXIST:
+  clearance?: string | number;
   staffId?: string;
   firstName?: string;
   lastName?: string;
   position?: string;
   
-  // (Keep whatever else you already have in here, like `staff?: any`)
   staff?: {
     staffId: string;
     firstName: string;

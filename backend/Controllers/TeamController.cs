@@ -38,7 +38,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> CreateTeam([FromBody] TeamRequest dto)
     {
         try
@@ -56,7 +56,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpPut("{teamId}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> EditTeam(string teamId, [FromBody] TeamRequest dto)
     {
         try
@@ -75,7 +75,7 @@ public class TeamsController : ControllerBase
     }
 
     [HttpDelete("{teamId}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> DeleteTeam(string teamId)
     {
         try

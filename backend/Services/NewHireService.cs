@@ -45,7 +45,6 @@ public class NewHireService : INewHireService
                 Password = password,
                 Created = DateTime.UtcNow,
                 Locked = false,
-                Clearance = Clearance.Staff
             };
             _context.Users.Add(user);
 

@@ -14,37 +14,41 @@ public class StaffRepository : IStaffRepository
         _dbContext = dbContext;
     }
 
+    // Base query used everywhere we need a fully-hydrated Staff (with User).
+    // Centralizing this is what prevents the "forgot .Include(User) on one
+    // method" bug from happening again — every read path below reuses it.
+    private IQueryable<Staff> StaffWithUser => _dbContext.Staff.Include(s => s.User);
+
     public async Task<Staff?> GetByIdAsync(string staffId)
     {
-        // 🔥 ADDED .Include(s => s.User) so the Service can update the Email!
-        return await _dbContext.Staff
-            .Include(s => s.User)
+        return await StaffWithUser
             .FirstOrDefaultAsync(s => s.StaffId == staffId);
     }
 
     public async Task<Staff?> GetByUserIdAsync(string userId)
     {
-        return await _dbContext.Staff
+        return await StaffWithUser
             .FirstOrDefaultAsync(s => s.UserId == userId);
     }
 
     public async Task<List<Staff>> GetAllAsync()
     {
-        return await _dbContext.Staff.ToListAsync();
+        return await StaffWithUser
+            .ToListAsync();
+    }
+
+    public async Task<List<Staff>> GetUnassignedStaffAsync()
+    {
+        return await StaffWithUser
+            .Include(s => s.StaffTeams)
+            .Where(s => !s.StaffTeams.Any())
+            .ToListAsync();
     }
 
     public async Task UpdateAsync(Staff staff)
     {
         _dbContext.Staff.Update(staff);
         await _dbContext.SaveChangesAsync();
-    }
-
-    public async Task<List<Staff>> GetUnassignedStaffAsync()
-    {
-        return await _dbContext.Staff
-            .Include(s => s.StaffTeams)
-            .Where(s => !s.StaffTeams.Any())
-            .ToListAsync();
     }
 
     public async Task AssignStaffToTeamAsync(string staffId, string teamId)
@@ -61,7 +65,7 @@ public class StaffRepository : IStaffRepository
         {
             _dbContext.StaffTeams.Add(new StaffTeam
             {
-                StaffTeamId = Guid.NewGuid().ToString(), // Generate the string ID!
+                StaffTeamId = Guid.NewGuid().ToString(),
                 StaffId = staffId,
                 TeamId = teamId
             });

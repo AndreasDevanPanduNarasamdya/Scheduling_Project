@@ -16,9 +16,9 @@ public class StaffService : IStaffService
     private readonly ITeamRepository _teamRepository;
 
     public StaffService(
-            IStaffRepository staffRepository,
-            IActivityLogService activityLogService,
-            ITeamRepository teamRepository)
+        IStaffRepository staffRepository,
+        IActivityLogService activityLogService,
+        ITeamRepository teamRepository)
     {
         _staffRepository = staffRepository;
         _activityLogService = activityLogService;
@@ -43,21 +43,6 @@ public class StaffService : IStaffService
         return staffList.Select(MapToDto).ToList();
     }
 
-    // 🔥 OPTIMIZATION: Expression-bodied mapper with target-typed new()
-    private static StaffResponse MapToDto(Staff staff) => new()
-    {
-        StaffId = staff.StaffId,
-        FirstName = staff.FirstName,
-        LastName = staff.LastName,
-        Sex = staff.Sex,
-        Position = staff.Position,
-        Phone = staff.Phone,
-        Dob = staff.Dob,
-        JoinDate = staff.JoinDate,
-        Email = staff.User?.Email,
-        Clearance = staff.User?.Clearance ?? Clearance.Staff
-    };
-
     public async Task<List<TeamMemberResponse>> GetUnassignedStaffAsync()
     {
         var staffList = await _staffRepository.GetUnassignedStaffAsync();
@@ -77,7 +62,7 @@ public class StaffService : IStaffService
         var staff = await _staffRepository.GetByIdAsync(dto.StaffId);
         if (staff is null) return false;
 
-        // Note: Pulling ALL teams into memory here is a heavy DB hit. 
+        // Note: Pulling ALL teams into memory here is a heavy DB hit.
         // If the app gets slow later, write a Repo method to fetch just the ONE old team.
         var allTeams = await _teamRepository.GetAllTeamsWithStaffAsync();
         var oldTeam = allTeams.FirstOrDefault(t => t.StaffTeams.Any(st => st.StaffId == dto.StaffId));
@@ -86,7 +71,6 @@ public class StaffService : IStaffService
 
         var isUnassigned = string.IsNullOrWhiteSpace(dto.TeamId) || dto.TeamId == "unassigned";
 
-        // 🔥 OPTIMIZATION: Clean ternary flow with target-typed objects
         Team newTeam = isUnassigned
             ? new() { TeamName = "Unassigned" }
             : await _teamRepository.GetByIdAsync(dto.TeamId) ?? new() { TeamName = "Unknown Team" };
@@ -115,7 +99,15 @@ public class StaffService : IStaffService
         var staff = await _staffRepository.GetByIdAsync(staffId);
         if (staff is null) throw new ArgumentException("Staff member not found.");
 
-        // 🔥 OPTIMIZATION: Target-typed snapshot creation
+        // If this ever throws, it means the repository stopped hydrating
+        // User (the exact regression that caused the earlier clearance-0
+        // bug). Failing loudly here beats silently no-op'ing the update —
+        // a save that looks successful but doesn't persist Email/Clearance
+        // is worse than an explicit error.
+        if (staff.User is null)
+            throw new InvalidOperationException(
+                $"Staff '{staffId}' has no linked User record loaded. Cannot update Email/Clearance.");
+
         Staff oldStaffSnapshot = new()
         {
             FirstName = staff.FirstName,
@@ -134,14 +126,24 @@ public class StaffService : IStaffService
         staff.Phone = request.Phone;
         staff.Dob = request.Dob;
         staff.JoinDate = request.JoinDate;
-
-        if (staff.User != null)
-        {
-            staff.User.Email = request.Email;
-            staff.User.Clearance = request.Clearance;
-        }
+        staff.User.Email = request.Email;
+        staff.User.Clearance = request.Clearance;
 
         await _staffRepository.UpdateAsync(staff);
         await _activityLogService.LogStaffEditedAsync(oldStaffSnapshot, staff, actorStaffId, "Memperbarui informasi profil staf");
     }
+
+    private static StaffResponse MapToDto(Staff staff) => new()
+    {
+        StaffId = staff.StaffId,
+        FirstName = staff.FirstName,
+        LastName = staff.LastName,
+        Sex = (int)staff.Sex,
+        Position = staff.Position,
+        Phone = staff.Phone,
+        Dob = staff.Dob,
+        JoinDate = staff.JoinDate,
+        Email = staff.User?.Email,
+        Clearance = (int)(staff.User?.Clearance ?? Models.Clearance.Staff)
+    };
 }

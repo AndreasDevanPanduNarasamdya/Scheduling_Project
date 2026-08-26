@@ -3,7 +3,6 @@ import { UserRound, Plus, ArrowLeftRight, Trash2, Pencil } from "lucide-react";
 import { useManagement } from "./hooks/useManagement";
 import TeamSection from "./components/TeamSection";
 
-// (You will import these from wherever you save your separated Modals)
 import { 
   AddStaffModal, EditStaffModal, AddTeamModal, 
   EditTeamModal, AssignStaffModal, DeleteModal 

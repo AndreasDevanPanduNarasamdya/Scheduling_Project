@@ -28,7 +28,7 @@ public class NewHireController : ControllerBase
     // MANAGEMENT (Strictly locked to Admin ONLY)
     // =========================================================
     [HttpPost("new-hire")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> AddNewHire([FromBody] NewHireRequest request)
     {
         string generatedToken = Guid.NewGuid().ToString();
@@ -38,7 +38,6 @@ public class NewHireController : ControllerBase
         {
             NewHireId = Guid.NewGuid().ToString(),
             ActivationToken = generatedToken,
-            // 🔥 CRITICAL FIX: Matched this to UtcNow so your Service doesn't instantly reject it!
             TokenExpiry = DateTime.UtcNow.AddHours(48),
             FirstName = request.FirstName,
             LastName = request.LastName,

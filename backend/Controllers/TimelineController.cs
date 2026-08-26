@@ -69,7 +69,7 @@ public class TimelineController : ControllerBase
     // =========================================================
 
     [HttpPost]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> CreateTimeline([FromBody] CreateTimelineRequest request)
     {
         try
@@ -85,7 +85,7 @@ public class TimelineController : ControllerBase
     }
 
     [HttpPost("end")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> EndTimeline([FromBody] EndTimelineRequest request)
     {
         try
@@ -100,7 +100,7 @@ public class TimelineController : ControllerBase
     }
 
     [HttpPut("{timelineId}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> UpdateTimeline(string timelineId, [FromBody] UpdateTimelineRequest request)
     {
         try
@@ -119,7 +119,7 @@ public class TimelineController : ControllerBase
     }
 
     [HttpDelete("{timelineId}")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "2")]
     public async Task<IActionResult> DeleteTimeline(string timelineId)
     {
         try
