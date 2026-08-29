@@ -8,6 +8,9 @@ import { useTimelineHistory } from "./hooks/useTimelineHistory";
 import { fetchTimeline, getUserClearance } from "../../../api";
 import { Clearance } from "../../../types";
 import type { TimelineTeam } from "../../../types";
+import BarDetailModal from "./components/BarDetailModal";
+import type { BarDetail } from "./components/BarDetailModal";
+import BlockedDatePicker from "./components/CustomDatePicker";
 
 export default function Timeline() {
   const userClearance = getUserClearance();
@@ -17,6 +20,9 @@ export default function Timeline() {
   const currentYear = new Date().getFullYear();
   const startDate = new Date(currentYear, 0, 1);
   const endDate = new Date(currentYear + 1, 11, 31);
+
+  const [timelineStart, setTimelineStart] = useState(new Date(currentYear, 0, 1));
+  const [timelineEnd, setTimelineEnd] = useState(new Date(currentYear + 1, 11, 31));
   
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("All");
   const [selectedInspection, setSelectedInspection] = useState<{ id: string; name: string; type: "team" | "staff"; subtitle?: string; } | null>(null);
@@ -24,22 +30,58 @@ export default function Timeline() {
   const [globalError, setGlobalError] = useState<string | null>(null);
   const [globalSuccess, setGlobalSuccess] = useState<string | null>(null);
 
+  const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState("All");
+  const [jumpDate, setJumpDate] = useState<Date | null>(null);
+  const [jumpDateStr, setJumpDateStr] = useState("");
+
   // MODAL STATES
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [isNewTeamModalOpen, setIsNewTeamModalOpen] = useState(false);
+  const [selectedBarDetail, setSelectedBarDetail] = useState<BarDetail | null>(null);
 
   // CUSTOM HOOK (The Brains)
   const { historyRecords, isLoadingHistory, errorMessage: historyError, loadHistory } = useTimelineHistory(teams);
 
-  const filteredTeams = useMemo(() => {
-    if (selectedTeamFilter === "All") return teams;
-    return teams.filter(t => t.teamId === selectedTeamFilter);
+  const availableEmployees = useMemo(() => {
+    if (selectedTeamFilter === "All") return teams.flatMap(t => t.members);
+    return teams.find(t => t.teamId === selectedTeamFilter)?.members || [];
   }, [teams, selectedTeamFilter]);
 
-  const loadData = async () => {
+  const filteredTeams = useMemo(() => {
+    let result = teams;
+
+    if (selectedTeamFilter !== "All") {
+      result = result.filter(t => t.teamId === selectedTeamFilter);
+    }
+
+    if (selectedEmployeeFilter !== "All") {
+      result = result.map(t => ({
+        ...t,
+        members: t.members.filter(m => m.staffId === selectedEmployeeFilter)
+      })).filter(t => t.members.length > 0);
+    }
+
+    return result;
+  }, [teams, selectedTeamFilter, selectedEmployeeFilter]);
+
+  const handleScheduleCreated = async () => {
+    await loadData(timelineStart, timelineEnd);
+    if (selectedInspection) {
+      await handleInspectTarget(
+        selectedInspection.id,
+        selectedInspection.name,
+        selectedInspection.type,
+        selectedInspection.subtitle
+      );
+    }
+  };
+
+  const loadData = async (start: Date, end: Date) => {
     setIsLoading(true);
     try {
-      const data = await fetchTimeline(`${currentYear}-01-01`, `${currentYear + 1}-12-31`);
+      const startStr = start.toISOString().split("T")[0];
+      const endStr = end.toISOString().split("T")[0];
+      const data = await fetchTimeline(startStr, endStr);
       setTeams(Array.isArray(data) ? data : []);
     } catch (err) {
       setGlobalError("Gagal memuat jadwal lapangan dari server.");
@@ -48,7 +90,9 @@ export default function Timeline() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { 
+    loadData(timelineStart, timelineEnd); 
+  }, [timelineStart, timelineEnd]);
 
   const handleInspectTarget = async (id: string, name: string, type: "team" | "staff", subtitle?: string) => {
     setSelectedInspection({ id, name, type, subtitle });
@@ -63,46 +107,56 @@ export default function Timeline() {
           <span className="font-bold tracking-wide text-sm uppercase pl-12">Timeline Jadwal</span>
         </div>
         
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="flex items-center gap-1 bg-brand-primary/80 px-2.5 py-1 rounded-lg text-xs">
-            <Filter size={14} className="text-white/80" />
-            <select
-              className="bg-transparent text-white font-medium focus:outline-none cursor-pointer"
-              value={selectedTeamFilter}
-              onChange={(e) => setSelectedTeamFilter(e.target.value)}
-            >
-              <option value="All" className="text-black">Semua Tim</option>
-              {teams.map((t) => (
-                <option key={t.teamId} value={t.teamId} className="text-black">{t.teamName}</option>
-              ))}
-            </select>
-          </div>
+        <div className="flex items-center gap-3 shrink-0 mr-2">
+          
+          {/* <div className="w-[180px]">
+            <BlockedDatePicker
+              value={jumpDateStr}
+              blockedRanges={[]} 
+              placeholder="Pilih Tanggal"
+              className="bg-white border border-gray-300 text-black px-3 py-1.5 rounded-md text-sm w-full focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer shadow-sm"
+              onChange={(picked) => {
+                setJumpDateStr(picked);
+                if (!picked) {
+                   setJumpDate(null);
+                   return;
+                }
+                const d = new Date(picked);
+                
+                if (d.getFullYear() !== timelineStart.getFullYear()) {
+                  setTimelineStart(new Date(d.getFullYear(), 0, 1));
+                  setTimelineEnd(new Date(d.getFullYear() + 1, 11, 31));
+                }
+                setJumpDate(d);
+              }}
+            />
+          </div> */}
 
-          {userClearance === Clearance.Admin && (
-            <>
-              {/* Ensure you have the Unassigned Staff modal logic linked here if you still need it */}
-              <button onClick={() => console.log("Unassigned Staff clicked")} className="btn-primary text-xs py-1.5 px-3">
-                <UserPlus size={14} /><span>Staf Tanpa Tim</span>
-              </button>
+          <select
+            className="bg-white border border-gray-300 text-black px-3 py-1.5 rounded-md text-sm min-w-[140px] focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer shadow-sm"
+            value={selectedTeamFilter}
+            onChange={(e) => {
+              setSelectedTeamFilter(e.target.value);
+              setSelectedEmployeeFilter("All"); // Reset employee filter if team changes
+            }}
+          >
+            <option value="All">Semua Tim</option>
+            {teams.map((t) => (
+              <option key={t.teamId} value={t.teamId}>{t.teamName}</option>
+            ))}
+          </select>
 
-              <div className="action-group ml-2">
-                <button 
-                  type="button" 
-                  onClick={() => { setGlobalError(null); setIsAssignModalOpen(true); }} 
-                  className="action-group-btn"
-                >
-                  Atur Jadwal <Plus size={15} strokeWidth={2.5} />
-                </button>
-                <button 
-                  type="button" 
-                  onClick={() => { setGlobalError(null); setIsNewTeamModalOpen(true); }} 
-                  className="action-group-btn"
-                >
-                  Tim Baru <Plus size={15} strokeWidth={2.5} />
-                </button>
-              </div>
-            </>
-          )}
+          <select
+            className="bg-white border border-gray-300 text-black px-3 py-1.5 rounded-md text-sm min-w-[140px] focus:outline-none focus:ring-2 focus:ring-brand-primary cursor-pointer shadow-sm"
+            value={selectedEmployeeFilter}
+            onChange={(e) => setSelectedEmployeeFilter(e.target.value)}
+          >
+            <option value="All">Semua Staf</option>
+            {availableEmployees.map((m) => (
+              <option key={m.staffId} value={m.staffId}>{m.name}</option>
+            ))}
+          </select>
+          
         </div>
       </div>
       
@@ -116,10 +170,16 @@ export default function Timeline() {
           <TimelineComponent 
             teams={filteredTeams}
             isLoading={isLoading}
-            startDate={startDate}
-            endDate={endDate}
+            startDate={timelineStart}
+            endDate={timelineEnd}
+            jumpToDate={jumpDate}
             compact={false}
             onInspectTarget={handleInspectTarget}
+            onBarClick={(detail) => setSelectedBarDetail(detail)}
+            onRangeChange={(newStart, newEnd) => {
+               setTimelineStart(newStart);
+               setTimelineEnd(newEnd);
+            }}
           />
         </div>
 
@@ -130,7 +190,7 @@ export default function Timeline() {
           isLoadingHistory={isLoadingHistory}
           userClearance={userClearance}
           onClose={() => setSelectedInspection(null)}
-          onReloadRequested={() => handleInspectTarget(selectedInspection!.id, selectedInspection!.name, selectedInspection!.type, selectedInspection!.subtitle)}
+          onReloadRequested={handleScheduleCreated}
           onOpenAssignModal={() => setIsAssignModalOpen(true)}
           setGlobalError={setGlobalError}
           setGlobalSuccess={setGlobalSuccess}
@@ -142,7 +202,8 @@ export default function Timeline() {
             isOpen={isAssignModalOpen}
             onClose={() => setIsAssignModalOpen(false)}
             teams={teams}
-            onSuccess={loadData}
+            initialTargetId={selectedInspection ? `${selectedInspection.type}:${selectedInspection.id}` : ""}
+            onSuccess={handleScheduleCreated}
             setGlobalError={setGlobalError}
             setGlobalSuccess={setGlobalSuccess}
          />
@@ -152,9 +213,17 @@ export default function Timeline() {
          <NewTeamModal 
             isOpen={isNewTeamModalOpen}
             onClose={() => setIsNewTeamModalOpen(false)}
-            onSuccess={loadData}
+            onSuccess={handleScheduleCreated}
             setGlobalError={setGlobalError}
             setGlobalSuccess={setGlobalSuccess}
+         />
+      )}
+
+      {selectedBarDetail && (
+         <BarDetailModal 
+            isOpen={!!selectedBarDetail}
+            onClose={() => setSelectedBarDetail(null)}
+            detail={selectedBarDetail}
          />
       )}
     </div>

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { X, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { Clearance } from "../../../../types";
-import { updateTimeline, deleteTimelineSchedule } from "../../../../api";
+import { updateTimeline, deleteTimelineSchedule, fetchBlockedRanges } from "../../../../api";
+import BlockedDatePicker from "./CustomDatePicker";
 
 interface InspectionPanelProps {
   selectedInspection: { id: string; name: string; type: "team" | "staff"; subtitle?: string; } | null;
@@ -24,9 +25,25 @@ export default function InspectionPanel({
   const [isEditingFields, setIsEditingFields] = useState(false);
   const [editForm, setEditForm] = useState({ daysOn: "", daysOff: "", startDate: "", endDate: "" });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editBlockedRanges, setEditBlockedRanges] = useState<{ startDate: string; endDate: string }[]>([]);
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  const MONTH_NAMES = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
 
-  // Helper functions for updating/deleting records go here to keep this panel self-contained
-  // They call onReloadRequested() when successful to tell the main page to refresh data.
+  function formatDateDisplay(dateStr: string) {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length !== 3) return dateStr;
+    
+    const year = parts[0];
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    
+    return `${day} ${MONTH_NAMES[month]} ${year}`;
+  }
 
   return (
     <div 
@@ -66,20 +83,26 @@ export default function InspectionPanel({
                   const isLeave = rec.barType === "Leave";
                   const recordKey = `${rec.timelineId}-${index}`;
                   const isSelected = editingRecordId === recordKey;
-
-                  const cardBorder = isTicket
-                    ? (isLeave
-                        ? (isActive ? "border-red-500 bg-red-50/50" : "border-red-300 bg-red-50/30")
-                        : (isActive ? "border-emerald-500 bg-emerald-50/50" : "border-emerald-300 bg-emerald-50/30"))
-                    : (isActive ? "border-brand-primary bg-brand-bg/60 shadow-sm" : "border-amber-300 bg-amber-50/40");
-
-                  const badgeClass = isTicket
-                    ? (isLeave
-                        ? (isActive ? "bg-red-500 text-white" : "bg-red-100 text-red-800")
-                        : (isActive ? "bg-emerald-500 text-white" : "bg-emerald-100 text-emerald-800"))
-                    : (isActive ? "bg-brand-primary text-white" : "bg-amber-100 text-amber-800");
-
                   const canEditThis = !isTicket && userClearance === Clearance.Admin;
+
+                  // 1. CLEAN & SIMPLE COLOR LOGIC
+                  let cardBorder = "";
+                  let badgeClass = "";
+                  let sourceClass = "";
+
+                  if (isTicket) {
+                    cardBorder = "border-red-400 bg-red-50/50";
+                    badgeClass = "bg-red-500 text-white";
+                    sourceClass = "text-red-700 bg-white border-red-200";
+                  } else if (!isActive) {
+                    cardBorder = "border-yellow-400 bg-yellow-50/40";
+                    badgeClass = "bg-yellow-400 text-yellow-950";
+                    sourceClass = "text-yellow-800 bg-white border-yellow-300";
+                  } else {
+                    cardBorder = "border-brand-primary bg-brand-bg/60 shadow-sm";
+                    badgeClass = "bg-brand-primary text-white";
+                    sourceClass = "text-brand-dark bg-white border-brand-outline/60";
+                  }
 
                   return (
                     <div
@@ -94,52 +117,64 @@ export default function InspectionPanel({
                           startDate: rec.startDate ?? "",
                           endDate: rec.endDate ?? "",
                         });
+
+                        if (!isSelected) {
+                          const isTeamPanel = selectedInspection?.type === "team";
+                          const fetchTeamId = isTeamPanel ? selectedInspection!.id : rec._teamId;
+                          const fetchStaffId = isTeamPanel ? undefined : rec._staffId;
+
+                          fetchBlockedRanges(fetchTeamId, fetchStaffId)
+                          .then(ranges => {
+                            const filteredRanges = ranges.filter(r => r.startDate !== rec.startDate);
+                            setEditBlockedRanges(filteredRanges);
+                          }).catch(() => setEditBlockedRanges([]));
+                        }
                       }}
                       className={`p-3 rounded-xl border transition ${cardBorder} ${canEditThis ? "cursor-pointer hover:shadow-md" : ""}`}
                     >
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
-                          <span className={`badge text-[10px] py-0.5 px-2 ${badgeClass}`}>
+                          <span className={`badge text-[10px] py-0.5 px-2 font-bold tracking-wider ${badgeClass}`}>
                             {isActive ? "AKTIF" : "MENDATANG"}
                           </span>
                           {rec._source && (
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm border ${isTicket ? 'text-red-700 bg-white border-red-200' : 'text-brand-dark bg-white border-brand-outline/60'}`}>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm border ${sourceClass}`}>
                               {rec._source}
                             </span>
                           )}
                         </div>
 
                         {isTicket ? (
-                          <span className={`text-xs font-bold uppercase tracking-wide ${isLeave ? 'text-red-600' : 'text-emerald-600'}`}>
+                          <span className={`text-xs font-bold uppercase tracking-wide ${isLeave ? 'text-red-600' : 'text-red-500'}`}>
                             {isLeave ? "LEAVE (OFF)" : "TICKET (OFF)"}
                           </span>
                         ) : !isEditingFields || !isSelected ? (
-                          <span className="text-xs font-semibold text-black/80">{rec.daysOn} ON / {rec.daysOff} OFF</span>
+                          <span className="text-xs font-bold text-black/90">{rec.daysOn} ON / {rec.daysOff} OFF</span>
                         ) : null}
                       </div>
 
-                      {/* View mode */}
+                      {/* 2. DATE FORMATTER APPLIED HERE */}
                       {(!isSelected || !isEditingFields) && (
                         <>
-                          <div className="flex items-center gap-1.5 text-xs text-black/70 mt-2">
+                          <div className="flex items-center gap-1.5 text-xs text-black/80 mt-2">
                             <CalendarIcon size={14} className="text-black/40" />
-                            <span>Mulai: <strong className="text-black/90">{rec.startDate}</strong></span>
+                            <span>Mulai: <strong className="text-black/90 font-semibold">{formatDateDisplay(rec.startDate)}</strong></span>
                           </div>
-                          <div className="flex items-center gap-1.5 text-xs text-black/70 mt-1">
+                          <div className="flex items-center gap-1.5 text-xs text-black/80 mt-1">
                             <Clock size={14} className="text-black/40" />
-                            <span>Selesai: <strong className="text-black/90">{rec.endDate || "Sekarang (Tanpa Batas)"}</strong></span>
+                            <span>Selesai: <strong className="text-black/90 font-semibold">{formatDateDisplay(rec.endDate)}</strong></span>
                           </div>
 
                           {isTicket && rec.reason && (
                             <div className="mt-2.5 p-2 bg-white border border-red-100 rounded-lg text-xs text-red-900 font-medium shadow-sm">
-                              <strong className="block text-red-400 mb-0.5 text-[10px] uppercase tracking-wider">Catatan Tiket:</strong>
+                              <strong className="block text-red-500 mb-0.5 text-[10px] uppercase tracking-wider font-bold">Catatan Tiket:</strong>
                               {rec.reason}
                             </div>
                           )}
                         </>
                       )}
 
-                      {/* Edit mode form */}
+                      {/* 3. EDIT FORM & ACTIONS (Original Logic) */}
                       {canEditThis && isSelected && isEditingFields && (
                         <div className="flex flex-col gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-2">
@@ -156,26 +191,21 @@ export default function InspectionPanel({
                               placeholder="Days Off"
                             />
                           </div>
-                          
-                          <input
-                            type="date" 
-                            className="input-field text-sm py-1.5 cursor-pointer text-black/80"
+                          <BlockedDatePicker
                             value={editForm.startDate}
-                            onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch (err) {} }}
-                            onChange={(e) => setEditForm({ ...editForm, startDate: e.target.value })}
+                            blockedRanges={editBlockedRanges}
+                            minDate={todayStr}
+                            onChange={(picked) => setEditForm({ ...editForm, startDate: picked, endDate: "" })}
                           />
-                          <input
-                            type="date" 
-                            className="input-field text-sm py-1.5 cursor-pointer text-black/80"
+                          <BlockedDatePicker
                             value={editForm.endDate}
-                            min={editForm.startDate}
-                            onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch (err) {} }}
-                            onChange={(e) => setEditForm({ ...editForm, endDate: e.target.value })}
+                            blockedRanges={editBlockedRanges}
+                            minDate={editForm.startDate && editForm.startDate > todayStr ? editForm.startDate : todayStr}
+                            onChange={(picked) => setEditForm({ ...editForm, endDate: picked })}
                           />
                         </div>
                       )}
 
-                      {/* Action row */}
                       {canEditThis && isSelected && (
                         <div className="flex gap-2 mt-3" onClick={(e) => e.stopPropagation()}>
                           {!isEditingFields ? (
@@ -193,7 +223,7 @@ export default function InspectionPanel({
                                     await deleteTimelineSchedule(rec.timelineId);
                                     setGlobalSuccess("Jadwal berhasil dihapus.");
                                     setEditingRecordId(null);
-                                    onReloadRequested(); // Refreshes the data
+                                    onReloadRequested();
                                   } catch (err: any) {
                                     setGlobalError(err.message || "Gagal menghapus jadwal.");
                                   }
@@ -204,7 +234,7 @@ export default function InspectionPanel({
                               </button>
                               <button
                                 onClick={() => setEditingRecordId(null)}
-                                className="px-3 py-1.5 text-xs font-medium text-black/50 hover:bg-black/5 rounded-lg transition cursor-pointer"
+                                className="px-3 py-1.5 text-xs font-medium text-black/60 hover:bg-black/5 hover:text-black rounded-lg transition cursor-pointer"
                               >
                                 Batal
                               </button>
@@ -214,18 +244,22 @@ export default function InspectionPanel({
                               <button
                                 disabled={isSavingEdit}
                                 onClick={async () => {
+                                  if (!editForm.daysOn || !editForm.daysOff || !editForm.startDate || !editForm.endDate) {
+                                    setGlobalError("Semua kolom wajib diisi, termasuk tanggal berakhir.");
+                                    return;
+                                  }
                                   setIsSavingEdit(true);
                                   try {
                                     await updateTimeline(rec.timelineId, {
                                       daysOn: parseInt(editForm.daysOn, 10),
                                       daysOff: parseInt(editForm.daysOff, 10),
                                       startDate: editForm.startDate,
-                                      endDate: editForm.endDate || null,
+                                      endDate: editForm.endDate,
                                     });
                                     setGlobalSuccess("Jadwal berhasil diperbarui.");
                                     setEditingRecordId(null);
                                     setIsEditingFields(false);
-                                    onReloadRequested(); // Refreshes the data
+                                    onReloadRequested();
                                   } catch (err: any) {
                                     setGlobalError(err.message || "Gagal memperbarui jadwal.");
                                   } finally {
@@ -238,7 +272,7 @@ export default function InspectionPanel({
                               </button>
                               <button
                                 onClick={() => setIsEditingFields(false)}
-                                className="px-3 py-1.5 text-xs font-medium text-black/50 hover:bg-black/5 rounded-lg transition cursor-pointer"
+                                className="px-3 py-1.5 text-xs font-medium text-black/60 hover:bg-black/5 hover:text-black rounded-lg transition cursor-pointer"
                               >
                                 Batal
                               </button>
@@ -253,28 +287,14 @@ export default function InspectionPanel({
             )}
         </div>
 
-        {/* NEW: LOCKED TO ADMINS ONLY */}
         {userClearance === Clearance.Admin && (
           <div className="p-4 border-t border-brand-outline bg-brand-bg/30 shrink-0">
-            {(() => {
-              // 🔥 Check if the target already has a blocking active schedule
-              const disableNewSchedule = historyRecords.some(rec => 
-                rec.status === "Active" && 
-                (selectedInspection?.type === "team" || rec._source === "Personal")
-              );
-
-              return (
-                <button 
-                  disabled={disableNewSchedule}
-                  onClick={onOpenAssignModal} 
-                  className={`btn-primary w-full justify-center py-2 text-sm transition-all ${
-                    disableNewSchedule ? "opacity-50 cursor-not-allowed grayscale" : "cursor-pointer"
-                  }`}
-                >
-                  {disableNewSchedule ? "Jadwal Aktif Sudah Ada" : "+ Perbarui / Atur Rotasi Baru"}
-                </button>
-              );
-            })()}
+            <button 
+              onClick={onOpenAssignModal} 
+              className="btn-primary w-full justify-center py-2 text-sm cursor-pointer"
+            >
+              + Tambah Jadwal Baru
+            </button>
           </div>
         )}
       </div>

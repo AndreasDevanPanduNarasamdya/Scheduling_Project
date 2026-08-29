@@ -10,7 +10,7 @@ public partial class Timeline
     public DateTime StartDate { get; set; }
     public int DaysOn { get; set; }
     public int DaysOff { get; set; }
-    public DateTime? EndDate { get; set; }
+    public DateTime EndDate { get; set; }   // was DateTime? — Rule 7: mandatory
 
     public virtual Team? Team { get; set; }
     public virtual Staff? Staff { get; set; }

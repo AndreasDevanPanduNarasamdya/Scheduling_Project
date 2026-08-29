@@ -25,8 +25,16 @@ export function useTimelineHistory(teams: TimelineTeam[]) {
           staffTeam ? fetchTimelineHistory(staffTeam.teamId, undefined).catch(() => []) : Promise.resolve([])
         ]);
 
-        const mappedTeamSchedules = teamSchedules.map((r: any) => ({ ...r, _source: `Tim: ${staffTeam?.teamName}` }));
-        const mappedStaffSchedules = staffSchedules.map((r: any) => ({ ...r, _source: "Personal" }));
+        const mappedTeamSchedules = teamSchedules.map((r: any) => ({ 
+            ...r, 
+            _source: `Tim: ${staffTeam?.teamName}`,
+            _teamId: staffTeam?.teamId // 🔥 INJECT TEAM ID
+        }));
+        const mappedStaffSchedules = staffSchedules.map((r: any) => ({ 
+            ...r, 
+            _source: "Personal",
+            _staffId: id // 🔥 INJECT STAFF ID
+        }));
 
         const activeTickets: any[] = [];
         if (staffMember) {
@@ -40,7 +48,7 @@ export function useTimelineHistory(teams: TimelineTeam[]) {
                 if (currentTicket) activeTickets.push(currentTicket);
                 currentTicket = {
                   timelineId: `ticket-${day.date}`,
-                  _source: "Tiket / Override",
+                  _source: "Tiket",
                   isTicket: true,
                   barType: day.barType,
                   reason: dayReason,

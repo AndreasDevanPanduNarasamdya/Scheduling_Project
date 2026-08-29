@@ -22,6 +22,10 @@ namespace SchedulingMeruap.Api.DTO.Responses
         public string Date { get; set; } = string.Empty;
         public string BarType { get; set; } = string.Empty;
         public string? Label { get; set; }
+        public string? ScheduleType { get; set; }
+        public string? SchedulePattern { get; set; }
+        public string? ScheduleStart { get; set; }
+        public string? ScheduleEnd { get; set; }
     }
 
     public class TimelineHistoryResponse
@@ -30,9 +34,15 @@ namespace SchedulingMeruap.Api.DTO.Responses
         public string? TeamId { get; set; }
         public string? StaffId { get; set; }
         public string StartDate { get; set; } = string.Empty;
-        public string? EndDate { get; set; }
+        public string EndDate { get; set; } = string.Empty;
         public int DaysOn { get; set; }
         public int DaysOff { get; set; }
-        public string Status { get; set; } = string.Empty; // "Active", "Historical", or "Future"
+        public string Status { get; set; } = string.Empty;
+    }
+    public class BlockedRangeResponse
+    {
+        public required string TimelineId { get; set; }
+        public required string StartDate { get; set; }
+        public required string EndDate { get; set; }
     }
 }

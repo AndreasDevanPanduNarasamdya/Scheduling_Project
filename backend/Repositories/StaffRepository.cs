@@ -8,15 +8,11 @@ namespace SchedulingMeruap.Api.Repositories;
 public class StaffRepository : IStaffRepository
 {
     private readonly ApplicationDbContext _dbContext;
-
     public StaffRepository(ApplicationDbContext dbContext)
     {
         _dbContext = dbContext;
     }
 
-    // Base query used everywhere we need a fully-hydrated Staff (with User).
-    // Centralizing this is what prevents the "forgot .Include(User) on one
-    // method" bug from happening again — every read path below reuses it.
     private IQueryable<Staff> StaffWithUser => _dbContext.Staff.Include(s => s.User);
 
     public async Task<Staff?> GetByIdAsync(string staffId)
@@ -53,14 +49,12 @@ public class StaffRepository : IStaffRepository
 
     public async Task AssignStaffToTeamAsync(string staffId, string teamId)
     {
-        // 1. Remove old assignments for this staff
         var existingAssignments = await _dbContext.StaffTeams
             .Where(st => st.StaffId == staffId)
             .ToListAsync();
 
         _dbContext.StaffTeams.RemoveRange(existingAssignments);
 
-        // 2. Add new assignment (unless frontend sent "unassigned")
         if (teamId != "unassigned" && !string.IsNullOrWhiteSpace(teamId))
         {
             _dbContext.StaffTeams.Add(new StaffTeam

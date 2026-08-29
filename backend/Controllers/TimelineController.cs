@@ -25,7 +25,6 @@ public class TimelineController : ControllerBase
         _timelineService = timelineService;
     }
 
-    // 🔥 OPTIMIZATION: Expression-bodied helper
     private string? GetCurrentActorId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
     // =========================================================
@@ -35,8 +34,6 @@ public class TimelineController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetTimeline([FromQuery] TimelineRequest request)
     {
-        // 🔥 OPTIMIZATION: Removed ModelState.IsValid block (handled by [ApiController])
-
         if (request.StartDate == default)
         {
             request.StartDate = new DateTime(DateTime.UtcNow.Year, 1, 1);
@@ -46,17 +43,18 @@ public class TimelineController : ControllerBase
             request.EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31);
         }
 
-        // 🔥 OPTIMIZATION: Direct return
         return Ok(await _timelineService.GetTimelineDataAsync(request));
     }
 
     [HttpGet("history")]
-    public async Task<IActionResult> GetTimelineHistory([FromQuery] string? teamId, [FromQuery] string? staffId)
+    public async Task<IActionResult> GetTimelineHistory(
+        [FromQuery] string? teamId,
+        [FromQuery] string? staffId,
+        [FromQuery] bool includeHistorical = false)
     {
         try
         {
-            // 🔥 OPTIMIZATION: Direct return
-            return Ok(await _timelineService.GetTimelineHistoryAsync(teamId, staffId));
+            return Ok(await _timelineService.GetTimelineHistoryAsync(teamId, staffId, includeHistorical));
         }
         catch (ArgumentException ex)
         {
@@ -74,24 +72,8 @@ public class TimelineController : ControllerBase
     {
         try
         {
-            // 🔥 OPTIMIZATION: Inlined ActorId
             await _timelineService.CreateTimelineAsync(request, GetCurrentActorId());
             return Ok(new { message = "Jadwal berhasil dibuat." });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
-    }
-
-    [HttpPost("end")]
-    [Authorize(Roles = "2")]
-    public async Task<IActionResult> EndTimeline([FromBody] EndTimelineRequest request)
-    {
-        try
-        {
-            await _timelineService.EndActiveTimelineAsync(request, GetCurrentActorId());
-            return Ok(new { message = "Schedule successfully closed." });
         }
         catch (ArgumentException ex)
         {
@@ -134,6 +116,22 @@ public class TimelineController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, new { message = "Gagal menghapus jadwal.", details = ex.Message });
+        }
+    }
+
+    [HttpGet("blocked-ranges")]
+    public async Task<IActionResult> GetBlockedDateRanges(
+        [FromQuery] string? teamId,
+        [FromQuery] string? staffId,
+        [FromQuery] string? excludeTimelineId = null)
+    {
+        try
+        {
+            return Ok(await _timelineService.GetBlockedDateRangesAsync(teamId, staffId, excludeTimelineId));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
         }
     }
 }

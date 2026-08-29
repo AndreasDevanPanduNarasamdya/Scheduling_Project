@@ -20,7 +20,8 @@ namespace SchedulingMeruap.Api.DTO.Requests
         [Required]
         public DateTime StartDate { get; set; }
 
-        public DateTime? EndDate { get; set; }
+        [Required]
+        public DateTime EndDate { get; set; }   // was DateTime? — now mandatory per Rule 7
 
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "DaysOn must be greater than or equal to 1.")]
@@ -45,7 +46,8 @@ namespace SchedulingMeruap.Api.DTO.Requests
         [Required]
         public DateTime StartDate { get; set; }
 
-        public DateTime? EndDate { get; set; }
+        [Required]
+        public DateTime EndDate { get; set; }   // was DateTime? — now mandatory per Rule 7
 
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "DaysOn must be greater than or equal to 1.")]

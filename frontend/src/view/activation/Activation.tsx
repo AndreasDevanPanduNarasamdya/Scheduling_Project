@@ -118,7 +118,7 @@ export default function Activation() {
     const messages: Record<Exclude<TokenStatus, "checking" | "valid">, { title: string; body: string }> = {
       invalid: {
         title: "Akses Ditolak",
-        body: "Link aktivasi tidak valid atau token hilang dari URL. Mohon aktivasi melalui Admin atau IT",
+        body: "Link aktivasi tidak valid atau token hilang dari URL. ",
       },
       expired: {
         title: "Link Kedaluwarsa",
@@ -152,11 +152,6 @@ export default function Activation() {
   // ---- Token is valid: normal 3-step flow ----
   return (
     <div className="min-h-screen bg-brand-bg font-sans flex items-center justify-center relative p-4">
-      
-      {/* Top Left Menu Icon */}
-      <div className="absolute top-8 left-8 text-brand-dark">
-        <Menu size={28} />
-      </div>
 
       <div className="card p-10 sm:p-14 w-full max-w-[500px] flex flex-col items-center text-center">
         

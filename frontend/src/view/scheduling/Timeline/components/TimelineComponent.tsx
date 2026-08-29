@@ -49,6 +49,10 @@ function toDateKey(date: Date): string {
 interface DayInfo {
   barType: BarType;
   label?: string;
+  scheduleType?: string;
+  schedulePattern?: string;
+  scheduleStart?: string;
+  scheduleEnd?: string;
 }
 
 function useDayLookup(teams: TimelineTeam[]) {
@@ -58,7 +62,14 @@ function useDayLookup(teams: TimelineTeam[]) {
       for (const member of team.members) {
         const dayMap = new Map<string, DayInfo>();
         for (const day of member.days) {
-          dayMap.set(day.date, { barType: day.barType, label: day.label });
+          dayMap.set(day.date, { 
+            barType: day.barType, 
+            label: day.label,
+            scheduleType: day.scheduleType,
+            schedulePattern: day.schedulePattern,
+            scheduleStart: day.scheduleStart,
+            scheduleEnd: day.scheduleEnd
+          });
         }
         map.set(member.staffId, dayMap);
       }
@@ -72,6 +83,10 @@ interface BarSegment {
   length: number;
   barType: BarType;
   label?: string;
+  scheduleType?: string;
+  schedulePattern?: string;
+  scheduleStart?: string;
+  scheduleEnd?: string;
 }
 
 function computeSegments(days: { date: Date }[], memberDays: Map<string, DayInfo> | undefined): BarSegment[] {
@@ -87,10 +102,17 @@ function computeSegments(days: { date: Date }[], memberDays: Map<string, DayInfo
       return;
     }
 
-    if (current && current.barType === barType && current.label === entry?.label) {
-      current.length++;
+    if (current && 
+            current.barType === barType && 
+            current.label === entry?.label &&
+            current.scheduleStart === entry?.scheduleStart) { // Split segment if parent schedule changes!
+          current.length++;
     } else {
-      current = { startIndex: i, length: 1, barType, label: entry?.label };
+      current = { 
+        startIndex: i, length: 1, barType, label: entry?.label,
+        scheduleType: entry?.scheduleType, schedulePattern: entry?.schedulePattern,
+        scheduleStart: entry?.scheduleStart, scheduleEnd: entry?.scheduleEnd
+      };
       segments.push(current);
     }
   });
@@ -104,8 +126,21 @@ export interface TimelineComponentProps {
   startDate: Date;
   endDate: Date;
   compact?: boolean;
-  onBarClick?: (detail: { barType: BarType; label?: string; staffName: string; startDate: string; endDate: string }) => void;
+  jumpToDate?: Date | null;
+  onBarClick?: (detail: { 
+    barType: BarType; 
+    label?: string; 
+    staffName: string; 
+    teamName: string; 
+    startDate: string; 
+    endDate: string;
+    scheduleType?: string;
+    schedulePattern?: string;
+    scheduleStart?: string;
+    scheduleEnd?: string;
+  }) => void;
   onInspectTarget?: (id: string, name: string, type: "team" | "staff", subtitle?: string) => void;
+  onRangeChange?: (newStart: Date, newEnd: Date) => void;
 }
 
 export default function TimelineComponent({
@@ -114,8 +149,10 @@ export default function TimelineComponent({
   startDate,
   endDate,
   compact = false,
+  jumpToDate,
   onBarClick,
-  onInspectTarget
+  onInspectTarget,
+  onRangeChange
 }: TimelineComponentProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const hasInitialScrolled = useRef(false);
@@ -125,28 +162,18 @@ export default function TimelineComponent({
   const [currentRange, setCurrentRange] = useState({ start: startDate, end: endDate });
   const [visibleYear, setVisibleYear] = useState(startDate.getFullYear());
 
-  useEffect(() => {
-    setCurrentRange(prev => {
-      if (prev.start.getTime() === startDate.getTime() && prev.end.getTime() === endDate.getTime()) {
-        return prev;
-      }
-      return { start: startDate, end: endDate };
-    });
-  }, [startDate.getTime(), endDate.getTime()]);
-
+  
   const { days, months } = useMemo(() => generateTimelineDays(currentRange.start, currentRange.end), [currentRange.start, currentRange.end]);
   const totalWidth = days.length * COLUMN_WIDTH;
   const dayLookup = useDayLookup(teams);
-
-  // 🔥 Responsive sidebar classes: shrinks on mobile, expands on desktop
   const nameWidthClasses = compact 
-    ? "w-[120px] md:w-[200px] lg:w-[256px]" 
-    : "w-[130px] sm:w-[180px] md:w-[240px] lg:w-[288px]";
-
+  ? "w-[120px] md:w-[200px] lg:w-[256px]" 
+  : "w-[130px] sm:w-[180px] md:w-[240px] lg:w-[288px]";
+  
   const headerHeight = compact ? "h-[80px]" : "h-[88px]";
   const teamRowHeight = compact ? "h-[48px]" : "h-[54px]";
   const staffRowHeight = compact ? "h-[54px]" : "h-[60px]";
-
+  
   useLayoutEffect(() => {
     if (!hasInitialScrolled.current && scrollContainerRef.current && days.length > 0 && !isLoading) {
       const todayIndex = days.findIndex(d => d.isToday);
@@ -155,15 +182,39 @@ export default function TimelineComponent({
         hasInitialScrolled.current = true;
       }
     }
-  }, [days, isLoading]);
+  }, [days, isLoading]);TimelineComponent
+  
+  useEffect(() => {
+    if (!jumpToDate || days.length === 0 || !scrollContainerRef.current) return;
 
+    const targetKey = toDateKey(jumpToDate);
+    const targetIndex = days.findIndex(d => toDateKey(d.date) === targetKey);
+
+    if (targetIndex !== -1) {
+      const container = scrollContainerRef.current;
+      // Scroll exactly to that date, perfectly centered on the screen
+      container.scrollLeft = (targetIndex * COLUMN_WIDTH) - (container.clientWidth / 2) + (COLUMN_WIDTH / 2);
+    }
+  }, [jumpToDate, days.length]);
+
+  
   const handleScroll = () => {
     const container = scrollContainerRef.current;
     if (!container || isAddingPast.current || isLoading) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = container;
 
-    const centerDayIndex = Math.floor((scrollLeft + clientWidth / 2) / COLUMN_WIDTH);
+    const gridWidth = days.length * COLUMN_WIDTH;
+    const sidebarWidth = scrollWidth - gridWidth;
+    
+    const absoluteCenter = scrollLeft + (clientWidth / 2);
+    const pixelInsideGrid = absoluteCenter - sidebarWidth;
+    
+    let centerDayIndex = Math.floor(pixelInsideGrid / COLUMN_WIDTH);
+    
+    if (centerDayIndex < 0) centerDayIndex = 0;
+    if (centerDayIndex >= days.length) centerDayIndex = days.length - 1;
+
     const centerDate = days[centerDayIndex]?.date;
     if (centerDate && centerDate.getFullYear() !== visibleYear) {
       setVisibleYear(centerDate.getFullYear());
@@ -176,6 +227,9 @@ export default function TimelineComponent({
       setCurrentRange(prev => {
         const newStart = new Date(prev.start);
         newStart.setFullYear(newStart.getFullYear() - 1);
+        
+        onRangeChange?.(newStart, prev.end);
+        
         return { ...prev, start: newStart };
       });
     } 
@@ -183,6 +237,9 @@ export default function TimelineComponent({
       setCurrentRange(prev => {
         const newEnd = new Date(prev.end);
         newEnd.setFullYear(newEnd.getFullYear() + 1);
+        
+        onRangeChange?.(prev.start, newEnd);
+        
         return { ...prev, end: newEnd };
       });
     }
@@ -208,7 +265,7 @@ export default function TimelineComponent({
       className="w-full h-full overflow-auto relative bg-white scrollbar-thin [-webkit-overflow-scrolling:touch]"
     >
       {/* 🔥 Changed inline minWidth math to Tailwind's min-w-max so the browser handles it responsively! */}
-      <div className="flex min-w-max">
+      <div className="flex min-w-max min-h-full">
 
         {/* STICKY LEFT NAME COLUMN */}
         <div
@@ -256,7 +313,7 @@ export default function TimelineComponent({
 
           <div className={`sticky top-0 z-20 bg-white shrink-0 shadow-sm border-b border-brand-outline flex flex-col box-border ${headerHeight}`}>
             
-            <div className={`${compact ? 'hidden' : 'h-[24px] flex'} items-center justify-center border-b border-brand-outline/40 bg-brand-bg shrink-0 w-full box-border`}>
+            <div className={`${compact ? 'hidden' : 'h-[24px] flex'} items-center border-b border-brand-outline/40 bg-brand-bg shrink-0 w-full box-border`}>
               <div className="sticky left-1/2 -translate-x-1/2 w-fit">
                 <span className="text-brand-dark font-semibold text-[13px] whitespace-nowrap">{visibleYear}</span>
               </div>
@@ -280,14 +337,16 @@ export default function TimelineComponent({
           </div>
 
           <div className="relative flex-1">
+            {/* 1. BACKGROUND GRID (Bottom Layer) */}
             <div className="absolute inset-0 flex pointer-events-none">
               {days.map((d, i) => (
                 <div key={i} className={`w-[40px] flex-shrink-0 border-r border-brand-outline/30 h-full relative ${d.isWeekend ? 'bg-brand-bg/30' : 'bg-white'}`}>
-                  {d.isToday && <div className="absolute top-0 bottom-0 w-[2px] bg-brand-primary left-1/2 -translate-x-1/2 z-0" />}
+                  {/* Removed the today line from here! */}
                 </div>
               ))}
             </div>
 
+            {/* 2. TIMELINE BARS (Middle Layer) */}
             <div className="relative z-10">
               {teams.map((team) => (
                 <div key={`grid-team-${team.teamId}`}>
@@ -307,7 +366,18 @@ export default function TimelineComponent({
                             return seg.barType === "Transition" ? (
                               <div
                                 key={idx}
-                                onClick={() => !compact && onBarClick?.({ barType: seg.barType, label: seg.label, staffName: member.name, startDate: barStartDate, endDate: barEndDate })}
+                                onClick={() => !compact && onBarClick?.({
+                                  barType: seg.barType,
+                                  label: seg.label,
+                                  staffName: member.name,
+                                  teamName: team.teamName,
+                                  startDate: barStartDate,
+                                  endDate: barEndDate,
+                                  scheduleType: seg.scheduleType,
+                                  schedulePattern: seg.schedulePattern,
+                                  scheduleStart: seg.scheduleStart,
+                                  scheduleEnd: seg.scheduleEnd
+                                })}
                                 className={`absolute top-1/2 -translate-y-1/2 ${compact ? 'h-6' : 'h-4'} rounded-full bg-yellow-300 border-2 border-yellow-500 shadow-sm z-10 ${!compact ? 'cursor-pointer hover:ring-2 ring-brand-primary/50 transition' : ''}`}
                                 style={{ left: seg.startIndex * COLUMN_WIDTH + 8, width: COLUMN_WIDTH - 16 }}
                                 title={seg.label || "Transition"}
@@ -315,7 +385,18 @@ export default function TimelineComponent({
                             ) : (
                               <div
                                 key={idx}
-                                onClick={() => !compact && onBarClick?.({ barType: seg.barType, label: seg.label, staffName: member.name, startDate: barStartDate, endDate: barEndDate })}
+                                onClick={() => !compact && onBarClick?.({
+                                  barType: seg.barType,
+                                  label: seg.label,
+                                  staffName: member.name,
+                                  teamName: team.teamName,
+                                  startDate: barStartDate,
+                                  endDate: barEndDate,
+                                  scheduleType: seg.scheduleType,
+                                  schedulePattern: seg.schedulePattern,
+                                  scheduleStart: seg.scheduleStart,
+                                  scheduleEnd: seg.scheduleEnd
+                                })}
                                 className={`absolute top-1/2 -translate-y-1/2 ${compact ? 'h-6' : 'h-4'} rounded-md ${BAR_COLORS[seg.barType]} ${!compact ? 'cursor-pointer hover:brightness-95 transition' : ''}`}
                                 style={{ left: seg.startIndex * COLUMN_WIDTH + 4, width: seg.length * COLUMN_WIDTH - 8 }}
                                 title={seg.label || seg.barType}
@@ -329,6 +410,16 @@ export default function TimelineComponent({
                 </div>
               ))}
             </div>
+
+            {/* 3. TODAY LINE OVERLAY (Top Layer - z-20) */}
+            <div className="absolute inset-0 flex pointer-events-none z-20">
+              {days.map((d, i) => (
+                <div key={i} className="w-[40px] flex-shrink-0 h-full relative">
+                  {d.isToday && <div className="absolute top-0 bottom-0 w-[2px] bg-brand-primary left-1/2 -translate-x-1/2 shadow-[0_0_4px_rgba(0,0,0,0.3)]" />}
+                </div>
+              ))}
+            </div>
+            
           </div>
         </div>
       </div>

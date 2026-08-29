@@ -10,17 +10,11 @@ public partial class NewHire
     public string ActivationToken { get; set; } = null!;
     public DateTime TokenExpiry { get; set; }
     public string FirstName { get; set; } = null!;
-
     public string LastName { get; set; } = null!;
     public string Email { get; set; } = null!;
-
     public Sex Sex { get; set; }
-
     public string Position { get; set; } = null!;
-
     public string Phone { get; set; } = null!;
-
     public DateTime JoinDate { get; set; }
-
     public DateTime Dob { get; set; }
 }

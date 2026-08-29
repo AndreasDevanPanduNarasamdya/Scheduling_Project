@@ -39,7 +39,6 @@ public class TeamService : ITeamService
 
     public async Task<TeamResponse> CreateTeamAsync(TeamRequest dto, string? actorStaffId)
     {
-        // 🔥 OPTIMIZATION: Target-typed new()
         Team newTeam = new()
         {
             TeamId = Guid.NewGuid().ToString(),

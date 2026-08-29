@@ -21,12 +21,6 @@ export type ActivityLogAction =
   | "RemoveTeamSchedule"
   | "SwitchingTeamMembers";
 
-export interface EndTimelinePayload {
-  teamId: string | null;
-  staffId: string | null;
-  effectiveEndDate: string; // YYYY-MM-DD
-}
-
 export interface TimelineHistoryRecord {
   timelineId: string;
   teamId?: string | null;
@@ -39,9 +33,13 @@ export interface TimelineHistoryRecord {
 }
 
 export interface TimelineDay {
-  date: string;       // ISO date string, e.g. "2026-07-24"
+  date: string;
   barType: BarType;
   label?: string;
+  scheduleType?: string;
+  schedulePattern?: string;
+  scheduleStart?: string;
+  scheduleEnd?: string;
 }
 
 export interface TimelineStaff {

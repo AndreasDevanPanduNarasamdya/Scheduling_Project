@@ -1,16 +1,22 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import { createTimeline, fetchTimelineHistory } from "../../../../api";
+import { createTimeline, fetchBlockedRanges } from "../../../../api";
 import type { TimelineTeam } from "../../../../types";
+import BlockedDatePicker from "./CustomDatePicker";
 
 interface AssignScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
   teams: TimelineTeam[];
-  initialTargetId?: string; // If passed from the side panel
+  initialTargetId?: string;
   onSuccess: () => void;
   setGlobalError: (msg: string | null) => void;
   setGlobalSuccess: (msg: string | null) => void;
+}
+
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 export default function AssignScheduleModal({ 
@@ -19,43 +25,71 @@ export default function AssignScheduleModal({
   
   const [formData, setFormData] = useState({ targetId: initialTargetId, daysOn: "", daysOff: "", startDate: "", endDate: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [targetHasActiveSchedule, setTargetHasActiveSchedule] = useState(false);
   const [isCheckingTarget, setIsCheckingTarget] = useState(false);
+  const [blockedRanges, setBlockedRanges] = useState<{ startDate: string; endDate: string }[]>([]);
+  const [dateOverlapError, setDateOverlapError] = useState<string | null>(null);
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-  // If opened via the side panel, check the target immediately
   useEffect(() => {
     if (initialTargetId) {
-      checkTargetActiveSchedule(initialTargetId);
+      loadBlockedRanges(initialTargetId);
     }
   }, [initialTargetId]);
 
   if (!isOpen) return null;
 
-  const checkTargetActiveSchedule = async (targetValue: string) => {
+  const loadBlockedRanges = async (targetValue: string) => {
     if (!targetValue) {
-      setTargetHasActiveSchedule(false);
+      setBlockedRanges([]);
       return;
     }
     setIsCheckingTarget(true);
     try {
       const isTeam = targetValue.startsWith("team:");
       const actualId = targetValue.split(":")[1];
-      const history = await fetchTimelineHistory(isTeam ? actualId : undefined, isTeam ? undefined : actualId);
-      const hasActive = history.some((r: any) => r.status === "Active");
-      setTargetHasActiveSchedule(hasActive);
+      const ranges = await fetchBlockedRanges(isTeam ? actualId : undefined, isTeam ? undefined : actualId);
+      setBlockedRanges(ranges);
     } catch {
-      setTargetHasActiveSchedule(false);
+      setBlockedRanges([]);
     } finally {
       setIsCheckingTarget(false);
     }
   };
 
-  const handleSaveSchedule = async () => {
-    if (!formData.targetId || !formData.daysOn || !formData.daysOff || !formData.startDate) {
-      setGlobalError("Harap isi semua kolom wajib!"); 
+  const sortedRanges = [...blockedRanges].sort(
+    (a, b) => parseLocalDate(a.startDate).getTime() - parseLocalDate(b.startDate).getTime()
+  );
+
+  const validateDatesAgainstBlockedRanges = (start: string, end: string) => {
+    if (!start) { setDateOverlapError(null); return; }
+    const s = parseLocalDate(start).getTime();
+
+    if (!end) {
+      const hit = sortedRanges.find(r => {
+        const rs = parseLocalDate(r.startDate).getTime();
+        const re = parseLocalDate(r.endDate).getTime();
+        return s >= rs && s <= re;
+      });
+      setDateOverlapError(hit ? `Tanggal mulai bertabrakan dengan jadwal yang sudah ada (${hit.startDate} s/d ${hit.endDate}).` : null);
       return;
     }
-    
+
+    const e = parseLocalDate(end).getTime();
+    const hit = sortedRanges.find(r => {
+      const rs = parseLocalDate(r.startDate).getTime();
+      const re = parseLocalDate(r.endDate).getTime();
+      return s <= re && rs <= e;
+    });
+    setDateOverlapError(hit ? `Tanggal ini bertabrakan dengan jadwal yang sudah ada (${hit.startDate} s/d ${hit.endDate}).` : null);
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!formData.targetId || !formData.daysOn || !formData.daysOff || !formData.startDate || !formData.endDate) {
+      setGlobalError("Harap isi semua kolom wajib! Tanggal berakhir sekarang wajib diisi.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       const isTeam = formData.targetId.startsWith("team:");
@@ -65,14 +99,14 @@ export default function AssignScheduleModal({
         teamId: isTeam ? actualId : null,
         staffId: !isTeam ? actualId : null,
         startDate: formData.startDate,
-        endDate: formData.endDate ? formData.endDate : null,
+        endDate: formData.endDate,
         daysOn: parseInt(formData.daysOn, 10),
         daysOff: parseInt(formData.daysOff, 10),
       });
 
       setGlobalSuccess("Versi jadwal baru berhasil disimpan dan diberlakukan!");
       setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "" });
-      onSuccess(); // Triggers reload in parent
+      onSuccess();
       onClose();
     } catch (error: any) {
       setGlobalError(error.message || "Terjadi kesalahan saat menyimpan jadwal.");
@@ -82,12 +116,11 @@ export default function AssignScheduleModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150 backdrop-blur-sm">
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center animate-in fade-in duration-150">
       <div className="card w-[500px] p-6 text-left shadow-2xl">
         <div className="flex items-center justify-between mb-4 border-b border-brand-outline/40 pb-3">
           <div>
-            <h2 className="text-xl font-bold text-brand-dark">Atur Rotasi Baru</h2>
-            <p className="text-xs text-black/50">Menambahkan versi jadwal baru secara otomatis menutup siklus aktif sebelumnya.</p>
+            <h2 className="text-xl font-bold text-brand-dark">Tambah Jadwal baru</h2>
           </div>
           <button onClick={onClose} className="text-black/40 hover:text-black cursor-pointer">
             <X size={20} />
@@ -100,8 +133,8 @@ export default function AssignScheduleModal({
             className="input-field cursor-pointer" 
             value={formData.targetId} 
             onChange={(e) => {
-              setFormData({ ...formData, targetId: e.target.value });
-              checkTargetActiveSchedule(e.target.value);
+              setFormData({ ...formData, targetId: e.target.value, startDate: "", endDate: "" });
+              loadBlockedRanges(e.target.value);
             }}
           >
             <option value="">-- Pilih Tim atau Staf --</option>
@@ -117,9 +150,9 @@ export default function AssignScheduleModal({
             ))}
           </select>
 
-          {targetHasActiveSchedule && (
-            <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
-              Target ini sudah memiliki jadwal aktif. Edit atau hapus jadwal yang ada terlebih dahulu melalui panel inspeksi.
+          {dateOverlapError && (
+            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
+              {dateOverlapError}
             </div>
           )}
 
@@ -136,11 +169,29 @@ export default function AssignScheduleModal({
           </div>
 
           <label className="form-label mt-1">Tanggal Mulai Berlaku</label>
-          <input type="date" className="input-field cursor-pointer text-black/80" value={formData.startDate} onChange={(e) => setFormData({ ...formData, startDate: e.target.value })} onClick={(e) => (e.currentTarget as any).showPicker?.()} />
-          
-          <label className="form-label mt-1">Tanggal Berakhir (Opsional)</label>
-          <input type="date" className="input-field cursor-pointer text-black/80" value={formData.endDate} min={formData.startDate} onChange={(e) => setFormData({ ...formData, endDate: e.target.value })} onClick={(e) => (e.currentTarget as any).showPicker?.()} />
-          <span className="text-[11px] text-black/40 block">Kosongkan jika jadwal berulang tanpa batas waktu.</span>
+          <BlockedDatePicker
+            value={formData.startDate}
+            blockedRanges={blockedRanges}
+            minDate={todayStr}
+            onChange={(picked) => {
+              const next = { ...formData, startDate: picked, endDate: "" };
+              setFormData(next);
+              validateDatesAgainstBlockedRanges(next.startDate, next.endDate);
+            }}
+          />
+
+          <label className="form-label mt-1">Tanggal Berakhir</label>
+          <BlockedDatePicker
+            value={formData.endDate}
+            blockedRanges={blockedRanges}
+            minDate={formData.startDate && formData.startDate > todayStr ? formData.startDate : todayStr}
+            onChange={(picked) => {
+              const next = { ...formData, endDate: picked };
+              setFormData(next);
+              validateDatesAgainstBlockedRanges(next.startDate, next.endDate);
+            }}
+          />
+          <span className="text-[11px] text-black/40 block">Setiap jadwal wajib memiliki tanggal berakhir.</span>
         </div>
 
         <div className="mt-6 flex justify-end gap-2 border-t border-brand-outline/40 pt-4">
@@ -154,7 +205,7 @@ export default function AssignScheduleModal({
           <button
             onClick={handleSaveSchedule}
             className="btn-primary text-sm cursor-pointer"
-            disabled={isSubmitting || targetHasActiveSchedule || isCheckingTarget}
+            disabled={isSubmitting || isCheckingTarget || !!dateOverlapError}
           >
             {isSubmitting ? "Menyimpan..." : "Simpan Versi Jadwal"}
           </button>

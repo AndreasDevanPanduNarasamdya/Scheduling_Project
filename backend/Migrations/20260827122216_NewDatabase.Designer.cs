@@ -12,8 +12,8 @@ using SchedulingMeruap.Api.Data;
 namespace SchedulingMeruap.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260822073916_NewClearance")]
-    partial class NewClearance
+    [Migration("20260827122216_NewDatabase")]
+    partial class NewDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

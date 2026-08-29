@@ -27,7 +27,7 @@ public class TimelineRepository : ITimelineRepository
     public async Task<List<Timeline>> GetActiveTimelinesAsync(DateTime startDate, DateTime endDate)
     {
         return await _context.Timelines
-            .Where(t => t.StartDate <= endDate && (!t.EndDate.HasValue || t.EndDate >= startDate))
+            .Where(t => t.StartDate <= endDate && t.EndDate >= startDate)
             .ToListAsync();
     }
 

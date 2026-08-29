@@ -3,7 +3,6 @@ import type {
   Team, 
   CreateTimelinePayload, 
   TokenValidationResult,
-  EndTimelinePayload,
   TimelineHistoryRecord,
   ActivityLogResponse,
   UpdateStaffPayload,
@@ -35,8 +34,7 @@ export async function fetchWithToken(url: string, options: RequestInit = {}) {
 }
 
 export async function fetchTimeline(startDate: string, endDate: string) {
-  //FIXED: Now uses API_BASE_URL instead of hardcoding localhost
-  const response = await fetchWithToken(`${API_BASE_URL}/timeline?start=${startDate}&end=${endDate}`);
+  const response = await fetchWithToken(`${API_BASE_URL}/timeline?StartDate=${startDate}&EndDate=${endDate}`);
   
   if (!response.ok) throw new Error("Failed to fetch timeline");
   return response.json();
@@ -152,18 +150,6 @@ export async function fetchTimelineHistory(teamId?: string, staffId?: string): P
   return response.json();
 }
 
-export async function endActiveTimeline(payload: EndTimelinePayload): Promise<void> {
-  const response = await fetchWithToken(`${API_BASE_URL}/timeline/end`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || "Gagal mengakhiri jadwal aktif");
-  }
-}
-
 export async function deleteStaff(staffId: string) {
   const response = await fetchWithToken(`${API_BASE_URL}/staff/${staffId}`, {
     method: "DELETE",
@@ -239,7 +225,7 @@ export async function editTeam(teamId: string, payload: { teamName: string }) {
 
 export async function updateTimeline(
   timelineId: string,
-  payload: { daysOn: number; daysOff: number; startDate: string; endDate?: string | null }
+  payload: { daysOn: number; daysOff: number; startDate: string; endDate: string }
 ): Promise<void> {
   const response = await fetchWithToken(`${API_BASE_URL}/timeline/${timelineId}`, {
     method: "PUT",
@@ -287,4 +273,24 @@ export function getUserClearance(): Clearance {
   }
 
   return Clearance.Staff; // Default fallback
+}
+
+export async function fetchBlockedRanges(
+  teamId?: string,
+  staffId?: string,
+  excludeTimelineId?: string
+): Promise<{ timelineId: string; startDate: string; endDate: string }[]> {   // endDate: string, not string | null
+  const params = new URLSearchParams();
+  if (teamId) params.append("teamId", teamId);
+  if (staffId) params.append("staffId", staffId);
+  if (excludeTimelineId) params.append("excludeTimelineId", excludeTimelineId);
+
+  const response = await fetchWithToken(`${API_BASE_URL}/timeline/blocked-ranges?${params.toString()}`);
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(errorText || "Gagal memeriksa tanggal terpakai.");
+  }
+
+  return response.json();
 }

@@ -10,14 +10,14 @@ using SchedulingMeruap.Api.Services.Interfaces;
 
 namespace SchedulingMeruap.Api.Services;
 
+
+
 public class AuthService : IAuthService
 {
     private readonly IAuthRepository _authRepository;
     private readonly SigningCredentials _credentials;
     private readonly string _issuer;
     private readonly string _audience;
-
-    // Static handler prevents heavy per-request object creation
     private static readonly JwtSecurityTokenHandler _tokenHandler = new JwtSecurityTokenHandler();
 
     public AuthService(IAuthRepository authRepository, IConfiguration configuration)
