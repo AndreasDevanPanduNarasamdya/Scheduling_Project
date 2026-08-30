@@ -22,17 +22,44 @@ public class TeamService : ITeamService
     {
         var teams = await _repository.GetAllTeamsWithStaffAsync();
 
+        // Grab today's date once so we don't calculate it hundreds of times in the loop
+        var today = DateTime.Today;
+
         return teams.Select(t => new TeamResponse
         {
             TeamId = t.TeamId,
             TeamName = t.TeamName,
-            Members = t.StaffTeams.Select(st => new TeamMemberResponse
+            Members = t.StaffTeams.Select(st =>
             {
-                StaffId = st.Staff.StaffId,
-                Name = $"{st.Staff.FirstName} {st.Staff.LastName}".Trim(),
-                Position = st.Staff.Position,
-                Status = "ON",
-                Note = null
+                var staff = st.Staff;
+
+                // 1. Look for an Approved ticket that overlaps with TODAY
+                // (Using ?. just in case Tickets is null)
+                var activeTicket = staff.Tickets?.FirstOrDefault(tick =>
+                    tick.Status == TicketStatus.Approved &&
+                    today >= tick.StartDate.Date &&
+                    today <= tick.EndDate.Date);
+
+                // 2. Default state (Change this later if you want to check a Schedule table!)
+                string computedStatus = "ON";
+                string computedNote = "On shift";
+
+                // 3. The Override Logic
+                if (activeTicket != null)
+                {
+                    // Ticket exists! Override the status and pull the description
+                    computedStatus = activeTicket.Type == TicketType.On ? "ON" : "OFF";
+                    computedNote = activeTicket.Description;
+                }
+
+                return new TeamMemberResponse
+                {
+                    StaffId = staff.StaffId,
+                    Name = $"{staff.FirstName} {staff.LastName}".Trim(),
+                    Position = staff.Position,
+                    Status = computedStatus,
+                    Note = computedNote
+                };
             }).ToList()
         }).ToList();
     }

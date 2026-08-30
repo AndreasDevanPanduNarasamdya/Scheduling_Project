@@ -16,10 +16,10 @@ public class TeamRepository : ITeamRepository
 
     public async Task<List<Team>> GetAllTeamsWithStaffAsync()
     {
-        // Returns RAW database models. No DTOs here!
         return await _context.Teams
             .Include(t => t.StaffTeams)
                 .ThenInclude(st => st.Staff)
+                    .ThenInclude(s => s.Tickets)
             .ToListAsync();
     }
     public async Task AddTeamAsync(Team team)

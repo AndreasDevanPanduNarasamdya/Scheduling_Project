@@ -46,7 +46,7 @@ export default function Management() {
 
   return (
     <div className="min-h-screen w-full bg-brand-bg font-sans overflow-y-auto">
-      <div className="max-w-6xl mx-auto px-8 pt-20 pb-16">
+      <div className="w-full max-w-[1600px] mx-auto px-6 md:px-10 lg:px-16 pt-10 md:pt-14 pb-16">
         
         <div className="flex items-center gap-3 mb-6">
           <h1 className="text-3xl font-semibold text-brand-dark">Management</h1>

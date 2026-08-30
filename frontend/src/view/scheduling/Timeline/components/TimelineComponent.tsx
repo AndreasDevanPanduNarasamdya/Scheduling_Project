@@ -261,13 +261,10 @@ export default function TimelineComponent({
     <div
       ref={scrollContainerRef}
       onScroll={handleScroll}
-      // Added mobile touch scrolling enhancements
       className="w-full h-full overflow-auto relative bg-white scrollbar-thin [-webkit-overflow-scrolling:touch]"
     >
-      {/* 🔥 Changed inline minWidth math to Tailwind's min-w-max so the browser handles it responsively! */}
       <div className="flex min-w-max min-h-full">
 
-        {/* STICKY LEFT NAME COLUMN */}
         <div
           className={`${nameWidthClasses} flex-shrink-0 sticky left-0 z-30 border-r border-brand-outline flex flex-col bg-white shadow-[4px_0_12px_-4px_rgba(0,0,0,0.15)]`}
         >

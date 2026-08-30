@@ -27,7 +27,6 @@ export default function InboxSelected({ ticket, onClose, onActionComplete, class
 
   return (
     <>
-      {/* Background Overlay */}
       <div 
         onClick={handleClose} 
         className={`fixed inset-0 bg-black/20 z-40 transition-opacity duration-300 ${
@@ -35,18 +34,14 @@ export default function InboxSelected({ ticket, onClose, onActionComplete, class
         }`} 
       />
 
-      {/* The Square Light Blue Background Wrapper */}
       <div className={`fixed top-0 right-0 h-full w-[460px] bg-brand-bg shadow-2xl z-50 p-6 flex flex-col transition-transform duration-300 ease-in-out transform ${
         ticket ? "translate-x-0" : "translate-x-full"
       } ${className}`}>
         
         {ticket && (
-          /* The Inner White Rounded Card */
           <div className="card h-full flex flex-col overflow-hidden relative">
-            
             {view === 'detail' && (
               <>
-                {/* Header */}
                 <div className="p-5 px-6 flex justify-between items-center">
                   <span className={`badge ${typeStyles.bg}`}>
                     {typeStyles.label}
@@ -56,7 +51,6 @@ export default function InboxSelected({ ticket, onClose, onActionComplete, class
                   </button>
                 </div>
 
-                {/* Body fields - USING CENTRALIZED CSS CLASSES */}
                 <div className="px-6 pb-2 flex-1 overflow-y-auto flex flex-col gap-4 scrollbar-thin">
                   <div>
                     <label className="form-label">Nama Lengkap</label>
@@ -85,9 +79,17 @@ export default function InboxSelected({ ticket, onClose, onActionComplete, class
                     <label className="form-label">Alasan Pengajuan</label>
                     <textarea rows={2} value={ticket.description} readOnly className="input-locked resize-none" />
                   </div>
+                  {ticket.status !== "Pending" && ticket.reason && (
+                    <div>
+                      <label className="form-label">
+                        Catatan
+                      </label>
+                      <textarea rows={2} value={ticket.reason} readOnly className="input-locked resize-none" />
+                    </div>
+                  )}
                 </div>
                 
-                {userClearance === Clearance.Admin && (
+                {userClearance === Clearance.Admin && ticket.status === 'Pending' && (
                   <div className="p-6 pt-4 flex justify-center gap-4 bg-white">
                     <button 
                       onClick={() => setView('accept')}

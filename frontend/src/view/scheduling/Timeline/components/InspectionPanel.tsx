@@ -54,10 +54,7 @@ export default function InspectionPanel({
       <div className="w-96 h-full flex flex-col">
         <div className="p-4 bg-brand-bg border-b border-brand-outline flex items-center justify-between shrink-0">
           <div>
-            <span className="text-[11px] font-bold tracking-wider text-brand-primary uppercase">
-              {selectedInspection?.type === "team" ? "Inspeksi Rotasi Tim" : "Inspeksi Staf"}
-            </span>
-            <h3 className="text-lg font-bold text-black/90">{selectedInspection?.name}</h3>
+            <h3 className="text-left text-lg font-bold text-black/90">{selectedInspection?.name}</h3>
             {selectedInspection?.subtitle && <p className="text-xs text-black/50">{selectedInspection.subtitle}</p>}
           </div>
           <button onClick={onClose} className="p-1.5 text-black/40 hover:text-black rounded-full hover:bg-black/5 transition cursor-pointer">
@@ -69,12 +66,11 @@ export default function InspectionPanel({
            {isLoadingHistory ? (
               <div className="text-center py-8 text-sm text-black/50">Memuat riwayat jadwal...</div>
             ) : historyRecords.length === 0 ? (
-              <div className="text-center py-8 text-sm text-black/40 italic">Belum ada jadwal rotasi yang diatur untuk target ini.</div>
+              <div className="text-center py-8 text-sm text-black/40">Belum ada jadwal rotasi yang diatur untuk target ini.</div>
             ) : (
               <>
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold uppercase text-black/50 tracking-wider">Versi Rotasi</h4>
-                  <span className="text-xs text-black/40">{historyRecords.length} Rekam</span>
+                  <h4 className="text-xs font-bold uppercase text-black/50 tracking-wider">Jadwal Berlaku</h4>
                 </div>
 
                 {historyRecords.map((rec, index) => {
@@ -145,8 +141,8 @@ export default function InspectionPanel({
                         </div>
 
                         {isTicket ? (
-                          <span className={`text-xs font-bold uppercase tracking-wide ${isLeave ? 'text-red-600' : 'text-red-500'}`}>
-                            {isLeave ? "LEAVE (OFF)" : "TICKET (OFF)"}
+                          <span className={`text-xs font-bold uppercase tracking-wide`}>
+                            {"TIKET OFF"}
                           </span>
                         ) : !isEditingFields || !isSelected ? (
                           <span className="text-xs font-bold text-black/90">{rec.daysOn} ON / {rec.daysOff} OFF</span>
@@ -165,10 +161,10 @@ export default function InspectionPanel({
                             <span>Selesai: <strong className="text-black/90 font-semibold">{formatDateDisplay(rec.endDate)}</strong></span>
                           </div>
 
-                          {isTicket && rec.reason && (
+                          {isTicket && rec.description && (
                             <div className="mt-2.5 p-2 bg-white border border-red-100 rounded-lg text-xs text-red-900 font-medium shadow-sm">
-                              <strong className="block text-red-500 mb-0.5 text-[10px] uppercase tracking-wider font-bold">Catatan Tiket:</strong>
-                              {rec.reason}
+                              <strong className="block text-red-500 mb-0.5 text-[10px] uppercase tracking-wider font-bold">Alasan Tiket:</strong>
+                              {rec.description}
                             </div>
                           )}
                         </>

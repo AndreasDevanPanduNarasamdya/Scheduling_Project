@@ -37,16 +37,17 @@ public class TicketController : ControllerBase
             var response = tickets.Select(t => new TicketResponse
             {
                 TicketID = t.TicketId,
-                FirstName = t.Staff?.FirstName ?? "Unknown",
+                FirstName = t.Staff?.FirstName ?? "",
                 LastName = t.Staff?.LastName ?? "",
                 Role = t.Staff?.Position ?? "Staff",
-                Team = "Tim A",
+                Team = t.Staff?.StaffTeams.FirstOrDefault()?.Team?.TeamName ?? "Tidak ada tim",
                 Type = t.Type,
                 Title = t.Title,
                 Description = t.Description,
                 StartDate = t.StartDate,
                 EndDate = t.EndDate,
-                Status = t.Status
+                Status = t.Status,
+                Reason = t.Reason
             });
 
             return Ok(response);

@@ -51,7 +51,7 @@ export default function BarDetailModal({ isOpen, onClose, detail }: BarDetailMod
                      isTransition ? "bg-yellow-400 text-yellow-950" :
                      "bg-brand-primary text-white";
 
-  const title = isLeave ? "LEAVE (IZIN / TIKET)" :
+  const title = isLeave ? "TIKET OFF" :
                   isTransition ? "TRANSISI" :
                   "OFF DUTY";
 

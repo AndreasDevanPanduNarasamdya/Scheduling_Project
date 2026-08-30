@@ -43,15 +43,17 @@ export function useTimelineHistory(teams: TimelineTeam[]) {
           
           sortedDays.forEach(day => {
             if (day.barType === "Leave" || (day.label && day.label.trim() !== "")) {
-              const dayReason = day.label || (day.barType === "Leave" ? "Izin / Cuti" : "Manual Override");
-              if (!currentTicket || currentTicket.reason !== dayReason) {
+              
+              const dayDesc = day.label || (day.barType === "Leave" ? "Izin / Cuti" : "Manual Override");
+              
+              if (!currentTicket || currentTicket.description !== dayDesc) {
                 if (currentTicket) activeTickets.push(currentTicket);
                 currentTicket = {
                   timelineId: `ticket-${day.date}`,
                   _source: "Tiket",
                   isTicket: true,
                   barType: day.barType,
-                  reason: dayReason,
+                  description: dayDesc,
                   startDate: day.date,
                   endDate: day.date,
                 };

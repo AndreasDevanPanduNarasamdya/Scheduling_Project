@@ -25,6 +25,8 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: { isOpen: boolean;
     email: "", phone: "", dob: "", joinDate: ""
   });
 
+  const [originalForm, setOriginalForm] = useState<any>(null);
+
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.SyntheticEvent) => {
@@ -159,9 +161,11 @@ export function EditStaffModal({
     clearance: 0,
   });
 
+  // 🔥 State for soft prevention comparison
+  const [originalForm, setOriginalForm] = useState<any>(null);
+
   const userClearance = getUserClearance();
 
-  // Whenever a different staff member is opened, reset to read-only view and (re)load their data.
   useEffect(() => {
     if (!staffId) {
       setIsEditing(false);
@@ -175,7 +179,7 @@ export function EditStaffModal({
       try {
         const realData = await fetchStaffById(staffId);
 
-        setStaffForm({
+        const formattedData = {
           firstName: realData.firstName || "",
           lastName: realData.lastName || "",
           sex: realData.sex === 1 ? "W" : "P",
@@ -185,7 +189,11 @@ export function EditStaffModal({
           dob: realData.dob ? realData.dob.split("T")[0] : "",
           joinDate: realData.joinDate ? realData.joinDate.split("T")[0] : "",
           clearance: realData.clearance ?? 0,
-        });
+        };
+
+        setStaffForm(formattedData);
+        setOriginalForm(formattedData); // 🔥 Snapshot saved here
+
       } catch (err) {
         alert("Gagal mengambil data lengkap staff dari database.");
         onClose();
@@ -202,8 +210,15 @@ export function EditStaffModal({
   const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault();
 
-    // Guard: never allow a submit unless edit mode was explicitly enabled first.
     if (!isEditing) return;
+
+    // 🔥 Soft prevention check
+    const hasChanges = JSON.stringify(staffForm) !== JSON.stringify(originalForm);
+    
+    if (!hasChanges) {
+      setIsEditing(false);
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -216,13 +231,11 @@ export function EditStaffModal({
         dob: staffForm.dob,
         joinDate: staffForm.joinDate,
         email: staffForm.email,
-        clearance: staffForm.clearance, // ✅ Pure number
+        clearance: staffForm.clearance, 
       };
 
       await editStaff(staffId, payload);
-
       alert("Informasi staff berhasil diperbarui!");
-
       onClose();
       onSuccess();
     } catch (err: any) {
@@ -234,6 +247,7 @@ export function EditStaffModal({
 
   const handleCancelEdit = () => {
     setIsEditing(false);
+    setStaffForm(originalForm); // Optional: Reset the textboxes back to original if they hit cancel
   };
 
   const disabledClass =
@@ -371,21 +385,20 @@ export function EditStaffModal({
               </div>
 
               <div>
-                <label className="form-label">Tingkat Akses (Clearance)</label>
+                <label className="form-label">Tingkat Akses</label>
                 <select
                   className="input-field disabled:bg-brand-bg/60 disabled:text-black/60 disabled:border-transparent disabled:cursor-not-allowed"
                   value={staffForm.clearance}
                   onChange={(e) => setStaffForm({ ...staffForm, clearance: parseInt(e.target.value) })}
                   disabled={!isEditing}
                 >
-                  <option value={0}>Staff (Level 0)</option>
-                  <option value={1}>Supervisor (Level 1)</option>
-                  <option value={2}>Admin (Level 2)</option>
+                  <option value={0}>Staff</option>
+                  <option value={1}>Supervisor</option>
+                  <option value={2}>Admin</option>
                 </select>
               </div>
             </div>
 
-            {/* Footer: view mode shows Tutup + Edit; edit mode shows Batal + Simpan (submit). */}
             <div className="flex justify-end gap-3 pt-6 border-t border-brand-outline/40 mt-4">
               {!isEditing ? (
                 <>
@@ -401,8 +414,8 @@ export function EditStaffModal({
                     <button
                       type="button"
                       onClick={(e) => {
-                        e.preventDefault(); // 🔥 THIS KILLS THE PHANTOM CLICK 
-                        setIsEditing(true); // Unlocks the textboxes
+                        e.preventDefault(); 
+                        setIsEditing(true); 
                       }}
                       className="btn-primary text-sm bg-brand-primary cursor-pointer"
                     >

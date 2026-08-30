@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { registerLocale } from "react-datepicker";
+import { id } from "date-fns/locale/id";
 import { Calendar, Upload, Send } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { fetchWithToken, fetchStaffById, fetchTeams } from "../../api";
@@ -15,8 +17,17 @@ export default function Form() {
   const { user } = useAuth();
   const [liveStaff, setLiveStaff] = useState<any>(null);
   const [teamName, setTeamName] = useState<string>("Memuat...");
+  const minAllowedDate = new Date();
+  minAllowedDate.setDate(minAllowedDate.getDate() + 14);
 
   const currentStaffId = user?.staffId || user?.staff?.staffId;
+
+  const formatLocal = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   useEffect(() => {
     const loadProfileAndTeam = async () => {
@@ -52,10 +63,9 @@ export default function Form() {
   const displayLastName = liveStaff?.lastName ?? (user as any)?.lastName ?? user?.staff?.lastName ?? "";
   const displayPosition = liveStaff?.position ?? (user as any)?.position ?? user?.staff?.position ?? "";
 
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 🔥 3. Grab the ID safely
     const staffId = user?.staffId || user?.staff?.staffId;
 
     if (!staffId) {
@@ -68,11 +78,16 @@ export default function Form() {
       return;
     }
 
+    // 🔥 2. Map directly to integers. 
+    // Assuming Off = 0 and On = 1 in your C# backend. Swap these if your backend is reversed!
+    const ticketTypeValue = isTicketOn ? 0 : 1;
+
     const payload = {
       staffId: staffId,
-      startDate: startDate.toISOString().split('T')[0], 
-      endDate: endDate.toISOString().split('T')[0],
-      type: isTicketOn ? "On" : "Off",
+      // 🔥 3. Use the local formatter instead of toISOString()
+      startDate: formatLocal(startDate), 
+      endDate: formatLocal(endDate),
+      type: ticketTypeValue, // Sending the integer directly
       title: title,
       description: description,
     };
@@ -175,7 +190,9 @@ export default function Form() {
                   startDate={startDate}
                   endDate={endDate}
                   onChange={(update) => setDateRange(update)}
-                  dateFormat="dd/MM/yyyy"
+                  minDate={minAllowedDate}
+                    dateFormat="dd MMMM yyyy"
+                    locale="id"
                   placeholderText="Pilih rentang tanggal"
                   wrapperClassName="w-full" 
                   onKeyDown={(e) => e.preventDefault()}

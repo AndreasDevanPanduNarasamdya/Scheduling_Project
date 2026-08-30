@@ -40,6 +40,7 @@ export interface TimelineDay {
   schedulePattern?: string;
   scheduleStart?: string;
   scheduleEnd?: string;
+  description?: string;
 }
 
 export interface TimelineStaff {
@@ -77,6 +78,7 @@ export interface Ticket {
   EndDate: string;
   dateRange?: string;
   status: TicketStatus;
+  reason?: string;
 }
 
 export interface StaffMember {

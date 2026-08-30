@@ -24,6 +24,8 @@ public class TicketRepository : ITicketRepository
     {
         return await _dbContext.Tickets
             .Include(t => t.Staff)
+                .ThenInclude(s => s.StaffTeams)
+                    .ThenInclude(st => st.Team)
             .OrderByDescending(t => t.TicketId)
             .ToListAsync();
     }

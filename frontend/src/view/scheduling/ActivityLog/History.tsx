@@ -34,7 +34,7 @@ export default function History() {
 
   return (
     <div className="min-h-screen w-full bg-[#f4f7fc] font-sans overflow-y-auto">
-      <div className="max-w-[1400px] mx-auto px-10 pt-20 pb-16">
+      <div className="w-full px-6 md:px-10 lg:px-12 pt-10 md:pt-14 pb-16">
 
         {/* Page Header */}
         <div className="flex items-center gap-3 mb-10">
@@ -68,7 +68,7 @@ export default function History() {
 
         {/* Seamless Horizontal Timeline */}
         {!isLoading && !error && groupedByDay.length > 0 && (
-          <div className="flex gap-12 overflow-x-auto pb-10 items-start">
+          <div className="flex gap-12 overflow-x-auto pb-10 items-start -mx-6 md:-mx-10 lg:-mx-12 px-6 md:px-10 lg:px-12 scrollbar-thin">
             {groupedByDay.map((day) => {
               const isDayCollapsed = collapsedDays.has(day.key);
 
@@ -84,7 +84,8 @@ export default function History() {
                   {/* Branching Path & Logs */}
                   {!isDayCollapsed && (
                     <div className="relative mt-[-10px]">
-                      <div className="absolute left-[7px] top-0 bottom-[-40px] w-[2px] bg-slate-400/80 z-0" />
+                      {/* 🔥 FIX: Changed bottom-[-40px] to h-[24px] so it stops at the curve */}
+                      <div className="absolute left-[7px] top-0 h-[24px] w-[2px] bg-slate-400/80 z-0" />
                       <div className="absolute left-[7px] top-[24px] w-[24px] h-[24px] border-l-[2px] border-b-[2px] border-slate-400/80 rounded-bl-[16px] z-0" />
                       
                       <div className="relative ml-[31px] pt-[41px] pb-2 z-0">
@@ -92,6 +93,7 @@ export default function History() {
                           <TimelineLogEntry
                             key={log.logId}
                             log={log}
+                            isFirst={index === 0} // 🔥 ADDED: Tells the component if it's the top item
                             isLast={index === day.entries.length - 1}
                             isCollapsed={collapsedLogs.has(log.logId)}
                             onToggle={() => toggleLog(log.logId)}

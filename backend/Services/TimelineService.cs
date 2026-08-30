@@ -74,25 +74,24 @@ public class TimelineService : ITimelineService
         var queryStart = startDate.AddDays(-5);
         var queryEnd = endDate.AddDays(5);
 
-        var baseStates = new Dictionary<DateTime, (string State, string? SourceId, bool IsStaffSchedule)>();
+        // 🔥 1. Add 'Label' to the dictionary so it can hold the ticket description
+        var baseStates = new Dictionary<DateTime, (string State, string? Label, string? SourceId, bool IsStaffSchedule)>();
 
         for (var date = queryStart; date <= queryEnd; date = date.AddDays(1))
         {
-            baseStates[date] = ResolveBaseRotationState(date, staff.StaffId, team.TeamId, activeTimelines);
+            var baseRotation = ResolveBaseRotationState(date, staff.StaffId, team.TeamId, activeTimelines);
+
+            // 🔥 2. Apply Ticket BEFORE transitions so we know the true shape of the blocks!
+            baseStates[date] = ApplyTicketOverride(date, baseRotation, staff.Tickets);
         }
 
-        // Rule 5 & 6: every OffDuty block — regardless of length — gets its
-        // first and last day carved out as Transition, taken FROM the off
-        // days (not added on top). A 1-day block becomes a single
-        // Transition day; a 2-day block becomes two Transition days;
-        // a 3+ day block keeps a solid OffDuty middle.
+        // 🔥 3. Now run the transition rules on the final cut-up shapes
         ApplyTransitionRules(baseStates);
 
         var days = new List<TimelineDayResponse>();
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
         {
-            var dayData = baseStates[date];
-            var finalState = ApplyTicketOverride(date, dayData, staff.Tickets);
+            var finalState = baseStates[date];
 
             string? sType = null, sPattern = null, sStart = null, sEnd = null;
             if (finalState.SourceId != null)
@@ -103,11 +102,10 @@ public class TimelineService : ITimelineService
                     sType = string.IsNullOrWhiteSpace(tl.StaffId) ? $"Tim: {team.TeamName}" : "Personal";
                     sPattern = $"{tl.DaysOn} ON / {tl.DaysOff} OFF";
                     sStart = tl.StartDate.ToString("yyyy-MM-dd");
-                    sEnd = tl.EndDate.ToString("yyyy-MM-dd"); // always present now (Rule 7)
+                    sEnd = tl.EndDate.ToString("yyyy-MM-dd");
                 }
             }
 
-            // Rule 1: only breaks/off/transition render — Work and NoSchedule are invisible
             if (finalState.State != "Work" && finalState.State != "NoSchedule")
             {
                 days.Add(new TimelineDayResponse
@@ -158,31 +156,45 @@ public class TimelineService : ITimelineService
     // no minimum length. First and last day of each OffDuty run become
     // Transition; if the block is exactly 1 day, that single day becomes
     // Transition (start == end); anything in between stays OffDuty.
-    private void ApplyTransitionRules(Dictionary<DateTime, (string State, string? SourceId, bool IsStaffSchedule)> baseStates)
+    // 🔥 Updated dictionary signature to match
+    private void ApplyTransitionRules(Dictionary<DateTime, (string State, string? Label, string? SourceId, bool IsStaffSchedule)> baseStates)
     {
         var dates = baseStates.Keys.OrderBy(d => d).ToList();
 
         int i = 0;
         while (i < dates.Count)
         {
-            if (baseStates[dates[i]].State == "OffDuty")
+            // 🔥 Treat touching OffDuty and Leave as ONE giant combined block
+            if (baseStates[dates[i]].State == "OffDuty" || baseStates[dates[i]].State == "Leave")
             {
                 int startIdx = i;
-                while (i < dates.Count && baseStates[dates[i]].State == "OffDuty")
+                bool hasLeaveTicket = false;
+
+                // Keep moving forward as long as the days are SOME kind of off-time
+                while (i < dates.Count && (baseStates[dates[i]].State == "OffDuty" || baseStates[dates[i]].State == "Leave"))
                 {
+                    if (baseStates[dates[i]].State == "Leave")
+                        hasLeaveTicket = true;
                     i++;
                 }
                 int endIdx = i - 1;
 
-                // Mark first day as Transition (covers the length==1 case too,
-                // since startIdx == endIdx there)
-                UpdateDayState(baseStates, dates[startIdx], "Transition");
+                // Calculate the COMBINED length of the touching blocks
+                int totalLength = endIdx - startIdx + 1;
 
-                if (endIdx != startIdx)
+                // Only apply transitions if the combined block is >= 3 days (or contains a ticket)
+                if (totalLength >= 3 || hasLeaveTicket)
                 {
-                    UpdateDayState(baseStates, dates[endIdx], "Transition");
+                    // Put a transition on the far left edge
+                    UpdateDayState(baseStates, dates[startIdx], "Transition");
+
+                    // Put a transition on the far right edge
+                    if (endIdx != startIdx)
+                    {
+                        UpdateDayState(baseStates, dates[endIdx], "Transition");
+                    }
                 }
-                // Middle days (startIdx+1 .. endIdx-1), if any, remain OffDuty
+                // Because we jump 'i' to the end of the block, internal meeting edges are safely ignored!
             }
             else
             {
@@ -190,10 +202,8 @@ public class TimelineService : ITimelineService
             }
         }
     }
-
-    // Rule 4: tickets override both team and personal schedules unconditionally
     private (string State, string? Label, string? SourceId, bool IsStaffSchedule) ApplyTicketOverride(
-        DateTime date, (string State, string? SourceId, bool IsStaffSchedule) baseState, ICollection<Ticket> tickets)
+            DateTime date, (string State, string? SourceId, bool IsStaffSchedule) baseState, ICollection<Ticket> tickets)
     {
         var activeTicket = tickets.FirstOrDefault(t =>
             t.Status == TicketStatus.Approved &&
@@ -204,23 +214,19 @@ public class TimelineService : ITimelineService
             if (activeTicket.Type == TicketType.On)
                 return ("Work", null, baseState.SourceId, baseState.IsStaffSchedule);
 
-            var ticketStart = activeTicket.StartDate.Date;
-            var ticketEnd = activeTicket.EndDate.Date;
-            var label = activeTicket.Reason ?? activeTicket.Title;
+            var label = activeTicket.Description ?? activeTicket.Reason ?? activeTicket.Title;
 
-            if (date == ticketStart || date == ticketEnd)
-                return ("Transition", label, baseState.SourceId, baseState.IsStaffSchedule);
-
+            // 🔥 JUST returns Leave. No transitions are calculated here!
             return ("Leave", label, baseState.SourceId, baseState.IsStaffSchedule);
         }
 
         return (baseState.State, null, baseState.SourceId, baseState.IsStaffSchedule);
     }
 
-    private void UpdateDayState(Dictionary<DateTime, (string State, string? SourceId, bool IsStaffSchedule)> states, DateTime date, string newState)
+    private void UpdateDayState(Dictionary<DateTime, (string State, string? Label, string? SourceId, bool IsStaffSchedule)> states, DateTime date, string newState)
     {
         var current = states[date];
-        states[date] = (newState, current.SourceId, current.IsStaffSchedule);
+        states[date] = (newState, current.Label, current.SourceId, current.IsStaffSchedule);
     }
 
     private static Timeline? GetApplicableTimeline(List<Timeline> timelines, string targetId, bool isTeam, DateTime date)

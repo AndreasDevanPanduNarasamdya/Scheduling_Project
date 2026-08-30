@@ -5,11 +5,12 @@ import { formatTimeOnly, getActionLabel, getActualChanges } from "../utils/histo
 interface TimelineLogEntryProps {
   log: ActivityLogResponse;
   isLast: boolean;
+  isFirst: boolean;
   isCollapsed: boolean;
   onToggle: () => void;
 }
 
-export default function TimelineLogEntry({ log, isLast, isCollapsed, onToggle }: TimelineLogEntryProps) {
+export default function TimelineLogEntry({ log, isFirst, isLast, isCollapsed, onToggle }: TimelineLogEntryProps) {
   const action = log.action;
   const actionLabel = getActionLabel(action);
 
@@ -20,17 +21,32 @@ export default function TimelineLogEntry({ log, isLast, isCollapsed, onToggle }:
   const isSwitch = action === "SwitchingTeamMembers";
   const isEditStaff = action === "EditStaff";
 
-  return (
+return (
     <div className={`relative pl-7 w-full ${isCollapsed ? 'pb-5' : 'pb-10'}`}>
-      {/* Sibling Line */}
+      
+      {/* Sibling Line (connecting blue dots directly to each other) */}
       {!isLast && (
         <div className="absolute left-[-1px] top-[14px] bottom-[-7px] w-[2px] bg-slate-400/80 z-0" />
+      )}
+
+      {/* THE MERGING TRUNK LOGIC */}
+      {!isLast ? (
+        // Middle items: Just draw a straight trunk line on the far left
+        <div className={`absolute left-[-24px] ${isFirst ? 'top-[7px]' : 'top-0'} bottom-0 w-[2px] bg-slate-400/80 z-0`} />
+      ) : (
+        <>
+          {/* Last item: Draw the trunk line stopping exactly where the bottom curve starts */}
+          <div className={`absolute left-[-24px] ${isFirst ? 'top-[7px] h-[23px]' : 'top-0 h-[30px]'} w-[2px] bg-slate-400/80 z-0`} />
+          {/* The magic merging bracket returning back to the trunk! */}
+          <div className="absolute left-[-24px] top-[14px] w-[25px] h-[16px] border-r-[2px] border-b-[2px] border-slate-400/80 rounded-br-[12px] z-0" />
+        </>
       )}
 
       {/* Blue Timeline Dot */}
       <button
         type="button"
         onClick={onToggle}
+        // ... rest of the button stays the same
         title={isCollapsed ? "Tampilkan detail" : "Sembunyikan detail"}
         className="absolute left-[-7px] top-[0px] w-[14px] h-[14px] rounded-full bg-[#3b5998] ring-[4px] ring-[#f4f7fc] z-10 hover:scale-[1.15] transition-transform cursor-pointer"
       />
