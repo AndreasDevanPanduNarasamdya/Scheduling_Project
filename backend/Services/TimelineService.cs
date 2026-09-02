@@ -298,7 +298,7 @@ public class TimelineService : ITimelineService
             throw new ArgumentException("Provide only one of TeamId or StaffId, not both.");
 
         var timelines = await _repository.GetTimelinesByTargetAsync(teamId, staffId);
-        var today = DateTime.UtcNow.Date;
+        var today = DateTime.Now.Date; ;
 
         var mapped = timelines.OrderByDescending(t => t.StartDate).Select(t => new
         {
@@ -328,7 +328,7 @@ public class TimelineService : ITimelineService
         if (timeline is null)
             throw new ArgumentException("Schedule not found.");
 
-        var today = DateTime.UtcNow.Date;
+        var today = DateTime.Now.Date; ;
         if (GetStatus(timeline, today) == "Historical")
             throw new ArgumentException("This schedule has already ended and can no longer be edited.");
 
@@ -378,7 +378,7 @@ public class TimelineService : ITimelineService
         if (timeline is null)
             throw new ArgumentException("Schedule not found.");
 
-        var today = DateTime.UtcNow.Date;
+        var today = DateTime.Now.Date; ;
         if (GetStatus(timeline, today) == "Historical")
             throw new ArgumentException("This schedule has already ended and can no longer be deleted.");
 
@@ -410,7 +410,7 @@ public class TimelineService : ITimelineService
             throw new ArgumentException("Provide only one of TeamId or StaffId, not both.");
 
         var existingTimelines = await _repository.GetTimelinesByTargetAsync(teamId, staffId);
-        var today = DateTime.UtcNow.Date;
+        var today = DateTime.Now.Date; ;
 
         return existingTimelines
             .Where(t => t.TimelineId != excludeTimelineId && GetStatus(t, today) != "Historical")
@@ -421,5 +421,60 @@ public class TimelineService : ITimelineService
                 EndDate = t.EndDate.ToString("yyyy-MM-dd")
             })
             .ToList();
+    }
+    public async Task<Dictionary<string, (string Status, string? Note)>> GetCurrentStatusForStaffAsync(List<string> staffIds)
+    {
+        var today = DateTime.Now.Date;
+        var result = new Dictionary<string, (string Status, string? Note)>();
+
+        if (staffIds.Count == 0) return result;
+
+        var teamsData = await _repository.GetTeamsWithStaffAndTicketsAsync();
+        var activeTimelines = await _repository.GetActiveTimelinesAsync(today.AddDays(-5), today.AddDays(5));
+
+        foreach (var team in teamsData)
+        {
+            foreach (var staffTeam in team.StaffTeams)
+            {
+                var staff = staffTeam.Staff;
+                if (staff is null || !staffIds.Contains(staff.StaffId)) continue;
+
+                var baseRotation = ResolveBaseRotationState(today, staff.StaffId, team.TeamId, activeTimelines);
+                var finalState = ApplyTicketOverride(today, baseRotation, staff.Tickets);
+
+                var yesterday = ApplyTicketOverride(today.AddDays(-1),
+                    ResolveBaseRotationState(today.AddDays(-1), staff.StaffId, team.TeamId, activeTimelines),
+                    staff.Tickets);
+                var tomorrow = ApplyTicketOverride(today.AddDays(1),
+                    ResolveBaseRotationState(today.AddDays(1), staff.StaffId, team.TeamId, activeTimelines),
+                    staff.Tickets);
+
+                bool isOffLike(string s) => s == "OffDuty" || s == "Leave";
+                bool isTransitionDay = isOffLike(finalState.State) &&
+                    (!isOffLike(yesterday.State) || !isOffLike(tomorrow.State));
+
+                string status = finalState.State switch
+                {
+                    "Work" => "ON",
+                    "Leave" => "LEAVE",
+                    "OffDuty" => isTransitionDay ? "TRANSITION" : "OFF",
+                    "NoSchedule" => "OFF",
+                    _ => "OFF"
+                };
+
+                string? note = finalState.State switch
+                {
+                    "Work" => "On shift",
+                    "Leave" => finalState.Label ?? "Cuti / Izin",
+                    "OffDuty" => isTransitionDay ? "Dalam Masa Transisi" : "Off duty",
+                    "NoSchedule" => "Tidak ada jadwal aktif",
+                    _ => null
+                };
+
+                result[staff.StaffId] = (status, note);
+            }
+        }
+
+        return result;
     }
 }

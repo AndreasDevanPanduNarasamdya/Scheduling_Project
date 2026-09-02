@@ -9,11 +9,22 @@ interface TeamSectionProps {
   onStaffClick: (staff: StaffMember) => void;
 }
 
-export function StatusBadge({ status }: { status: "ON" | "OFF" }) {
-  const isOn = status === "ON";
+export function StatusBadge({ status }: { status: "ON" | "OFF" | "TRANSITION" | "LEAVE" }) {
+  const styles: Record<string, string> = {
+    ON: "bg-brand-primary text-white",
+    OFF: "bg-gray-200 text-gray-600",
+    TRANSITION: "bg-yellow-400 text-yellow-900",
+    LEAVE: "bg-red-500 text-white",
+  };
+  const labels: Record<string, string> = {
+    ON: "ON",
+    OFF: "OFF",
+    TRANSITION: "TRANSISI",
+    LEAVE: "IZIN",
+  };
   return (
-    <span className={`badge ${isOn ? "bg-brand-primary text-white" : "bg-gray-200 text-gray-600"}`}>
-      {status}
+    <span className={`badge ${styles[status]}`}>
+      {labels[status]}
     </span>
   );
 }
@@ -55,7 +66,7 @@ export default function TeamSection({ team, collapsed, onToggle, isUnassigned = 
                 >
                   <span className="font-medium text-brand-primary">{member.name}</span>
                   <span className="text-black/70">{member.position}</span>
-                  <span><StatusBadge status={member.status as "ON" | "OFF"} /></span>
+                  <span><StatusBadge status={member.status as "ON" | "OFF" | "TRANSITION" | "LEAVE"} /></span>
                   <span className="text-sm text-black/50 truncate pr-4">{member.note ?? ""}</span>
                 </div>
               ))}

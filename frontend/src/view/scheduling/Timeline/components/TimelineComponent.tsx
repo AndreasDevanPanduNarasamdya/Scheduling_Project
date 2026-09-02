@@ -182,7 +182,7 @@ export default function TimelineComponent({
         hasInitialScrolled.current = true;
       }
     }
-  }, [days, isLoading]);TimelineComponent
+  }, [days, isLoading]);
   
   useEffect(() => {
     if (!jumpToDate || days.length === 0 || !scrollContainerRef.current) return;

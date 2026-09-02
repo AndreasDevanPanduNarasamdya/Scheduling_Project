@@ -42,7 +42,6 @@ public class TimelineController : ControllerBase
         {
             request.EndDate = new DateTime(DateTime.UtcNow.Year, 12, 31);
         }
-
         return Ok(await _timelineService.GetTimelineDataAsync(request));
     }
 
@@ -133,5 +132,15 @@ public class TimelineController : ControllerBase
         {
             return BadRequest(new { message = ex.Message });
         }
+    }
+    [HttpGet("debug-time")]
+    public IActionResult DebugTime()
+    {
+        return Ok(new
+        {
+            UtcNow = DateTime.UtcNow,
+            LocalNow = DateTime.Now,
+            ServerTimeZone = TimeZoneInfo.Local.Id
+        });
     }
 }

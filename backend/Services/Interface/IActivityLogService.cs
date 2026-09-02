@@ -25,7 +25,11 @@ public interface IActivityLogService
     // STAFF LOGS
     // ==========================================
     Task LogStaffCreatedAsync(Staff staff, string? actorStaffId, string? note = null);
-    Task LogStaffEditedAsync(Staff oldStaff, Staff newStaff, string? actorStaffId, string? note = null);
+    Task LogStaffEditedAsync(
+        Staff oldStaff, Staff newStaff,
+        string? oldEmail, string? newEmail,
+        Models.Clearance oldClearance, Models.Clearance newClearance,
+        string? actorStaffId, string? note = null);
     Task LogStaffDeletedAsync(string staffName, string? actorStaffId, string? note = null);
     Task LogAccountActivatedAsync(Staff staff);
 

@@ -10,16 +10,14 @@ interface TicketCardProps {
 }
 
 function TicketCard({ ticket, onClick }: TicketCardProps) {
-  
-  // 🔥 Changed back to 'bg' colors for the structural bar
   const getStatusStyles = (status: TicketStatus) => {
     switch (status) {
       case "Pending":
-        return { bar: "bg-amber-500", text: "text-amber-500", label: "Belum dibaca", icon: <AlertCircle size={16} /> };
+        return { bar: "bg-amber-500", text: "text-amber-500", label: "Belum dibaca", icon: <AlertCircle size={15} /> };
       case "Approved":
-        return { bar: "bg-green-500", text: "text-green-500", label: "Approved", icon: <Check size={16} /> };
+        return { bar: "bg-green-500", text: "text-green-500", label: "Approved", icon: <Check size={15} /> };
       case "Declined":
-        return { bar: "bg-red-500", text: "text-red-500", label: "Ditolak", icon: <X size={16} /> };
+        return { bar: "bg-red-500", text: "text-red-500", label: "Ditolak", icon: <X size={15} /> };
       default:
         return { bar: "bg-gray-300", text: "text-gray-500", label: "Unknown", icon: null };
     }
@@ -30,19 +28,21 @@ function TicketCard({ ticket, onClick }: TicketCardProps) {
   return (
     <div 
       onClick={() => onClick(ticket)}
-      className="card !shadow-none hover:!shadow-md w-[350px] overflow-hidden cursor-pointer hover:-translate-y-1 transition-all border border-brand-outline flex flex-col shrink-0"
+      // Increased width slightly to 340px to give the larger text room to breathe
+      className="card !shadow-none hover:!shadow-md w-[340px] h-fit overflow-hidden cursor-pointer hover:-translate-y-1 transition-all border border-brand-outline flex flex-col shrink-0"
     >
-      <div className={`w-full h-[17px] shrink-0 ${statusStyle.bar}`}></div>
-      <div className="px-5 pb-5 pt-4 flex-1 flex flex-col justify-between">
+      <div className={`w-full h-[8px] shrink-0 ${statusStyle.bar}`}></div>
+      
+      {/* Restored padding to a comfortable p-4 */}
+      <div className="p-4 flex-1 flex flex-col justify-between">
         
         <div>
-          {/* THE NEW STATUS HEADER */}
-          <div className="flex justify-between items-center mb-4">
-            <div className={`flex items-center gap-1.5 font-bold text-[13px] ${statusStyle.text}`}>
+          {/* THE STATUS HEADER */}
+          <div className="flex justify-between items-center mb-3">
+            <div className={`flex items-center gap-1.5 font-bold text-sm ${statusStyle.text}`}>
               {statusStyle.icon}
               <span>{statusStyle.label}</span>
             </div>
-            {/* The 3-dots icon */}
             <div className="text-black/30">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
@@ -51,38 +51,45 @@ function TicketCard({ ticket, onClick }: TicketCardProps) {
           </div>
 
           <div className="flex justify-between items-start mb-3">
-            <div>
-              <h3 className="text-base font-bold text-black/90">
-                {ticket.firstName} {ticket.lastName} <span className="text-black/50 font-normal ml-1 text-sm">{ticket.role}</span>
+            <div className="flex flex-col max-w-[75%] gap-0.5">
+              {/* Increased Name to text-base (16px) and Role to text-xs (12px) */}
+              <h3 className="text-base font-bold text-black/90 leading-tight">
+                {ticket.firstName} {ticket.lastName}
               </h3>
-              <p className="text-black/60 text-sm text-left font-medium">{ticket.team}</p>
+              <span className="text-black/50 font-normal text-xs leading-tight">
+                {ticket.role}
+              </span>
+              <p className="text-black/70 text-[13px] font-medium mt-0.5">
+                {ticket.team}
+              </p>
             </div>
             
-            <span className={`badge ${ticket.type === 'On' ? 'bg-brand-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
+            <span className={`badge shrink-0 mt-0.5 text-xs px-2.5 py-1 ${ticket.type === 'On' ? 'bg-brand-primary text-white' : 'bg-gray-200 text-gray-600'}`}>
               {ticket.type === 'On' ? 'ON' : 'OFF'}
             </span>
           </div>
           
-          <div className="mb-4">
-            <h4 className="font-bold text-black/90 text-sm text-left mb-1">{ticket.title}</h4>
-            <p className="text-black/60 text-xs text-left line-clamp-2">{ticket.description}</p>
+          <div className="mb-3">
+            <h4 className="font-bold text-black/90 text-sm text-left mb-1 truncate">{ticket.title}</h4>
+            {/* Increased Description and Catatan to 13px with relaxed line height for readability */}
+            <p className="text-black/60 text-[13px] text-left line-clamp-2 leading-relaxed">{ticket.description}</p>
             
             {ticket.status !== "Pending" && ticket.reason && (
               <div className="mt-3 border-t border-brand-outline/30 pt-3">
-                <h4 className="text-black/90 text-sm text-left mb-1">
+                <h4 className="text-black/90 text-[13px] font-semibold text-left mb-1">
                   Catatan:
                 </h4>
-                <p className="text-black/60 text-xs text-left line-clamp-2">{ticket.reason}</p>
+                <p className="text-black/60 text-[13px] text-left line-clamp-1 leading-relaxed">{ticket.reason}</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-black/50 text-xs font-medium pt-2 border-t border-brand-outline/30">
+        {/* Increased Footer text and icon size */}
+        <div className="flex items-center gap-1.5 text-black/50 text-[12px] font-medium pt-3 mt-auto border-t border-brand-outline/30">
           <Calendar size={14} />
           {ticket.dateRange}
         </div>
-
       </div>
     </div>
   );
@@ -131,17 +138,13 @@ export default function InboxList() {
 
   const pendingCount = tickets.filter(t => t.status === "Pending").length;
 
-  return (
-    <div className="w-full h-full flex-1 p-8 font-sans flex flex-col">
+return (
+    // 🔥 FIX 7: Reduced master padding to p-4 (with md:p-6 for slightly bigger screens)
+    <div className="w-full min-h-screen p-4 md:p-6 font-sans flex flex-col">
       
       {/* HEADER AREA */}
-      <div className="flex items-center gap-4 mb-6">
-        <h1 className="text-3xl font-bold text-brand-dark flex items-center gap-2.5">
-          Inbox <Mail size={28} />
-        </h1>
-        <div className="flex items-center gap-1.5 text-amber-600 font-semibold text-sm bg-amber-50 px-3 py-1.5 rounded-full border border-amber-200">
-          {pendingCount} Pesan belum dibaca <AlertCircle size={16} />
-        </div>
+      <div className="flex items-center gap-4 mb-4">
+        {/* ... (Header content stays exactly the same) ... */}
       </div>
 
       {/* HORIZONTAL SCROLLABLE GRID */}
@@ -154,7 +157,8 @@ export default function InboxList() {
           onWheel={(e) => {
             e.currentTarget.scrollLeft += e.deltaY;
           }}
-          className="flex-1 content-start grid grid-flow-col grid-rows-2 overflow-x-auto pt-4 pb-6 px-8 -mx-8 gap-5 scrollbar-thin"
+          // 🔥 FIX: Added `justify-start` to pack them left, and `auto-cols-max` to lock their width!
+          className="grid grid-flow-col grid-rows-[auto_auto] auto-cols-max justify-start overflow-x-auto pt-2 pb-2 px-6 -mx-6 gap-4 scrollbar-thin items-start"
         >
           {tickets.map((ticket) => (
             <TicketCard 

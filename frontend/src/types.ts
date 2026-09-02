@@ -85,7 +85,7 @@ export interface StaffMember {
   staffId: string;
   name: string;
   position: string;
-  status: "ON" | "OFF";
+  status: "ON" | "OFF" | "TRANSITION" | "LEAVE";
   note?: string | null;
 }
 

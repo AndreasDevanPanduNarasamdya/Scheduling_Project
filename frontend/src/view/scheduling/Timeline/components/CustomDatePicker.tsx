@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 
 interface BlockedRange {
   startDate: string;
-  endDate: string | null;
+  endDate: string;
 }
 
 interface BlockedDatePickerProps {
@@ -60,12 +60,12 @@ export default function BlockedDatePicker({ value, onChange, blockedRanges, minD
   }, []);
 
     const isBlocked = (d: Date) => {
-    const t = d.getTime();
-    return blockedRanges.some(r => {
+      const t = d.getTime();
+      return blockedRanges.some(r => {
         const rs = parseLocalDate(r.startDate).getTime();
-        const re = r.endDate ? parseLocalDate(r.endDate).getTime() : Infinity;
+        const re = parseLocalDate(r.endDate).getTime();
         return t >= rs && t <= re;
-    });
+      });
     };
 
     const isBeforeMin = (d: Date) => {

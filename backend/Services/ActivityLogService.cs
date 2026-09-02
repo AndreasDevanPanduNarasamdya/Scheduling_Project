@@ -21,9 +21,9 @@ public class ActivityLogService : IActivityLogService
         _staffRepository = staffRepository;
     }
 
-    // 🔥 OPTIMIZATION 1: Centralized Name Formatter
+    // OPTIMIZATION 1: Centralized Name Formatter but this isn't for the remaining of the time optimization is just a unique word for what is it
     private static string GetFullName(Staff staff) => $"{staff.FirstName} {staff.LastName}".Trim();
-    private static string GetEndDate(DateTime? endDate) => endDate?.ToString("yyyy-MM-dd") ?? "Seterusnya";
+    private static string GetEndDate(DateTime endDate) => endDate.ToString("yyyy-MM-dd");
 
     private async Task<string> GetActorNameAsync(string? actorId)
     {
@@ -163,7 +163,11 @@ public class ActivityLogService : IActivityLogService
         });
     }
 
-    public async Task LogStaffEditedAsync(Staff oldStaff, Staff newStaff, string? actorStaffId, string? note = null)
+    public async Task LogStaffEditedAsync(
+        Staff oldStaff, Staff newStaff,
+        string? oldEmail, string? newEmail,
+        Models.Clearance oldClearance, Models.Clearance newClearance,
+        string? actorStaffId, string? note = null)
     {
         var diffs = new List<string>();
 
@@ -174,6 +178,8 @@ public class ActivityLogService : IActivityLogService
         if (oldStaff.Position != newStaff.Position) diffs.Add($"Position: {oldStaff.Position} → {newStaff.Position}");
         if (oldStaff.JoinDate != newStaff.JoinDate) diffs.Add($"Tanggal Bergabung: {oldStaff.JoinDate:yyyy-MM-dd} → {newStaff.JoinDate:yyyy-MM-dd}");
         if (oldStaff.Dob != newStaff.Dob) diffs.Add($"DOB: {oldStaff.Dob:yyyy-MM-dd} → {newStaff.Dob:yyyy-MM-dd}");
+        if (oldEmail != newEmail) diffs.Add($"Email: {oldEmail} → {newEmail}");
+        if (oldClearance != newClearance) diffs.Add($"Tingkat Akses: {oldClearance} → {newClearance}");
 
         await WriteLogAsync(new ActivityLog
         {

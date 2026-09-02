@@ -11,19 +11,21 @@ public class TeamService : ITeamService
 {
     private readonly ITeamRepository _repository;
     private readonly IActivityLogService _activityLogService;
+    private readonly ITimelineService _timelineService;
 
-    public TeamService(ITeamRepository repository, IActivityLogService activityLogService)
+    public TeamService(ITeamRepository repository, IActivityLogService activityLogService, ITimelineService timelineService)
     {
         _repository = repository;
         _activityLogService = activityLogService;
+        _timelineService = timelineService;
     }
 
     public async Task<List<TeamResponse>> GetTeamsForManagementAsync()
     {
         var teams = await _repository.GetAllTeamsWithStaffAsync();
 
-        // Grab today's date once so we don't calculate it hundreds of times in the loop
-        var today = DateTime.Today;
+        var allStaffIds = teams.SelectMany(t => t.StaffTeams.Select(st => st.Staff.StaffId)).ToList();
+        var statusMap = await _timelineService.GetCurrentStatusForStaffAsync(allStaffIds);
 
         return teams.Select(t => new TeamResponse
         {
@@ -32,33 +34,17 @@ public class TeamService : ITeamService
             Members = t.StaffTeams.Select(st =>
             {
                 var staff = st.Staff;
-
-                // 1. Look for an Approved ticket that overlaps with TODAY
-                // (Using ?. just in case Tickets is null)
-                var activeTicket = staff.Tickets?.FirstOrDefault(tick =>
-                    tick.Status == TicketStatus.Approved &&
-                    today >= tick.StartDate.Date &&
-                    today <= tick.EndDate.Date);
-
-                // 2. Default state (Change this later if you want to check a Schedule table!)
-                string computedStatus = "ON";
-                string computedNote = "On shift";
-
-                // 3. The Override Logic
-                if (activeTicket != null)
-                {
-                    // Ticket exists! Override the status and pull the description
-                    computedStatus = activeTicket.Type == TicketType.On ? "ON" : "OFF";
-                    computedNote = activeTicket.Description;
-                }
+                var (status, note) = statusMap.TryGetValue(staff.StaffId, out var s)
+                    ? s
+                    : ("OFF", "Tidak ada jadwal aktif");
 
                 return new TeamMemberResponse
                 {
                     StaffId = staff.StaffId,
                     Name = $"{staff.FirstName} {staff.LastName}".Trim(),
                     Position = staff.Position,
-                    Status = computedStatus,
-                    Note = computedNote
+                    Status = status,
+                    Note = note
                 };
             }).ToList()
         }).ToList();

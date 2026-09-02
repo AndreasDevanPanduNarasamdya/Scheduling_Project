@@ -12,5 +12,5 @@ public interface ITimelineService
     Task UpdateTimelineAsync(string timelineId, UpdateTimelineRequest request, string? actorStaffId);
     Task DeleteTimelineAsync(string timelineId, string? actorStaffId);
     Task<List<BlockedRangeResponse>> GetBlockedDateRangesAsync(string? teamId, string? staffId, string? excludeTimelineId = null);
-
+    Task<Dictionary<string, (string Status, string? Note)>> GetCurrentStatusForStaffAsync(List<string> staffIds);
 }

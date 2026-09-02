@@ -1,8 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import TimelineComponent from "./components/TimelineComponent";
 import InspectionPanel from "./components/InspectionPanel";
-import AssignScheduleModal from "./components/AssignScheduleModal"; // Extracted
-import NewTeamModal from "./components/NewTeamModal";             // Extracted
+import AssignScheduleModal from "./components/AssignScheduleModal"; // Extracted       // Extracted
 import { Filter, UserPlus, Plus, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useTimelineHistory } from "./hooks/useTimelineHistory";
 import { fetchTimeline, getUserClearance } from "../../../api";
@@ -209,7 +208,7 @@ export default function Timeline() {
          />
       )}
 
-      {isNewTeamModalOpen && (
+      {/* {isNewTeamModalOpen && (
          <NewTeamModal 
             isOpen={isNewTeamModalOpen}
             onClose={() => setIsNewTeamModalOpen(false)}
@@ -217,7 +216,7 @@ export default function Timeline() {
             setGlobalError={setGlobalError}
             setGlobalSuccess={setGlobalSuccess}
          />
-      )}
+      )} */}
 
       {selectedBarDetail && (
          <BarDetailModal 

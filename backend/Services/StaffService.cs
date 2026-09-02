@@ -14,15 +14,18 @@ public class StaffService : IStaffService
     private readonly IStaffRepository _staffRepository;
     private readonly IActivityLogService _activityLogService;
     private readonly ITeamRepository _teamRepository;
+    private readonly ITimelineService _timelineService;
 
     public StaffService(
         IStaffRepository staffRepository,
         IActivityLogService activityLogService,
-        ITeamRepository teamRepository)
+        ITeamRepository teamRepository,
+        ITimelineService timelineService)
     {
         _staffRepository = staffRepository;
         _activityLogService = activityLogService;
         _teamRepository = teamRepository;
+        _timelineService = timelineService;
     }
 
     public async Task<StaffResponse?> GetByIdAsync(string staffId)
@@ -46,14 +49,23 @@ public class StaffService : IStaffService
     public async Task<List<TeamMemberResponse>> GetUnassignedStaffAsync()
     {
         var staffList = await _staffRepository.GetUnassignedStaffAsync();
+        var staffIds = staffList.Select(s => s.StaffId).ToList();
+        var statusMap = await _timelineService.GetCurrentStatusForStaffAsync(staffIds);
 
-        return staffList.Select(s => new TeamMemberResponse
+        return staffList.Select(s =>
         {
-            StaffId = s.StaffId,
-            Name = $"{s.FirstName} {s.LastName}".Trim(),
-            Position = s.Position,
-            Status = "OFF",
-            Note = null
+            var (status, note) = statusMap.TryGetValue(s.StaffId, out var result)
+                ? result
+                : ("OFF", "Tidak ada jadwal aktif");
+
+            return new TeamMemberResponse
+            {
+                StaffId = s.StaffId,
+                Name = $"{s.FirstName} {s.LastName}".Trim(),
+                Position = s.Position,
+                Status = status,
+                Note = note
+            };
         }).ToList();
     }
 
@@ -99,11 +111,6 @@ public class StaffService : IStaffService
         var staff = await _staffRepository.GetByIdAsync(staffId);
         if (staff is null) throw new ArgumentException("Staff member not found.");
 
-        // If this ever throws, it means the repository stopped hydrating
-        // User (the exact regression that caused the earlier clearance-0
-        // bug). Failing loudly here beats silently no-op'ing the update —
-        // a save that looks successful but doesn't persist Email/Clearance
-        // is worse than an explicit error.
         if (staff.User is null)
             throw new InvalidOperationException(
                 $"Staff '{staffId}' has no linked User record loaded. Cannot update Email/Clearance.");
@@ -118,6 +125,8 @@ public class StaffService : IStaffService
             Dob = staff.Dob,
             JoinDate = staff.JoinDate
         };
+        var oldEmail = staff.User.Email;
+        var oldClearance = staff.User.Clearance;
 
         staff.FirstName = request.FirstName;
         staff.LastName = request.LastName;
@@ -130,7 +139,11 @@ public class StaffService : IStaffService
         staff.User.Clearance = request.Clearance;
 
         await _staffRepository.UpdateAsync(staff);
-        await _activityLogService.LogStaffEditedAsync(oldStaffSnapshot, staff, actorStaffId, "Memperbarui informasi profil staf");
+        await _activityLogService.LogStaffEditedAsync(
+            oldStaffSnapshot, staff,
+            oldEmail, staff.User.Email,
+            oldClearance, staff.User.Clearance,
+            actorStaffId, "Memperbarui informasi profil staf");
     }
 
     private static StaffResponse MapToDto(Staff staff) => new()
