@@ -20,6 +20,25 @@ export const ACTION_META: Record<ActivityLogAction, string> = {
   SwitchingTeamMembers: "Menambahkan Staff ke Tim",
 };
 
+export function formatEmbeddedDates(text: string): string {
+  const isoDatePattern = /\b\d{4}-\d{2}-\d{2}\b/g;
+  return text.replace(isoDatePattern, (match) => formatDateOnly(match));
+}
+
+export function formatDateOnly(isoDate?: string): string {
+  if (!isoDate) return "";
+  const datePart = isoDate.split("T")[0]; // harmless safety net, DateOnly won't send a T anyway
+  const [y, m, d] = datePart.split("-").map(Number);
+  if (!y || !m || !d) return "";
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
+}
+
+export function formatDateRange(rangeStart?: string, rangeEnd?: string): string {
+  if (!rangeStart || !rangeEnd) return "";
+  return `${formatDateOnly(rangeStart)} - ${formatDateOnly(rangeEnd)}`;
+}
+
 export function formatTimeOnly(timeString: string | undefined): string {
   if (!timeString) return "";
   return timeString.slice(0, 5);
@@ -46,5 +65,6 @@ export function getActualChanges(editString?: string): string[] {
       const before = seg.slice(0, arrowIdx).split(":").slice(1).join(":").trim();
       const after = seg.slice(arrowIdx + 1).trim();
       return before !== after;
-    });
+    })
+    .map(formatEmbeddedDates);   // ⬅ add this line
 }

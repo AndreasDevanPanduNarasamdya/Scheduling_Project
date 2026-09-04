@@ -166,7 +166,7 @@ export default function Activation() {
             </p>
             <button
               onClick={handleActivateClick}
-              className="btn-primary justify-center w-full"
+              className="mt-5 btn-primary justify-center w-full"
             >
               Aktivasi akun sekarang
             </button>
@@ -248,7 +248,7 @@ export default function Activation() {
             </p>
             <button
               onClick={handleGoToLogin}
-              className="btn-primary justify-center w-full"
+              className="mt-5 btn-primary justify-center w-full"
             >
               Pergi ke Login
             </button>

@@ -57,7 +57,6 @@ public class TicketService : ITicketService
     {
         var ticket = await _ticketRepository.GetByIdAsync(id);
 
-        // 🔥 OPTIMIZATION: 'is null' check
         if (ticket is null)
             throw new KeyNotFoundException("Ticket not found");
 
@@ -69,7 +68,7 @@ public class TicketService : ITicketService
         var staff = await _staffRepository.GetByIdAsync(ticket.StaffId);
         if (staff is not null)
         {
-            await _activityLogService.LogTicketApprovedAsync(ticket, staff, actorStaffId);
+            await _activityLogService.LogTicketApprovedAsync(ticket, staff, actorStaffId, reason);
         }
     }
 

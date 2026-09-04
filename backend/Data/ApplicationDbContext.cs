@@ -82,8 +82,9 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.Action).HasColumnType("tinyint").HasColumnName("ACTION").IsRequired();
             entity.Property(e => e.Target).HasMaxLength(150).HasColumnName("TARGET").IsRequired();
             entity.Property(e => e.Type).HasColumnType("tinyint").HasColumnName("TYPE");
-            entity.Property(e => e.Edit).HasMaxLength(150).HasColumnName("EDIT");
-            entity.Property(e => e.DateRange).HasMaxLength(100).IsUnicode(false).HasColumnName("DATE_RANGE");
+            entity.Property(e => e.Edit).HasMaxLength(4000).HasColumnName("EDIT");
+            entity.Property(e => e.RangeStart).HasColumnType("date").HasColumnName("RANGE_START");
+            entity.Property(e => e.RangeEnd).HasColumnType("date").HasColumnName("RANGE_END");
             entity.Property(e => e.Rotation).HasMaxLength(50).IsUnicode(false).HasColumnName("ROTATION");
             entity.Property(e => e.Description).HasMaxLength(500).HasColumnName("DESCRIPTION");
         });

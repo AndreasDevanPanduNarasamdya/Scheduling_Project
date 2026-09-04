@@ -18,7 +18,7 @@ public interface IActivityLogService
     // TICKET LOGS
     // ==========================================
     Task LogTicketCreatedAsync(Ticket ticket, Staff staff, string? actorStaffId);
-    Task LogTicketApprovedAsync(Ticket ticket, Staff staff, string? actorStaffId, string? note = null);
+    Task LogTicketApprovedAsync(Ticket ticket, Staff staff, string? actorStaffId, string? note);
     Task LogTicketDeclinedAsync(Ticket ticket, Staff staff, string? actorStaffId, string declineReason);
 
     // ==========================================

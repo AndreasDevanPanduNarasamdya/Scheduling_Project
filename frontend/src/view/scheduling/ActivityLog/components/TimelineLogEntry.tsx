@@ -1,6 +1,7 @@
 import { User, Users, Calendar, Repeat } from "lucide-react";
 import type { ActivityLogResponse } from "../../../../types";
-import { formatTimeOnly, getActionLabel, getActualChanges } from "../utils/historyUtils";
+import { formatTimeOnly, getActionLabel, getActualChanges, formatDateRange } from "../utils/historyUtils";
+
 
 interface TimelineLogEntryProps {
   log: ActivityLogResponse;
@@ -78,10 +79,10 @@ return (
               </div>
             )}
 
-            {(isPersonalSchedule || isTeamSchedule || isTicket) && log.dateRange && (
+            {(isPersonalSchedule || isTeamSchedule || isTicket) && log.rangeStart && log.rangeEnd && (
               <div className="flex items-center gap-2 text-[14px] font-normal text-gray-600">
                 <Calendar size={16} strokeWidth={2} className="text-gray-600" />
-                {log.dateRange}
+                {formatDateRange(log.rangeStart, log.rangeEnd)}
               </div>
             )}
 

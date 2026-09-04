@@ -12,8 +12,8 @@ using SchedulingMeruap.Api.Data;
 namespace SchedulingMeruap.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260827122216_NewDatabase")]
-    partial class NewDatabase
+    [Migration("20260903050134_NewActivityLog_Range")]
+    partial class NewActivityLog_Range
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -47,21 +47,23 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnType("date")
                         .HasColumnName("DATE");
 
-                    b.Property<string>("DateRange")
-                        .HasMaxLength(100)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(100)")
-                        .HasColumnName("DATE_RANGE");
-
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)")
                         .HasColumnName("DESCRIPTION");
 
                     b.Property<string>("Edit")
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)")
                         .HasColumnName("EDIT");
+
+                    b.Property<DateTime?>("RangeEnd")
+                        .HasColumnType("date")
+                        .HasColumnName("RANGE_END");
+
+                    b.Property<DateTime?>("RangeStart")
+                        .HasColumnType("date")
+                        .HasColumnName("RANGE_START");
 
                     b.Property<string>("Rotation")
                         .HasMaxLength(50)
@@ -367,7 +369,7 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnType("int")
                         .HasColumnName("DAYS_ON");
 
-                    b.Property<DateTime?>("EndDate")
+                    b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime")
                         .HasColumnName("END_DATE");
 

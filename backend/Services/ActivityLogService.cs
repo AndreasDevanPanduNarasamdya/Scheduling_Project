@@ -23,7 +23,7 @@ public class ActivityLogService : IActivityLogService
 
     // OPTIMIZATION 1: Centralized Name Formatter but this isn't for the remaining of the time optimization is just a unique word for what is it
     private static string GetFullName(Staff staff) => $"{staff.FirstName} {staff.LastName}".Trim();
-    private static string GetEndDate(DateTime endDate) => endDate.ToString("yyyy-MM-dd");
+    // private static string GetEndDate(DateTime endDate) => endDate.ToString("yyyy-MM-dd");
 
     private async Task<string> GetActorNameAsync(string? actorId)
     {
@@ -39,7 +39,7 @@ public class ActivityLogService : IActivityLogService
     {
         var nowWib = DateTime.UtcNow.AddHours(7);
         log.LogId = Guid.NewGuid().ToString();
-        log.Date = nowWib.Date;
+        log.Date = DateOnly.FromDateTime(nowWib);
         log.Time = nowWib.TimeOfDay;
 
         await _activityLogRepository.AddAsync(log);
@@ -59,7 +59,8 @@ public class ActivityLogService : IActivityLogService
             Target = l.Target,
             Type = l.Type,
             Edit = l.Edit,
-            DateRange = l.DateRange,
+            RangeStart = l.RangeStart,
+            RangeEnd = l.RangeEnd,
             Rotation = l.Rotation,
             Description = l.Description
         }).ToList();
@@ -67,12 +68,14 @@ public class ActivityLogService : IActivityLogService
 
     public async Task LogScheduleCreatedAsync(Timeline timeline, Staff? staff, Team? team, string? actorStaffId, string? note = null)
     {
+        var idCulture = new System.Globalization.CultureInfo("id-ID");
         await WriteLogAsync(new ActivityLog
         {
             Actor = await GetActorNameAsync(actorStaffId),
             Action = staff != null ? Action.CreatePersonalSchedule : Action.CreateTeamSchedule,
             Target = staff != null ? GetFullName(staff) : team?.TeamName ?? "Sistem",
-            DateRange = $"{timeline.StartDate:yyyy-MM-dd} - {GetEndDate(timeline.EndDate)}",
+            RangeStart = DateOnly.FromDateTime(timeline.StartDate),
+            RangeEnd = DateOnly.FromDateTime(timeline.EndDate),
             Rotation = $"{timeline.DaysOn} Hari On - {timeline.DaysOff} Hari Off",
             Description = note
         });
@@ -80,17 +83,19 @@ public class ActivityLogService : IActivityLogService
 
     public async Task LogScheduleChangedAsync(Timeline oldTimeline, Timeline newTimeline, Staff? staff, Team? team, string? actorStaffId, string? note = null)
     {
-        var oldRange = $"{oldTimeline.StartDate:yyyy-MM-dd} - {GetEndDate(oldTimeline.EndDate)}";
-        var newRange = $"{newTimeline.StartDate:yyyy-MM-dd} - {GetEndDate(newTimeline.EndDate)}";
         var oldRotation = $"{oldTimeline.DaysOn} Hari On - {oldTimeline.DaysOff} Hari Off";
         var newRotation = $"{newTimeline.DaysOn} Hari On - {newTimeline.DaysOff} Hari Off";
+        var oldRangeText = $"{oldTimeline.StartDate:yyyy-MM-dd} - {oldTimeline.EndDate:yyyy-MM-dd}";
+        var newRangeText = $"{newTimeline.StartDate:yyyy-MM-dd} - {newTimeline.EndDate:yyyy-MM-dd}";
 
         await WriteLogAsync(new ActivityLog
         {
             Actor = await GetActorNameAsync(actorStaffId),
             Action = staff != null ? Action.EditPersonalSchedule : Action.EditTeamSchedule,
             Target = staff != null ? GetFullName(staff) : team?.TeamName ?? "Sistem",
-            DateRange = oldRange == newRange ? newRange : $"{oldRange} → {newRange}",
+            RangeStart = DateOnly.FromDateTime(newTimeline.StartDate),
+            RangeEnd = DateOnly.FromDateTime(newTimeline.EndDate),
+            Edit = oldRangeText == newRangeText ? null : $"Tanggal: {oldRangeText} → {newRangeText}",
             Rotation = oldRotation == newRotation ? newRotation : $"{oldRotation} → {newRotation}",
             Description = note
         });
@@ -98,12 +103,14 @@ public class ActivityLogService : IActivityLogService
 
     public async Task LogScheduleDeletedAsync(Timeline deleted, Staff? staff, Team? team, string? actorStaffId, string? note = null)
     {
+        var idCulture = new System.Globalization.CultureInfo("id-ID");
         await WriteLogAsync(new ActivityLog
         {
             Actor = await GetActorNameAsync(actorStaffId),
             Action = staff != null ? Action.RemovePersonalSchedule : Action.RemoveTeamSchedule,
             Target = staff != null ? GetFullName(staff) : team?.TeamName ?? "Sistem",
-            DateRange = $"{deleted.StartDate:yyyy-MM-dd} - {GetEndDate(deleted.EndDate)}",
+            RangeStart = DateOnly.FromDateTime(deleted.StartDate),
+            RangeEnd = DateOnly.FromDateTime(deleted.EndDate),
             Rotation = $"{deleted.DaysOn} Hari On - {deleted.DaysOff} Hari Off",
             Description = note
         });
@@ -111,47 +118,48 @@ public class ActivityLogService : IActivityLogService
 
     public async Task LogTicketCreatedAsync(Ticket ticket, Staff staff, string? actorStaffId)
     {
+        var idCulture = new System.Globalization.CultureInfo("id-ID");
         await WriteLogAsync(new ActivityLog
         {
             Actor = await GetActorNameAsync(actorStaffId),
             Action = Action.CreateTicket,
             Target = GetFullName(staff),
             Type = ticket.Type,
-            DateRange = $"{ticket.StartDate:yyyy-MM-dd} - {ticket.EndDate:yyyy-MM-dd}",
-            Description = ticket.Reason ?? ticket.Title
+            RangeStart = DateOnly.FromDateTime(ticket.StartDate),
+            RangeEnd = DateOnly.FromDateTime(ticket.EndDate),
+            Description = ticket.Description
         });
     }
 
     public async Task LogTicketApprovedAsync(Ticket ticket, Staff staff, string? actorStaffId, string? note = null)
     {
+        var idCulture = new System.Globalization.CultureInfo("id-ID");
         await WriteLogAsync(new ActivityLog
         {
             Actor = await GetActorNameAsync(actorStaffId),
             Action = Action.ApproveTicket,
             Target = GetFullName(staff),
             Type = ticket.Type,
-            DateRange = $"{ticket.StartDate:yyyy-MM-dd} - {ticket.EndDate:yyyy-MM-dd}",
+            RangeStart = DateOnly.FromDateTime(ticket.StartDate),
+            RangeEnd = DateOnly.FromDateTime(ticket.EndDate),
             Description = note
         });
     }
 
     public async Task LogTicketDeclinedAsync(Ticket ticket, Staff staff, string? actorStaffId, string declineReason)
     {
+        var idCulture = new System.Globalization.CultureInfo("id-ID");
         await WriteLogAsync(new ActivityLog
         {
             Actor = await GetActorNameAsync(actorStaffId),
             Action = Action.DeclineTicket,
             Target = GetFullName(staff),
             Type = ticket.Type,
-            DateRange = $"{ticket.StartDate:yyyy-MM-dd} - {ticket.EndDate:yyyy-MM-dd}",
+            RangeStart = DateOnly.FromDateTime(ticket.StartDate),
+            RangeEnd = DateOnly.FromDateTime(ticket.EndDate),
             Description = declineReason
         });
     }
-
-    // ==========================================
-    // STAFF LOGS
-    // ==========================================
-
     public async Task LogStaffCreatedAsync(Staff staff, string? actorStaffId, string? note = null)
     {
         await WriteLogAsync(new ActivityLog
@@ -162,7 +170,6 @@ public class ActivityLogService : IActivityLogService
             Description = note ?? "Akun baru untuk staff"
         });
     }
-
     public async Task LogStaffEditedAsync(
         Staff oldStaff, Staff newStaff,
         string? oldEmail, string? newEmail,
@@ -214,10 +221,6 @@ public class ActivityLogService : IActivityLogService
             Description = "Berhasil mengaktivasi akun dan membuat password"
         });
     }
-
-    // ==========================================
-    // TEAM LOGS
-    // ==========================================
 
     public async Task LogTeamCreatedAsync(Team team, string? actorStaffId, string? note = null)
     {

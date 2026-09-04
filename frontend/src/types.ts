@@ -113,7 +113,8 @@ export interface ActivityLogResponse {
   target?: string;
   type?: number;
   edit?: string;
-  dateRange?: string;
+  rangeStart?: string;
+  rangeEnd?: string;
   rotation?: string;
   description?: string;
 }

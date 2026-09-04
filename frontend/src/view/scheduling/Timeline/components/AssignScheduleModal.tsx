@@ -156,15 +156,15 @@ export default function AssignScheduleModal({
             </div>
           )}
 
-          <label className="form-label mt-1">Pola Shift (Days On / Days Off)</label>
+          <label className="form-label mt-1">Pola Shift</label>
           <div className="flex gap-2">
             <div className="w-full">
-              <input type="number" min="1" placeholder="On (e.g. 5)" className="input-field" value={formData.daysOn} onChange={(e) => setFormData({ ...formData, daysOn: e.target.value })}/>
-              <span className="text-[11px] text-black/40 mt-1 block">Hari Kerja Aktif</span>
+              <input type="number" min="1" className="input-field" value={formData.daysOn} onChange={(e) => setFormData({ ...formData, daysOn: e.target.value })}/>
+              <span className="text-[11px] font-bold text-black/50 mt-1 block">Hari Kerja</span>
             </div>
             <div className="w-full">
-              <input type="number" min="1" placeholder="Off (e.g. 2)" className="input-field" value={formData.daysOff} onChange={(e) => setFormData({ ...formData, daysOff: e.target.value })}/>
-              <span className="text-[11px] text-black/40 mt-1 block">Hari Libur Rotasi</span>
+              <input type="number" min="1" className="input-field" value={formData.daysOff} onChange={(e) => setFormData({ ...formData, daysOff: e.target.value })}/>
+              <span className="text-[11px] font-bold text-black/50 mt-1 block">Hari Libur</span>
             </div>
           </div>
 
@@ -191,7 +191,6 @@ export default function AssignScheduleModal({
               validateDatesAgainstBlockedRanges(next.startDate, next.endDate);
             }}
           />
-          <span className="text-[11px] text-black/40 block">Setiap jadwal wajib memiliki tanggal berakhir.</span>
         </div>
 
         <div className="mt-6 flex justify-end gap-2 border-t border-brand-outline/40 pt-4">

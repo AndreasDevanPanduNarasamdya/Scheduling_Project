@@ -52,14 +52,13 @@ function TicketCard({ ticket, onClick }: TicketCardProps) {
 
           <div className="flex justify-between items-start mb-3">
             <div className="flex flex-col max-w-[75%] gap-0.5">
-              {/* Increased Name to text-base (16px) and Role to text-xs (12px) */}
-              <h3 className="text-base font-bold text-black/90 leading-tight">
+              <h3 className="text-left text-base font-bold text-black/90 leading-tight">
                 {ticket.firstName} {ticket.lastName}
               </h3>
-              <span className="text-black/50 font-normal text-xs leading-tight">
+              <span className="text-left text-black/50 font-normal text-xs leading-tight">
                 {ticket.role}
               </span>
-              <p className="text-black/70 text-[13px] font-medium mt-0.5">
+              <p className="text-left ext-black/70 text-[13px] font-medium mt-0.5">
                 {ticket.team}
               </p>
             </div>
@@ -138,28 +137,29 @@ export default function InboxList() {
 
   const pendingCount = tickets.filter(t => t.status === "Pending").length;
 
-return (
-    // 🔥 FIX 7: Reduced master padding to p-4 (with md:p-6 for slightly bigger screens)
-    <div className="w-full min-h-screen p-4 md:p-6 font-sans flex flex-col">
+  return (
+    <div className="w-full min-h-screen overflow-y-auto p-4 md:p-6 font-sans flex flex-col">
       
       {/* HEADER AREA */}
-      <div className="flex items-center gap-4 mb-4">
-        {/* ... (Header content stays exactly the same) ... */}
+      <div className="flex items-center gap-3 mb-6">
+        <Mail size={26} className="text-brand-black" strokeWidth={2.2} />
+        <h1 className="text-2xl font-semibold text-brand-black">Inbox</h1>
+        {pendingCount > 0 && (
+          <span className="bg-amber-500 text-white text-xs font-bold min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center shadow-sm">
+            {pendingCount}
+          </span>
+        )}
       </div>
 
-      {/* HORIZONTAL SCROLLABLE GRID */}
+      {/* RESPONSIVE WRAPPING GRID */}
       {isLoading ? (
         <div className="flex justify-center items-center h-64 text-brand-primary">
           <Loader2 className="animate-spin" size={40} />
         </div>
+      ) : tickets.length === 0 ? (
+        <div className="text-black/40 italic text-sm py-12 text-center">Belum ada tiket masuk.</div>
       ) : (
-        <div 
-          onWheel={(e) => {
-            e.currentTarget.scrollLeft += e.deltaY;
-          }}
-          // 🔥 FIX: Added `justify-start` to pack them left, and `auto-cols-max` to lock their width!
-          className="grid grid-flow-col grid-rows-[auto_auto] auto-cols-max justify-start overflow-x-auto pt-2 pb-2 px-6 -mx-6 gap-4 scrollbar-thin items-start"
-        >
+        <div className="grid grid-cols-[repeat(auto-fill,340px)] justify-center sm:justify-start gap-4 pb-4">
           {tickets.map((ticket) => (
             <TicketCard 
               key={ticket.ticketID}

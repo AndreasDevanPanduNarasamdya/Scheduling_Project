@@ -25,10 +25,10 @@ public class ActivityLogRepository : IActivityLogRepository
         var query = _context.ActivityLogs.AsQueryable();
 
         if (startDate.HasValue)
-            query = query.Where(l => l.Date >= startDate.Value.Date);
+            query = query.Where(l => l.Date >= DateOnly.FromDateTime(startDate.Value));
 
         if (endDate.HasValue)
-            query = query.Where(l => l.Date <= endDate.Value.Date);
+            query = query.Where(l => l.Date <= DateOnly.FromDateTime(endDate.Value));
 
         if (!string.IsNullOrEmpty(staffId))
         {
