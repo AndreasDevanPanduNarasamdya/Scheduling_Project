@@ -83,7 +83,7 @@ export default function Management() {
             {unassignedStaff.length > 0 && (
               <TeamSection
                 key="unassigned"
-                team={{ teamId: "unassigned", teamName: "Belum Masuk Tim (Unassigned)", members: unassignedStaff }}
+                team={{ teamId: "unassigned", teamName: "Belum Masuk Tim", members: unassignedStaff }}
                 collapsed={collapsedTeams.has("unassigned")}
                 onToggle={() => toggleTeam("unassigned")}
                 isUnassigned={true}

@@ -58,10 +58,12 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
 
           <div className="mb-8 mt-4">
             <button 
-              className="flex items-center py-3 px-6 text-red-500 hover:text-red-400..."
-              onClick={() => setIsLogoutModalOpen(true)} // <-- CHANGE THIS LINE
+              className="group flex items-center px-6 py-3.5 text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors border-l-4 border-transparent hover:border-red-500 w-full cursor-pointer"
+              onClick={() => setIsLogoutModalOpen(true)}
             >
-              <LogOut size={22} className="transform group-hover:-translate-x-1 transition-transform mr-4 shrink-0" />
+              <div className="flex items-center justify-center shrink-0 mr-4">
+                <LogOut size={22} className="transform group-hover:-translate-x-1 transition-transform" />
+              </div>
               <span className="font-medium tracking-wide">
                 Log Out
               </span>
@@ -108,14 +110,13 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
   );
 }
 
-// Cleaned up SidebarItem
 function SidebarItem({ icon, text, path }: { icon: React.ReactNode, text: string, path: string }) {
   return (
     <Link
       to={path}
-      className="flex items-center px-6 py-3.5 text-white/90 hover:bg-white/10 transition-colors border-l-4 border-transparent hover:border-brand-light w-full"
+      className="group flex items-center px-6 py-3.5 text-white/90 hover:bg-white/10 transition-colors border-l-4 border-transparent hover:border-brand-light w-full"
     >
-      <div className="flex items-center justify-center shrink-0 mr-4">
+      <div className="flex items-center justify-center shrink-0 mr-4 transform group-hover:-translate-x-1 transition-transform duration-200">
         {icon}
       </div>
       <span className="font-medium tracking-wide">
