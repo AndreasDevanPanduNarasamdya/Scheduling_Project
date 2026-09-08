@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SchedulingMeruap.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class NewActivityLog_Range : Migration
+    public partial class NewColorPicker : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,15 +16,15 @@ namespace SchedulingMeruap.Api.Migrations
                 columns: table => new
                 {
                     LOG_ID = table.Column<string>(type: "varchar(36)", unicode: false, maxLength: 36, nullable: false),
-                    DATE = table.Column<DateTime>(type: "date", nullable: false),
+                    DATE = table.Column<DateOnly>(type: "date", nullable: false),
                     TIME = table.Column<TimeSpan>(type: "time", nullable: false),
                     ACTOR = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     ACTION = table.Column<byte>(type: "tinyint", nullable: false),
                     TARGET = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: false),
                     TYPE = table.Column<byte>(type: "tinyint", nullable: true),
                     EDIT = table.Column<string>(type: "nvarchar(4000)", maxLength: 4000, nullable: true),
-                    RANGE_START = table.Column<DateTime>(type: "date", nullable: true),
-                    RANGE_END = table.Column<DateTime>(type: "date", nullable: true),
+                    RANGE_START = table.Column<DateOnly>(type: "date", nullable: true),
+                    RANGE_END = table.Column<DateOnly>(type: "date", nullable: true),
                     ROTATION = table.Column<string>(type: "varchar(50)", unicode: false, maxLength: 50, nullable: true),
                     DESCRIPTION = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
                 },
@@ -167,7 +167,8 @@ namespace SchedulingMeruap.Api.Migrations
                     START_DATE = table.Column<DateTime>(type: "datetime", nullable: false),
                     DAYS_ON = table.Column<int>(type: "int", nullable: false),
                     DAYS_OFF = table.Column<int>(type: "int", nullable: false),
-                    END_DATE = table.Column<DateTime>(type: "datetime", nullable: false)
+                    END_DATE = table.Column<DateTime>(type: "datetime", nullable: false),
+                    COLOR_THEME = table.Column<string>(type: "varchar(7)", unicode: false, maxLength: 7, nullable: true)
                 },
                 constraints: table =>
                 {

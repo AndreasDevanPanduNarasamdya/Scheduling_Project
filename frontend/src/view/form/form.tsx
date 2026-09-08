@@ -6,9 +6,11 @@ import { useAuth } from '../../context/AuthContext';
 import { fetchWithToken, fetchStaffById, fetchTeams } from "../../api";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { useAlert } from '../../view/messagebox/AlertProvider';
 
 
 export default function Form() {
+  const { showAlert } = useAlert();
   const [isTicketOn, setIsTicketOn] = useState(true);
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [startDate, endDate] = dateRange;
@@ -69,25 +71,30 @@ const handleSubmit = async (e: React.FormEvent) => {
     const staffId = user?.staffId || user?.staff?.staffId;
 
     if (!staffId) {
-      alert("Error: Akun ini tidak memiliki Profil Staff yang terhubung di database. Anda tidak dapat mengirim tiket.");
+      showAlert({ 
+        type: 'error', 
+        title: 'Akses Ditolak', 
+        message: 'Akun ini tidak memiliki Profil Staff yang terhubung di database. Anda tidak dapat mengirim tiket.' 
+      });
       return;
     }
 
     if (!startDate || !endDate) {
-      alert("Harap pilih rentang tanggal mulai dan selesai!");
+      showAlert({ 
+        type: 'warning', 
+        title: 'Tanggal Belum Dipilih', 
+        message: 'Harap pilih rentang tanggal mulai dan selesai!' 
+      });
       return;
     }
 
-    // 🔥 2. Map directly to integers. 
-    // Assuming Off = 0 and On = 1 in your C# backend. Swap these if your backend is reversed!
     const ticketTypeValue = isTicketOn ? 0 : 1;
 
     const payload = {
       staffId: staffId,
-      // 🔥 3. Use the local formatter instead of toISOString()
       startDate: formatLocal(startDate), 
       endDate: formatLocal(endDate),
-      type: ticketTypeValue, // Sending the integer directly
+      type: ticketTypeValue, 
       title: title,
       description: description,
     };
@@ -100,12 +107,31 @@ const handleSubmit = async (e: React.FormEvent) => {
       });
 
       if (response.ok) {
-        alert("Tiket berhasil dikirim!");
+        showAlert({ 
+          type: 'success', 
+          title: 'Berhasil', 
+          message: 'Tiket berhasil dikirim!' 
+        });
+        
+        // Clear the form
+        setTitle("");
+        setDescription("");
+        setDateRange([null, null]);
+        setIsTicketOn(true);
       } else {
-        alert("Gagal mengirim tiket.");
+        showAlert({ 
+          type: 'error', 
+          title: 'Gagal Mengirim', 
+          message: 'Gagal mengirim tiket. Silakan coba lagi.' 
+        });
       }
     } catch (error) {
       console.error("Error submitting form:", error);
+      showAlert({ 
+        type: 'error', 
+        title: 'Kesalahan Jaringan', 
+        message: 'Tidak dapat terhubung ke server.' 
+      });
     }
   };
 

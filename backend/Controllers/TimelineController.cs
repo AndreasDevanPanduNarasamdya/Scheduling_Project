@@ -27,10 +27,6 @@ public class TimelineController : ControllerBase
 
     private string? GetCurrentActorId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
 
-    // =========================================================
-    // VIEWING ENDPOINTS (Allowed for Staff, Supervisor, Admin)
-    // =========================================================
-
     [HttpGet]
     public async Task<IActionResult> GetTimeline([FromQuery] TimelineRequest request)
     {

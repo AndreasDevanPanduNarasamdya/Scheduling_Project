@@ -30,6 +30,9 @@ namespace SchedulingMeruap.Api.DTO.Requests
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "DaysOff must be greater than or equal to 1.")]
         public int DaysOff { get; set; }
+
+        [StringLength(7, ErrorMessage = "ColorTheme must be a valid 7-character hex code.")]
+        public string? ColorTheme { get; set; }
     }
 
     public class EndTimelineRequest
@@ -56,5 +59,8 @@ namespace SchedulingMeruap.Api.DTO.Requests
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "DaysOff must be greater than or equal to 1.")]
         public int DaysOff { get; set; }
+
+        [StringLength(7, ErrorMessage = "ColorTheme must be a valid 7-character hex code.")]
+        public string? ColorTheme { get; set; }
     }
 }

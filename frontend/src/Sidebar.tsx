@@ -79,7 +79,7 @@ export default function Sidebar({ isOpen, setIsOpen }: { isOpen: boolean, setIsO
               <LogOut size={24} className="text-red-500" />
             </div>
             
-            <h2 className="text-xl font-semibold text-black mb-2">Konfirmasi Logout</h2>
+            <h2 className="text-xl font-semibold text-black mb-2">Logout</h2>
             <p className="text-black/60 text-sm mb-6 text-center">
               Apakah Anda yakin ingin keluar dari aplikasi? Anda harus login kembali untuk masuk.
             </p>

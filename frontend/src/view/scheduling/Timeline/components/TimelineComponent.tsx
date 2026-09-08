@@ -8,9 +8,16 @@ const MONTH_NAMES = [
 
 const COLUMN_WIDTH = 40;
 
+const COLOR_THEMES: Record<string, string> = {
+  "#378DFF": "bg-[#378DFF] border-2 border-[#064C9C] shadow-sm", // Default Blue
+  "#00D70E": "bg-[#00D70E] border-2 border-[#007904] shadow-sm", // Green
+  "#EB8328": "bg-[#EB8328] border-2 border-[#A84E00] shadow-sm", // Orange
+  "#BE4EFF": "bg-[#BE4EFF] border-2 border-[#910087] shadow-sm", // Purple
+};
+
 const BAR_COLORS: Record<BarType, string> = {
   None: "",
-  OffDuty: "bg-brand-primary border-2 border-brand-dark shadow-sm",
+  OffDuty: COLOR_THEMES["#378DFF"], // <-- Updated this line
   Leave: "bg-red-500 border-2 border-red-700 shadow-sm",
   Transition: "bg-yellow-400 border-2 border-yellow-600",
 };
@@ -53,6 +60,7 @@ interface DayInfo {
   schedulePattern?: string;
   scheduleStart?: string;
   scheduleEnd?: string;
+  colorTheme?: string;
 }
 
 function useDayLookup(teams: TimelineTeam[]) {
@@ -68,7 +76,8 @@ function useDayLookup(teams: TimelineTeam[]) {
             scheduleType: day.scheduleType,
             schedulePattern: day.schedulePattern,
             scheduleStart: day.scheduleStart,
-            scheduleEnd: day.scheduleEnd
+            scheduleEnd: day.scheduleEnd,
+            colorTheme: day.colorTheme
           });
         }
         map.set(member.staffId, dayMap);
@@ -87,6 +96,7 @@ interface BarSegment {
   schedulePattern?: string;
   scheduleStart?: string;
   scheduleEnd?: string;
+  colorTheme?: string;
 }
 
 function computeSegments(days: { date: Date }[], memberDays: Map<string, DayInfo> | undefined): BarSegment[] {
@@ -105,13 +115,14 @@ function computeSegments(days: { date: Date }[], memberDays: Map<string, DayInfo
     if (current && 
             current.barType === barType && 
             current.label === entry?.label &&
-            current.scheduleStart === entry?.scheduleStart) { // Split segment if parent schedule changes!
+            current.scheduleStart === entry?.scheduleStart &&
+            current.colorTheme === entry?.colorTheme) {
           current.length++;
     } else {
       current = { 
         startIndex: i, length: 1, barType, label: entry?.label,
         scheduleType: entry?.scheduleType, schedulePattern: entry?.schedulePattern,
-        scheduleStart: entry?.scheduleStart, scheduleEnd: entry?.scheduleEnd
+        scheduleStart: entry?.scheduleStart, scheduleEnd: entry?.scheduleEnd, colorTheme: entry?.colorTheme
       };
       segments.push(current);
     }
@@ -138,6 +149,7 @@ export interface TimelineComponentProps {
     schedulePattern?: string;
     scheduleStart?: string;
     scheduleEnd?: string;
+    colorTheme?: string;
   }) => void;
   onInspectTarget?: (id: string, name: string, type: "team" | "staff", subtitle?: string) => void;
   onRangeChange?: (newStart: Date, newEnd: Date) => void;
@@ -359,6 +371,11 @@ export default function TimelineComponent({
                           {segments.map((seg, idx) => {
                             const barStartDate = toDateKey(days[seg.startIndex].date);
                             const barEndDate = toDateKey(days[seg.startIndex + seg.length - 1].date);
+
+                            let barClass = BAR_COLORS[seg.barType];
+                            if (seg.barType === "OffDuty" && seg.colorTheme) {
+                              barClass = COLOR_THEMES[seg.colorTheme] || COLOR_THEMES["#378DFF"];
+                            }
                             
                             return seg.barType === "Transition" ? (
                               <div
@@ -373,7 +390,8 @@ export default function TimelineComponent({
                                   scheduleType: seg.scheduleType,
                                   schedulePattern: seg.schedulePattern,
                                   scheduleStart: seg.scheduleStart,
-                                  scheduleEnd: seg.scheduleEnd
+                                  scheduleEnd: seg.scheduleEnd,
+                                  colorTheme: seg.colorTheme
                                 })}
                                 className={`absolute top-1/2 -translate-y-1/2 ${compact ? 'h-6' : 'h-4'} rounded-full bg-yellow-300 border-2 border-yellow-500 shadow-sm z-10 ${!compact ? 'cursor-pointer hover:ring-2 ring-brand-primary/50 transition' : ''}`}
                                 style={{ left: seg.startIndex * COLUMN_WIDTH + 8, width: COLUMN_WIDTH - 16 }}
@@ -394,7 +412,7 @@ export default function TimelineComponent({
                                   scheduleStart: seg.scheduleStart,
                                   scheduleEnd: seg.scheduleEnd
                                 })}
-                                className={`absolute top-1/2 -translate-y-1/2 ${compact ? 'h-6' : 'h-4'} rounded-md ${BAR_COLORS[seg.barType]} ${!compact ? 'cursor-pointer hover:brightness-95 transition' : ''}`}
+                                className={`absolute top-1/2 -translate-y-1/2 ${compact ? 'h-6' : 'h-4'} rounded-md ${barClass} ${!compact ? 'cursor-pointer hover:brightness-95 transition' : ''}`}
                                 style={{ left: seg.startIndex * COLUMN_WIDTH + 4, width: seg.length * COLUMN_WIDTH - 8 }}
                                 title={seg.label || seg.barType}
                               />

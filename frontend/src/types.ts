@@ -30,6 +30,7 @@ export interface TimelineHistoryRecord {
   daysOn: number;
   daysOff: number;
   status: ScheduleVersionStatus;
+  colorTheme?: string | null;
 }
 
 export interface TimelineDay {
@@ -41,6 +42,7 @@ export interface TimelineDay {
   scheduleStart?: string;
   scheduleEnd?: string;
   description?: string;
+  colorTheme?: string;
 }
 
 export interface TimelineStaff {
@@ -63,6 +65,7 @@ export interface CreateTimelinePayload {
   endDate?: string | null;
   daysOn: number;
   daysOff: number;
+  colorTheme?: string;
 }
 
 export interface Ticket {

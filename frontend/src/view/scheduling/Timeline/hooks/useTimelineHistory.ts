@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { fetchTimelineHistory } from "../../../../api";
 import type { TimelineTeam } from "../../../../types";
+import { useAlert } from "../../../messagebox/AlertProvider";
 
 export function useTimelineHistory(teams: TimelineTeam[]) {
+  const { showAlert } = useAlert();
   const [historyRecords, setHistoryRecords] = useState<any[]>([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -28,12 +30,12 @@ export function useTimelineHistory(teams: TimelineTeam[]) {
         const mappedTeamSchedules = teamSchedules.map((r: any) => ({ 
             ...r, 
             _source: `Tim: ${staffTeam?.teamName}`,
-            _teamId: staffTeam?.teamId // 🔥 INJECT TEAM ID
+            _teamId: staffTeam?.teamId
         }));
         const mappedStaffSchedules = staffSchedules.map((r: any) => ({ 
             ...r, 
             _source: "Personal",
-            _staffId: id // 🔥 INJECT STAFF ID
+            _staffId: id
         }));
 
         const activeTickets: any[] = [];
@@ -84,11 +86,15 @@ export function useTimelineHistory(teams: TimelineTeam[]) {
       finalRecords = finalRecords.filter(r => r.status === "Active" || r.status === "Future");
       setHistoryRecords(finalRecords);
     } catch (error: any) {
-      setErrorMessage(error.message || "Gagal memuat riwayat jadwal.");
+      showAlert({ 
+        type: 'error', 
+        title: 'Gagal Memuat Riwayat', 
+        message: error.message || "Gagal memuat riwayat jadwal dari server." 
+      });
     } finally {
       setIsLoadingHistory(false);
     }
   };
 
-  return { historyRecords, isLoadingHistory, errorMessage, setErrorMessage, loadHistory };
+  return { historyRecords, isLoadingHistory, loadHistory };
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Check, X, ArrowLeft, Loader2 } from "lucide-react";
 import { fetchWithToken } from "../../api";
 import type { Ticket } from "../../types";
+import { useAlert } from '../../view/messagebox/AlertProvider';
 
 interface AcceptProps {
   ticket: Ticket;
@@ -10,30 +11,53 @@ interface AcceptProps {
 }
 
 export default function Accept({ ticket, onBack, onSuccess }: AcceptProps) {
+  const { showAlert } = useAlert();
   const [reason, setReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
-    try {
-      const response = await fetchWithToken(`http://localhost:5096/api/ticket/${ticket.ticketID}/approve`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason })
-      });
+    showAlert({
+      type: 'confirm',
+      title: 'Konfirmasi Persetujuan',
+      message: 'Apakah Anda yakin ingin menyetujui pengajuan tiket ini?',
+      onConfirm: async () => {
+        
+        setIsSubmitting(true);
+        try {
+          const response = await fetchWithToken(`http://localhost:5096/api/ticket/${ticket.ticketID}/approve`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason })
+          });
 
-      if (response.ok) {
-        onSuccess();
-      } else {
-        console.error("Gagal memperbarui status tiket.");
+          if (response.ok) {
+            onSuccess();
+            
+            showAlert({ 
+              type: 'success', 
+              title: 'Berhasil', 
+              message: 'Tiket berhasil disetujui!'
+            });
+          } else {
+            showAlert({ 
+              type: 'error', 
+              title: 'Gagal Menyetujui', 
+              message: 'Gagal memperbarui status tiket di server.' 
+            });
+          }
+        } catch (error: any) {
+          showAlert({ 
+            type: 'error', 
+            title: 'Kesalahan Jaringan', 
+            message: error.message || 'Terjadi kesalahan saat menghubungi server.' 
+          });
+        } finally {
+          setIsSubmitting(false);
+        }
       }
-    } catch (error) {
-      console.error("Error:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   };
 
   return (

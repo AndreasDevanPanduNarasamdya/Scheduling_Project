@@ -37,12 +37,11 @@ public class NewHireService : INewHireService
         {
             string userId = Guid.NewGuid().ToString();
 
-            // Target-typed object initialization
             User user = new()
             {
                 UserId = userId,
                 Email = newHire.Email,
-                Password = password,
+                Password = BCrypt.Net.BCrypt.HashPassword(password),
                 Created = DateTime.UtcNow,
                 Locked = false,
             };
@@ -65,8 +64,6 @@ public class NewHireService : INewHireService
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();
-
-            // 🔥 OPTIMIZATION: Log AFTER commit to avoid holding database locks longer than necessary
             await _activityLogService.LogAccountActivatedAsync(staff);
 
             return true;

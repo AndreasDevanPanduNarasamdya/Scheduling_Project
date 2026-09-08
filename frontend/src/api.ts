@@ -82,7 +82,10 @@ export async function createTeam(payload: any) {
     body: JSON.stringify(payload)
   });
   
-  if (!response.ok) throw new Error("Failed to create team");
+  if (!response.ok) {
+    const errorMsg = await extractErrorMessage(response, "Gagal membuat tim");
+    throw new Error(errorMsg);
+  }
   return response.json();
 }
 
@@ -154,7 +157,11 @@ export async function deleteStaff(staffId: string) {
   const response = await fetchWithToken(`${API_BASE_URL}/staff/${staffId}`, {
     method: "DELETE",
   });
-  if (!response.ok) throw new Error("Failed to delete staff");
+  
+  if (!response.ok) {
+    const errorMsg = await extractErrorMessage(response, "Gagal menghapus staff");
+    throw new Error(errorMsg);
+  }
   return response.json();
 }
 
@@ -162,7 +169,11 @@ export async function deleteTeam(teamId: string) {
   const response = await fetchWithToken(`${API_BASE_URL}/teams/${teamId}`, {
     method: "DELETE",
   });
-  if (!response.ok) throw new Error("Failed to delete team");
+  
+  if (!response.ok) {
+    const errorMsg = await extractErrorMessage(response, "Gagal menghapus tim");
+    throw new Error(errorMsg);
+  }
   return response.json();
 }
 
@@ -225,7 +236,7 @@ export async function editTeam(teamId: string, payload: { teamName: string }) {
 
 export async function updateTimeline(
   timelineId: string,
-  payload: { daysOn: number; daysOff: number; startDate: string; endDate: string }
+  payload: { daysOn: number; daysOff: number; startDate: string; endDate: string; colorTheme?: string }
 ): Promise<void> {
   const response = await fetchWithToken(`${API_BASE_URL}/timeline/${timelineId}`, {
     method: "PUT",
@@ -293,4 +304,15 @@ export async function fetchBlockedRanges(
   }
 
   return response.json();
+}
+
+async function extractErrorMessage(response: Response, defaultMessage: string) {
+  try {
+    const errorData = await response.json();
+    return errorData.message || defaultMessage;
+  } catch {
+    // If it's not JSON (like a pure 500 crash), try to read the text
+    const errorText = await response.text().catch(() => "");
+    return errorText || defaultMessage;
+  }
 }

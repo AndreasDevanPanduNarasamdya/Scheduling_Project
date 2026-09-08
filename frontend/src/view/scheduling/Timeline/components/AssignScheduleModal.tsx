@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { createTimeline, fetchBlockedRanges } from "../../../../api";
 import type { TimelineTeam } from "../../../../types";
 import BlockedDatePicker from "./CustomDatePicker";
+import { useAlert } from "../../../messagebox/AlertProvider";
 
 interface AssignScheduleModalProps {
   isOpen: boolean;
@@ -10,8 +11,6 @@ interface AssignScheduleModalProps {
   teams: TimelineTeam[];
   initialTargetId?: string;
   onSuccess: () => void;
-  setGlobalError: (msg: string | null) => void;
-  setGlobalSuccess: (msg: string | null) => void;
 }
 
 function parseLocalDate(dateStr: string): Date {
@@ -20,10 +19,11 @@ function parseLocalDate(dateStr: string): Date {
 }
 
 export default function AssignScheduleModal({ 
-  isOpen, onClose, teams, initialTargetId = "", onSuccess, setGlobalError, setGlobalSuccess 
+  isOpen, onClose, teams, initialTargetId = "", onSuccess 
 }: AssignScheduleModalProps) {
   
-  const [formData, setFormData] = useState({ targetId: initialTargetId, daysOn: "", daysOff: "", startDate: "", endDate: "" });
+  const { showAlert } = useAlert();
+  const [formData, setFormData] = useState({ targetId: initialTargetId, daysOn: "", daysOff: "", startDate: "", endDate: "", colorTheme: "#378DFF" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingTarget, setIsCheckingTarget] = useState(false);
   const [blockedRanges, setBlockedRanges] = useState<{ startDate: string; endDate: string }[]>([]);
@@ -52,6 +52,11 @@ export default function AssignScheduleModal({
       setBlockedRanges(ranges);
     } catch {
       setBlockedRanges([]);
+      showAlert({ 
+        type: 'error', 
+        title: 'Gagal Sinkronisasi', 
+        message: 'Gagal memeriksa tanggal yang sudah terpakai di server.' 
+      });
     } finally {
       setIsCheckingTarget(false);
     }
@@ -86,7 +91,12 @@ export default function AssignScheduleModal({
 
   const handleSaveSchedule = async () => {
     if (!formData.targetId || !formData.daysOn || !formData.daysOff || !formData.startDate || !formData.endDate) {
-      setGlobalError("Harap isi semua kolom wajib! Tanggal berakhir sekarang wajib diisi.");
+      showAlert({ type: 'error', title: 'Kolom Belum Diisi', message: 'Harap isi semua kolom wajib!' });
+      return;
+    }
+
+    if (dateOverlapError) {
+      showAlert({ type: 'error', title: 'Jadwal Bertabrakan', message: dateOverlapError });
       return;
     }
 
@@ -102,14 +112,15 @@ export default function AssignScheduleModal({
         endDate: formData.endDate,
         daysOn: parseInt(formData.daysOn, 10),
         daysOff: parseInt(formData.daysOff, 10),
+        colorTheme: formData.colorTheme,
       });
 
-      setGlobalSuccess("Versi jadwal baru berhasil disimpan dan diberlakukan!");
-      setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "" });
+      showAlert({ type: 'success', title: 'Jadwal Berhasil Disimpan', message: 'Versi jadwal baru berhasil diberlakukan!' });
+      setFormData({ targetId: "", daysOn: "", daysOff: "", startDate: "", endDate: "", colorTheme: "#378DFF" });
       onSuccess();
       onClose();
     } catch (error: any) {
-      setGlobalError(error.message || "Terjadi kesalahan saat menyimpan jadwal.");
+      showAlert({ type: 'error', title: 'Gagal Menyimpan', message: error.message || "Terjadi kesalahan saat menyimpan jadwal." });
     } finally { 
       setIsSubmitting(false); 
     }
@@ -150,12 +161,6 @@ export default function AssignScheduleModal({
             ))}
           </select>
 
-          {dateOverlapError && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
-              {dateOverlapError}
-            </div>
-          )}
-
           <label className="form-label mt-1">Pola Shift</label>
           <div className="flex gap-2">
             <div className="w-full">
@@ -168,6 +173,21 @@ export default function AssignScheduleModal({
             </div>
           </div>
 
+          <label className="form-label mt-1">Warna Jadwal</label>
+          <div className="flex gap-3 mt-1 mb-2">
+            {["#378DFF", "#00D70E", "#EB8328", "#BE4EFF"].map((hex) => (
+              <button
+                key={hex}
+                type="button"
+                onClick={() => setFormData({ ...formData, colorTheme: hex })}
+                className={`w-8 h-8 rounded-full shadow-sm cursor-pointer transition-transform hover:scale-110 ${
+                  formData.colorTheme === hex ? "ring-2 ring-offset-2 ring-black/60" : ""
+                }`}
+                style={{ backgroundColor: hex }}
+              />
+            ))}
+          </div>
+          
           <label className="form-label mt-1">Tanggal Mulai Berlaku</label>
           <BlockedDatePicker
             value={formData.startDate}
@@ -204,7 +224,6 @@ export default function AssignScheduleModal({
           <button
             onClick={handleSaveSchedule}
             className="btn-primary text-sm cursor-pointer"
-            disabled={isSubmitting || isCheckingTarget || !!dateOverlapError}
           >
             {isSubmitting ? "Menyimpan..." : "Simpan Versi Jadwal"}
           </button>

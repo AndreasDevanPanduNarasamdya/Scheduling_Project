@@ -1,6 +1,7 @@
 // components/ManagementModals.tsx
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { useAlert } from "../../../messagebox/AlertProvider"; // Adjust path to your hook
 import type { Team, StaffMember } from "../../../../types";
 import { Clearance } from "../../../../types";
 import {
@@ -15,10 +16,8 @@ import {
   getUserClearance,
 } from "../../../../api";
 
-// ==========================================
-// 1. ADD STAFF MODAL
-// ==========================================
 export function AddStaffModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
+  const { showAlert } = useAlert();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [staffForm, setStaffForm] = useState({
     firstName: "", lastName: "", sex: "P", position: "",
@@ -42,20 +41,22 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: { isOpen: boolean;
       phone: staffForm.phone,
       dob: staffForm.dob,
       joinDate: staffForm.joinDate,
-      clearance: 0 // 🔥 Hardcoded to 0 (Staff). The user never sees this.
+      clearance: 0
     };
 
     try {
       await createNewHire(payload);
-      alert("Staff baru berhasil ditambahkan!");
+      showAlert({ type: 'success', title: 'Berhasil', message: 'Staff baru berhasil ditambahkan!' }); // 🟢 Updated
       onSuccess();
       onClose();
     } catch (err: any) {
-      alert(err.message || "Gagal menambahkan staff.");
+      showAlert({ type: 'error', title: 'Gagal Menambahkan', message: err.message || "Gagal menambahkan staff." }); // 🟢 Updated
     } finally {
       setIsSubmitting(false);
     }
   };
+  
+  // ... (keep the return block exactly the same)
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 sm:p-6">
@@ -126,16 +127,6 @@ export function AddStaffModal({ isOpen, onClose, onSuccess }: { isOpen: boolean;
   );
 }
 
-// ==========================================
-// 2. STAFF DETAIL / EDIT MODAL
-// Flow:
-//  - Opens in READ-ONLY "view details" mode (all fields disabled)
-//  - "Edit" button ONLY flips fields into editable mode — it never submits/saves anything
-//  - Once editing, the same button morphs into "Simpan" (Save) and becomes the form's submit button
-//  - Clicking "Simpan" submits the (possibly unchanged) field values and persists them
-//  - "Batal" while editing discards edits and returns to read-only view (no save)
-//  - "Tutup" while viewing simply closes the modal
-// ==========================================
 export function EditStaffModal({
   staffId,
   onClose,
@@ -144,7 +135,8 @@ export function EditStaffModal({
   staffId: string | null;
   onClose: () => void;
   onSuccess: () => void;
-}) {
+  }) {
+  const { showAlert } = useAlert();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -192,10 +184,10 @@ export function EditStaffModal({
         };
 
         setStaffForm(formattedData);
-        setOriginalForm(formattedData); // 🔥 Snapshot saved here
+        setOriginalForm(formattedData);
 
       } catch (err) {
-        alert("Gagal mengambil data lengkap staff dari database.");
+        showAlert({ type: 'error', title: 'Kesalahan Server', message: 'Gagal mengambil data lengkap staff dari database.' });
         onClose();
       } finally {
         setIsLoading(false);
@@ -212,7 +204,6 @@ export function EditStaffModal({
 
     if (!isEditing) return;
 
-    // 🔥 Soft prevention check
     const hasChanges = JSON.stringify(staffForm) !== JSON.stringify(originalForm);
     
     if (!hasChanges) {
@@ -235,11 +226,11 @@ export function EditStaffModal({
       };
 
       await editStaff(staffId, payload);
-      alert("Informasi staff berhasil diperbarui!");
+      showAlert({ type: 'success', title: 'Berhasil', message: 'Informasi staff berhasil diperbarui!' });
       onClose();
       onSuccess();
     } catch (err: any) {
-      alert(err.message || "Gagal memperbarui staff");
+      showAlert({ type: 'error', title: 'Gagal Memperbarui', message: err.message || "Gagal memperbarui staff" });
     } finally {
       setIsSubmitting(false);
     }
@@ -456,20 +447,46 @@ export function EditStaffModal({
 export function AddTeamModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; onClose: () => void; onSuccess: () => void }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [teamName, setTeamName] = useState("");
+  
+  // 1. Initialize the alert hook
+  const { showAlert } = useAlert(); 
 
   if (!isOpen) return null;
 
+  // 2. Update the submit handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Prevent empty submissions with the Yellow Warning Modal
+    if (!teamName.trim()) {
+      showAlert({
+        type: 'warning',
+        title: 'Kolom Belum Diisi',
+        message: 'Nama tim tidak boleh kosong.'
+      });
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await createTeam({ teamName });
-      alert("Tim berhasil dibuat!");
+      
+      // Show the Green Success Modal
+      showAlert({
+        type: 'success',
+        title: 'Tim Telah Berhasil Ditambah',
+      });
+      
       setTeamName("");
       onClose();
       onSuccess();
     } catch (err: any) {
-      alert(err.message || "Failed to create team");
+      // Show the Red Error Modal with the exact C# backend message
+      showAlert({
+        type: 'error',
+        title: 'Tim Tidak Tertambahkan',
+        message: err.message || "Server tidak tersambung"
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -498,6 +515,7 @@ export function AddTeamModal({ isOpen, onClose, onSuccess }: { isOpen: boolean; 
 // 4. EDIT TEAM MODAL
 // ==========================================
 export function EditTeamModal({ isOpen, onClose, teams, onSuccess }: { isOpen: boolean; onClose: () => void; teams: Team[]; onSuccess: () => void }) {
+  const { showAlert } = useAlert();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editTeamId, setEditTeamId] = useState("");
   const [editTeamName, setEditTeamName] = useState("");
@@ -510,13 +528,13 @@ export function EditTeamModal({ isOpen, onClose, teams, onSuccess }: { isOpen: b
     setIsSubmitting(true);
     try {
       await editTeam(editTeamId, { teamName: editTeamName });
-      alert("Nama tim berhasil diperbarui!");
+      showAlert({ type: 'success', title: 'Berhasil', message: 'Nama tim berhasil diperbarui!' });
       setEditTeamId("");
       setEditTeamName("");
       onClose();
       onSuccess();
     } catch (err: any) {
-      alert(err.message || "Gagal memperbarui tim");
+      showAlert({ type: 'error', title: 'Gagal Memperbarui', message: err.message || "Gagal memperbarui tim" });
     } finally {
       setIsSubmitting(false);
     }
@@ -559,6 +577,7 @@ export function EditTeamModal({ isOpen, onClose, teams, onSuccess }: { isOpen: b
 // 5. ASSIGN STAFF MODAL
 // ==========================================
 export function AssignStaffModal({ isOpen, onClose, teams, unassigned, onSuccess }: { isOpen: boolean; onClose: () => void; teams: Team[]; unassigned: StaffMember[]; onSuccess: () => void }) {
+  const { showAlert } = useAlert();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [assignForm, setAssignForm] = useState({ staffId: "", teamId: "" });
 
@@ -569,12 +588,12 @@ export function AssignStaffModal({ isOpen, onClose, teams, unassigned, onSuccess
     setIsSubmitting(true);
     try {
       await assignStaffToTeam(assignForm.staffId, assignForm.teamId);
-      alert("Staff berhasil dipindahkan!");
+      showAlert({ type: 'success', title: 'Berhasil', message: 'Staff berhasil dipindahkan!' });
       setAssignForm({ staffId: "", teamId: "" });
       onClose();
       onSuccess();
     } catch (err: any) {
-      alert(err.message || "Failed to assign staff");
+      showAlert({ type: 'error', title: 'Gagal Memindahkan', message: err.message || "Failed to assign staff" })
     } finally {
       setIsSubmitting(false);
     }
@@ -617,32 +636,45 @@ export function AssignStaffModal({ isOpen, onClose, teams, unassigned, onSuccess
   );
 }
 
-// ==========================================
-// 6. DELETE MODAL
-// ==========================================
 export function DeleteModal({ isOpen, onClose, teams, unassigned, onSuccess }: { isOpen: boolean; onClose: () => void; teams: Team[]; unassigned: StaffMember[]; onSuccess: () => void }) {
+  const { showAlert } = useAlert();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: "staff" | "team"; id: string; name: string } | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = async () => {
+  const handleDeleteClick = () => {
     if (!deleteTarget) return;
-    setIsSubmitting(true);
-    try {
-      if (deleteTarget.type === "staff") {
-        await deleteStaff(deleteTarget.id);
-      } else {
-        await deleteTeam(deleteTarget.id);
+    
+    // 1. Summon the confirmation modal FIRST
+    showAlert({
+      type: 'confirm',
+      title: 'Konfirmasi Hapus',
+      message: deleteTarget.type === 'staff' 
+        ? `Apakah Anda yakin ingin menghapus "${deleteTarget.name}"? Semua data terkait akan hilang.`
+        : `Apakah Anda yakin ingin menghapus tim "${deleteTarget.name}"?`,
+      onConfirm: async () => {
+        
+        // 2. If they click "Ya", this block runs to do the actual deletion
+        setIsSubmitting(true);
+        try {
+          if (deleteTarget.type === "staff") {
+            await deleteStaff(deleteTarget.id);
+          } else {
+            await deleteTeam(deleteTarget.id);
+          }
+          
+          showAlert({ type: 'success', title: 'Berhasil', message: 'Data berhasil dihapus.' });
+          setDeleteTarget(null);
+          onClose();
+          onSuccess();
+        } catch (err: any) {
+          showAlert({ type: 'error', title: 'Gagal Menghapus', message: err.message || "Gagal menghapus" });
+        } finally {
+          setIsSubmitting(false);
+        }
       }
-      setDeleteTarget(null);
-      onClose();
-      onSuccess();
-    } catch (err: any) {
-      alert(err.message || "Gagal menghapus");
-    } finally {
-      setIsSubmitting(false);
-    }
+    });
   };
 
   return (
@@ -690,7 +722,7 @@ export function DeleteModal({ isOpen, onClose, teams, unassigned, onSuccess }: {
         </div>
         <div className="flex justify-end gap-3 mt-6">
           <button type="button" onClick={() => { setDeleteTarget(null); onClose(); }} className="px-5 py-2 text-sm text-black/60 hover:bg-brand-bg rounded-xl transition">Batal</button>
-          <button type="button" onClick={handleSubmit} disabled={!deleteTarget || isSubmitting} className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl text-sm font-medium shadow-sm transition disabled:opacity-50 cursor-pointer">
+          <button type="button" onClick={handleDeleteClick} disabled={!deleteTarget || isSubmitting} className="bg-red-500 hover:bg-red-600 text-white px-5 py-2 rounded-xl text-sm font-medium shadow-sm transition disabled:opacity-50 cursor-pointer">
             {isSubmitting ? "Menghapus..." : "Hapus"}
           </button>
         </div>

@@ -3,6 +3,7 @@ import { Mail, AlertCircle, Loader2, Calendar, X, Check } from "lucide-react";
 import InboxSelected from "./InboxSelected";
 import type { Ticket, TicketStatus } from "../../types";
 import { fetchWithToken } from "../../api";
+import { useAlert } from '../../view/messagebox/AlertProvider';
 
 interface TicketCardProps {
   ticket: Ticket;
@@ -95,63 +96,71 @@ function TicketCard({ ticket, onClick }: TicketCardProps) {
 }
 
 export default function InboxList() {
+  const { showAlert } = useAlert(); // 🟢 Summon the hook
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const response = await fetchWithToken("http://localhost:5096/api/ticket", {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+  const fetchTickets = async () => {
+    try {
+      const response = await fetchWithToken("http://localhost:5096/api/ticket", {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const rawData = await response.json();
+        
+        const formattedTickets = rawData.map((t: any) => {
+          return {
+            ...t,
+            ticketID: t.ticketID || t.TicketID,
+            status: t.status || t.Status,  
+            type: t.type || t.Type,          
+            reason: t.reason || t.Reason,
+            dateRange: `${new Date(t.startDate || t.StartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} - ${new Date(t.endDate || t.EndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+          };
         });
 
-        if (response.ok) {
-          const rawData = await response.json();
-          
-          const formattedTickets = rawData.map((t: any) => {
-            return {
-              ...t,
-              ticketID: t.ticketID || t.TicketID,
-              status: t.status || t.Status,  
-              type: t.type || t.Type,          
-              reason: t.reason || t.Reason,
-              dateRange: `${new Date(t.startDate || t.StartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} - ${new Date(t.endDate || t.EndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
-            };
-          });
-
-          setTickets(formattedTickets);
-        } else {
-          console.error("Gagal mengambil tiket dari server.");
-        }
-      } catch (error) {
-        console.error("Error:", error);
-      } finally {
-        setIsLoading(false);
+        setTickets(formattedTickets);
+      } else {
+        showAlert({ 
+          type: 'error', 
+          title: 'Gagal Memuat Inbox', 
+          message: 'Tidak dapat mengambil daftar tiket dari server.' 
+        });
       }
-    };
+    } catch (error) {
+      showAlert({ 
+        type: 'error', 
+        title: 'Kesalahan Jaringan', 
+        message: 'Terjadi kesalahan saat menghubungi server.' 
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchTickets();
   }, []);
 
   const pendingCount = tickets.filter(t => t.status === "Pending").length;
 
   return (
-    <div className="w-full min-h-screen overflow-y-auto p-4 md:p-6 font-sans flex flex-col">
-      
-      {/* HEADER AREA */}
-      <div className="flex items-center gap-3 mb-6">
-        <Mail size={26} className="text-brand-black" strokeWidth={2.2} />
-        <h1 className="text-2xl font-semibold text-brand-black">Inbox</h1>
-        {pendingCount > 0 && (
-          <span className="bg-amber-500 text-white text-xs font-bold min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center shadow-sm">
-            {pendingCount}
-          </span>
-        )}
-      </div>
+    <div className="w-full min-h-screen bg-brand-bg overflow-y-auto font-sans flex flex-col">
+      <div className="w-full max-w-[1600px] mx-auto px-6 md:px-10 lg:px-12 pt-10 md:pt-14 pb-16">
+        
+        <div className="flex items-center gap-3 mb-6">
+          <h1 className="text-3xl font-bold text-header-1">Inbox</h1>
+          <Mail size={26} className="text-header-1" strokeWidth={2.5} />
+          {pendingCount > 0 && (
+            <span className="bg-amber-500 text-white text-xs font-bold min-w-[22px] h-[22px] px-1.5 rounded-full flex items-center justify-center shadow-sm">
+              {pendingCount}
+            </span>
+          )}
+        </div>
 
-      {/* RESPONSIVE WRAPPING GRID */}
       {isLoading ? (
         <div className="flex justify-center items-center h-64 text-brand-primary">
           <Loader2 className="animate-spin" size={40} />
@@ -174,10 +183,11 @@ export default function InboxList() {
         ticket={selectedTicket} 
         onClose={() => setSelectedTicket(null)}
         onActionComplete={() => {
-          window.location.reload(); 
+          fetchTickets();
         }}
       />
 
+      </div>
     </div>
   );
 }

@@ -1,6 +1,13 @@
 import { X, Calendar as CalendarIcon, Clock, Info } from "lucide-react";
 import type { BarType } from "../../../../types"; // adjust this path to your types file
 
+const OUTLINE_COLORS: Record<string, string> = {
+  "#378DFF": "border-[#064C9C]",
+  "#00D70E": "border-[#007904]",
+  "#EB8328": "border-[#A84E00]",
+  "#BE4EFF": "border-[#910087]",
+};
+
 const MONTH_NAMES = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni", 
   "Juli", "Agustus", "September", "Oktober", "November", "Desember"
@@ -29,6 +36,7 @@ export interface BarDetail {
   schedulePattern?: string;
   scheduleStart?: string;
   scheduleEnd?: string;
+  colorTheme?: string;
 }
 
 interface BarDetailModalProps {
@@ -43,13 +51,15 @@ export default function BarDetailModal({ isOpen, onClose, detail }: BarDetailMod
   const isLeave = detail.barType === "Leave";
   const isTransition = detail.barType === "Transition";
 
+  const customOutline = detail.colorTheme ? OUTLINE_COLORS[detail.colorTheme] : "border-brand-primary";
+  
   const cardBorder = isLeave ? "border-red-400 bg-red-50/50" :
                      isTransition ? "border-yellow-400 bg-yellow-50/40" :
-                     "border-brand-primary bg-brand-bg/60 shadow-sm";
+                     `${customOutline} bg-brand-bg/60 shadow-sm border-2`;
 
   const badgeClass = isLeave ? "bg-red-500 text-white" :
                      isTransition ? "bg-yellow-400 text-yellow-950" :
-                     "bg-brand-primary text-white";
+                     "text-white";
 
   const title = isLeave ? "TIKET OFF" :
                   isTransition ? "TRANSISI" :
@@ -93,7 +103,10 @@ export default function BarDetailModal({ isOpen, onClose, detail }: BarDetailMod
           {/* SPECIFIC BAR SEGMENT */}
           <div className={`p-4 rounded-xl border ${cardBorder}`}>
             <div className="flex items-center gap-2 mb-3 border-b border-black/5 pb-3">
-              <span className={`badge text-[10px] py-1 px-2.5 font-bold uppercase tracking-wider ${badgeClass}`}>
+              <span 
+                className={`badge text-[10px] py-1 px-2.5 font-bold uppercase tracking-wider ${badgeClass}`}
+                style={!isLeave && !isTransition ? { backgroundColor: detail.colorTheme || "#378DFF" } : undefined}
+              >
                 {title}
               </span>
             </div>

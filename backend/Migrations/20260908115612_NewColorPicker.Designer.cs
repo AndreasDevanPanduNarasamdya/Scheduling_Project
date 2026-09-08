@@ -12,8 +12,8 @@ using SchedulingMeruap.Api.Data;
 namespace SchedulingMeruap.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260903050134_NewActivityLog_Range")]
-    partial class NewActivityLog_Range
+    [Migration("20260908115612_NewColorPicker")]
+    partial class NewColorPicker
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -43,7 +43,7 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnType("nvarchar(150)")
                         .HasColumnName("ACTOR");
 
-                    b.Property<DateTime>("Date")
+                    b.Property<DateOnly>("Date")
                         .HasColumnType("date")
                         .HasColumnName("DATE");
 
@@ -57,11 +57,11 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnType("nvarchar(4000)")
                         .HasColumnName("EDIT");
 
-                    b.Property<DateTime?>("RangeEnd")
+                    b.Property<DateOnly?>("RangeEnd")
                         .HasColumnType("date")
                         .HasColumnName("RANGE_END");
 
-                    b.Property<DateTime?>("RangeStart")
+                    b.Property<DateOnly?>("RangeStart")
                         .HasColumnType("date")
                         .HasColumnName("RANGE_START");
 
@@ -360,6 +360,12 @@ namespace SchedulingMeruap.Api.Migrations
                         .IsUnicode(false)
                         .HasColumnType("varchar(36)")
                         .HasColumnName("TIMELINE_ID");
+
+                    b.Property<string>("ColorTheme")
+                        .HasMaxLength(7)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(7)")
+                        .HasColumnName("COLOR_THEME");
 
                     b.Property<int>("DaysOff")
                         .HasColumnType("int")

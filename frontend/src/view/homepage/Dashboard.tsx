@@ -3,9 +3,11 @@ import { useAuth } from "../../context/AuthContext";
 import { fetchTimeline, fetchStaffById } from "../../api";
 import TimelineComponent from "../scheduling/Timeline/components/TimelineComponent";
 import type { TimelineTeam } from "../../types";
+import { useAlert } from '../../view/messagebox/AlertProvider';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { showAlert } = useAlert();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [teams, setTeams] = useState<TimelineTeam[]>([]);
   const [isTimelineLoading, setIsTimelineLoading] = useState(true);
@@ -15,22 +17,38 @@ export default function Dashboard() {
   const [liveStaff, setLiveStaff] = useState<any>(null);
 
   useEffect(() => {
-  const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
 
-  const year = new Date().getFullYear();
-  fetchTimeline(`${year}-01-01`, `${year + 1}-12-31`)
-    .then((data) => setTeams(Array.isArray(data) ? data : []))
-    .catch((err) => console.error("Failed to fetch timeline:", err))
-    .finally(() => setIsTimelineLoading(false));
-    
-  if (user?.staff?.staffId) {
+    const year = new Date().getFullYear();
+    fetchTimeline(`${year}-01-01`, `${year + 1}-12-31`)
+      .then((data) => setTeams(Array.isArray(data) ? data : []))
+      .catch((err) => {
+        console.error("Failed to fetch timeline:", err);
+        // 🟢 Trigger custom error UI
+        showAlert({ 
+          type: 'error', 
+          title: 'Gagal Memuat Jadwal', 
+          message: 'Tidak dapat mengambil data timeline dari server.' 
+        });
+      })
+      .finally(() => setIsTimelineLoading(false));
+      
+    if (user?.staff?.staffId) {
       fetchStaffById(user.staff.staffId)
         .then((data) => setLiveStaff(data))
-        .catch((err) => console.error("Failed to fetch live staff profile:", err));
+        .catch((err) => {
+          console.error("Failed to fetch live staff profile:", err);
+          // 🟢 Trigger custom error UI
+          showAlert({ 
+            type: 'error', 
+            title: 'Gagal Memuat Profil', 
+            message: 'Tidak dapat menyinkronkan data profil terbaru.' 
+          });
+        });
     }
-    
-  return () => clearInterval(timer);
-}, []);
+      
+    return () => clearInterval(timer);
+  }, [user?.staff?.staffId]);
     
   const day = currentTime.getDate();
   const month = currentTime.toLocaleString("default", { month: "long" });

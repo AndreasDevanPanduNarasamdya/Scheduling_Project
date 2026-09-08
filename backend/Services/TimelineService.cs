@@ -93,7 +93,7 @@ public class TimelineService : ITimelineService
         {
             var finalState = baseStates[date];
 
-            string? sType = null, sPattern = null, sStart = null, sEnd = null;
+            string? sType = null, sPattern = null, sStart = null, sEnd = null, sColor = null;
             if (finalState.SourceId != null)
             {
                 var tl = activeTimelines.FirstOrDefault(t => t.TimelineId == finalState.SourceId);
@@ -103,6 +103,7 @@ public class TimelineService : ITimelineService
                     sPattern = $"{tl.DaysOn} ON / {tl.DaysOff} OFF";
                     sStart = tl.StartDate.ToString("yyyy-MM-dd");
                     sEnd = tl.EndDate.ToString("yyyy-MM-dd");
+                    sColor = tl.ColorTheme;
                 }
             }
 
@@ -116,7 +117,8 @@ public class TimelineService : ITimelineService
                     ScheduleType = sType,
                     SchedulePattern = sPattern,
                     ScheduleStart = sStart,
-                    ScheduleEnd = sEnd
+                    ScheduleEnd = sEnd,
+                    ColorTheme = sColor
                 });
             }
         }
@@ -216,7 +218,6 @@ public class TimelineService : ITimelineService
 
             var label = activeTicket.Description ?? activeTicket.Reason ?? activeTicket.Title;
 
-            // 🔥 JUST returns Leave. No transitions are calculated here!
             return ("Leave", label, baseState.SourceId, baseState.IsStaffSchedule);
         }
 
@@ -234,13 +235,11 @@ public class TimelineService : ITimelineService
         return timelines
             .Where(t => (isTeam ? t.TeamId == targetId : t.StaffId == targetId)
                         && t.StartDate.Date <= date.Date
-                        && t.EndDate.Date >= date.Date) // Rule 7: EndDate always present now
+                        && t.EndDate.Date >= date.Date)
             .OrderByDescending(t => t.StartDate)
             .FirstOrDefault();
     }
 
-    // Rule 7: EndDate is now MANDATORY — request.EndDate is a non-nullable
-    // DateTime, not DateTime?. Update your CreateTimelineRequest DTO accordingly.
     public async Task<Timeline> CreateTimelineAsync(CreateTimelineRequest request, string? actorStaffId)
     {
         bool hasTeam = !string.IsNullOrWhiteSpace(request.TeamId);
@@ -278,7 +277,8 @@ public class TimelineService : ITimelineService
             StartDate = request.StartDate.Date,
             DaysOn = request.DaysOn,
             DaysOff = request.DaysOff,
-            EndDate = request.EndDate
+            EndDate = request.EndDate,
+            ColorTheme = request.ColorTheme
         };
 
         var created = await _repository.CreateTimelineAsync(newTimeline);
@@ -318,7 +318,8 @@ public class TimelineService : ITimelineService
             EndDate = x.Timeline.EndDate.ToString("yyyy-MM-dd"),
             DaysOn = x.Timeline.DaysOn,
             DaysOff = x.Timeline.DaysOff,
-            Status = x.Status
+            Status = x.Status,
+            ColorTheme = x.Timeline.ColorTheme
         }).ToList();
     }
 
@@ -356,13 +357,15 @@ public class TimelineService : ITimelineService
             StartDate = timeline.StartDate,
             EndDate = timeline.EndDate,
             DaysOn = timeline.DaysOn,
-            DaysOff = timeline.DaysOff
+            DaysOff = timeline.DaysOff,
+            ColorTheme = timeline.ColorTheme
         };
 
         timeline.DaysOn = request.DaysOn;
         timeline.DaysOff = request.DaysOff;
         timeline.StartDate = request.StartDate.Date;
         timeline.EndDate = request.EndDate.Date;
+        timeline.ColorTheme = request.ColorTheme;
 
         await _repository.UpdateTimelineAsync(timeline);
 

@@ -56,6 +56,10 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.EndDate)
                 .HasColumnType("datetime")
                 .HasColumnName("END_DATE");
+            entity.Property(e => e.ColorTheme)
+                .HasMaxLength(7)
+                .IsUnicode(false)
+                .HasColumnName("COLOR_THEME");
 
             entity.HasOne(d => d.Team)
                 .WithMany()
@@ -301,7 +305,6 @@ public partial class ApplicationDbContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("USER_ID");
 
-            // 🔥 FIXED: Clearance (also added .IsRequired() just to be perfectly strict)
             entity.Property(e => e.Clearance)
                 .HasColumnType("tinyint")
                 .HasColumnName("CLEARANCE")

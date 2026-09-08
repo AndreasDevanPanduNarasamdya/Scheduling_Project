@@ -358,6 +358,12 @@ namespace SchedulingMeruap.Api.Migrations
                         .HasColumnType("varchar(36)")
                         .HasColumnName("TIMELINE_ID");
 
+                    b.Property<string>("ColorTheme")
+                        .HasMaxLength(7)
+                        .IsUnicode(false)
+                        .HasColumnType("varchar(7)")
+                        .HasColumnName("COLOR_THEME");
+
                     b.Property<int>("DaysOff")
                         .HasColumnType("int")
                         .HasColumnName("DAYS_OFF");

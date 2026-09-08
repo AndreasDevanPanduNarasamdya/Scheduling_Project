@@ -2,19 +2,20 @@ import { useState, useEffect } from "react";
 import { Menu, Eye, EyeOff, Loader2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { activateAccount, validateActivationToken } from "../../api";
+import { useAlert } from '../../view/messagebox/AlertProvider';
 
 type TokenStatus = "checking" | "valid" | "invalid" | "expired" | "used";
 
 export default function Activation() {
+  const { showAlert } = useAlert();
   const [step, setStep] = useState(1);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
   
   const [tokenStatus, setTokenStatus] = useState<TokenStatus>("checking");
-  const [staffName, setStaffName] = useState<string>(""); // Added state for dynamic name
+  const [staffName, setStaffName] = useState<string>("");
   
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token");
@@ -32,7 +33,6 @@ export default function Activation() {
         const result = await validateActivationToken(token);
         if (cancelled) return;
         
-        // Fix: Safely grab the data whether C# sends "status" or "Status"
         const actualStatus = result.status;
         const actualName = result.name;
         
@@ -65,18 +65,25 @@ export default function Activation() {
     return null;
   };
 
-  const handlePasswordSubmit = async (e: React.FormEvent) => {
+const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormError(null);
 
     if (!token) {
-      setFormError("Token tidak valid.");
+      showAlert({ 
+        type: 'error', 
+        title: 'Akses Ditolak', 
+        message: 'Token aktivasi tidak valid atau hilang.' 
+      });
       return;
     }
 
     const validationError = validatePassword();
     if (validationError) {
-      setFormError(validationError);
+      showAlert({ 
+        type: 'warning', 
+        title: 'Validasi Password', 
+        message: validationError 
+      });
       return;
     }
 
@@ -84,14 +91,14 @@ export default function Activation() {
 
     try {
       await activateAccount(token, password);
-      setStep(3);
+      setStep(3); // Moves to the success screen!
     } catch (error: unknown) {
-      console.error("Failed to activate account:", error);
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Terjadi kesalahan saat mengaktifkan akun.";
-      setFormError(message);
+      const message = error instanceof Error ? error.message : "Terjadi kesalahan saat mengaktifkan akun.";
+      showAlert({ 
+        type: 'error', 
+        title: 'Gagal Aktivasi', 
+        message: message 
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -101,7 +108,6 @@ export default function Activation() {
     window.location.href = "/";
   };
 
-  // ---- Token gate: still checking with the backend ----
   if (tokenStatus === "checking") {
     return (
       <div className="min-h-screen bg-brand-bg flex items-center justify-center p-4">
@@ -113,7 +119,6 @@ export default function Activation() {
     );
   }
 
-  // ---- Token gate: missing/invalid/expired/already used ----
   if (tokenStatus !== "valid") {
     const messages: Record<Exclude<TokenStatus, "checking" | "valid">, { title: string; body: string }> = {
       invalid: {
@@ -149,13 +154,11 @@ export default function Activation() {
     );
   }
 
-  // ---- Token is valid: normal 3-step flow ----
   return (
     <div className="min-h-screen bg-brand-bg font-sans flex items-center justify-center relative p-4">
 
       <div className="card p-10 sm:p-14 w-full max-w-[500px] flex flex-col items-center text-center">
         
-        {/* ================= STEP 1: AKTIVASI ================= */}
         {step === 1 && (
           <div className="w-full animation-fade-in">
             <h2 className="text-[28px] font-medium text-brand-dark mb-6">
@@ -173,7 +176,6 @@ export default function Activation() {
           </div>
         )}
 
-        {/* ================= STEP 2: PASSWORD ================= */}
         {step === 2 && (
           <div className="w-full animation-fade-in">
             <h2 className="text-[28px] font-medium text-brand-dark mb-6">
@@ -184,22 +186,25 @@ export default function Activation() {
             </p>
 
             <form onSubmit={handlePasswordSubmit} className="flex flex-col items-center w-full">
-              <div className="w-full max-w-[280px] text-left mb-4">
-                <label className="form-label">Password</label>
+              <div className="flex flex-col gap-1 mb-4">
+                <label htmlFor="password" className="form-label">
+                  Password:
+                </label>
                 <div className="relative">
                   <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Minimal 8 karakter"
+                    id="password"
+                    // 🟢 This ternary operator is the key!
+                    type={showPassword ? "text" : "password"} 
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="input-field pr-10"
+                    placeholder="Masukan password Anda"
+                    className="input-field pr-10" // 🟢 Added padding so text doesn't hide behind the icon
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black/60 cursor-pointer"
-                    aria-label={showPassword ? "Sembunyikan password" : "Tampilkan password"}
                   >
                     {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                   </button>
@@ -218,13 +223,7 @@ export default function Activation() {
                 />
               </div>
 
-              {formError && (
-                <p className="w-full max-w-[280px] text-left text-sm text-state-error mb-5">
-                  {formError}
-                </p>
-              )}
-
-              <div className={`w-full max-w-[280px] flex justify-end ${formError ? "" : "mt-5"}`}>
+              <div className="w-full max-w-[280px] flex justify-end mt-5">
                 <button
                   type="submit"
                   disabled={isSubmitting || password.length < 8 || confirmPassword.length < 8}
@@ -237,7 +236,6 @@ export default function Activation() {
           </div>
         )}
 
-        {/* ================= STEP 3: SUCCESS ================= */}
         {step === 3 && (
           <div className="w-full animation-fade-in">
             <h2 className="text-[28px] font-medium text-brand-dark mb-6">

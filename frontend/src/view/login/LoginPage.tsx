@@ -4,6 +4,7 @@ import BgImage from "../../assets/background.png";
 import LogoImage from "../../assets/MeruapLogo.png";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { Eye, EyeOff } from "lucide-react";
 
 
 const BG_IMAGE_URL = BgImage;
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const { login } = useAuth();
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,9 +41,6 @@ export default function LoginPage() {
       }
 
       const data = await response.json();
-
-      // console.log("LOGIN RESPONSE:", data);
-      // console.log("TOKEN RECEIVED:", !!data.token);
 
       login(
         {
@@ -127,15 +126,24 @@ export default function LoginPage() {
           <label htmlFor="password" className="form-label">
             Password:
           </label>
-          <input
-            id="password"
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Masukan password Anda"
-            className="input-field"
-          />
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"} 
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Masukan password Anda"
+              className="input-field pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-black/40 hover:text-black/60 cursor-pointer"
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -151,7 +159,7 @@ export default function LoginPage() {
                      text-white font-semibold tracking-wide py-2 transition
                      shadow-lg shadow-blue-900/30"
         >
-          {isLoading ? "LOGGING IN..." : "LOGIN"}
+          LOGIN
         </button>
 
         <Link

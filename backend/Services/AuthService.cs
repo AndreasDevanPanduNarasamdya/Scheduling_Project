@@ -10,8 +10,6 @@ using SchedulingMeruap.Api.Services.Interfaces;
 
 namespace SchedulingMeruap.Api.Services;
 
-
-
 public class AuthService : IAuthService
 {
     private readonly IAuthRepository _authRepository;
@@ -35,7 +33,12 @@ public class AuthService : IAuthService
     {
         var user = await _authRepository.GetByEmailAsync(request.Email.Trim());
 
-        if (user == null || user.Locked || user.Password != request.Password)
+        if (user == null || user.Locked)
+            return null;
+
+        bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.Password, user.Password);
+
+        if (!isPasswordValid)
             return null;
 
         var claims = new[]

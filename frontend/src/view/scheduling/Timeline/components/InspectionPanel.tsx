@@ -3,6 +3,7 @@ import { X, Calendar as CalendarIcon, Clock } from "lucide-react";
 import { Clearance } from "../../../../types";
 import { updateTimeline, deleteTimelineSchedule, fetchBlockedRanges } from "../../../../api";
 import BlockedDatePicker from "./CustomDatePicker";
+import { useAlert } from "../../../messagebox/AlertProvider";
 
 interface InspectionPanelProps {
   selectedInspection: { id: string; name: string; type: "team" | "staff"; subtitle?: string; } | null;
@@ -12,18 +13,22 @@ interface InspectionPanelProps {
   onClose: () => void;
   onReloadRequested: () => void;
   onOpenAssignModal: () => void;
-  setGlobalError: (msg: string) => void;
-  setGlobalSuccess: (msg: string) => void;
 }
 
-export default function InspectionPanel({
-  selectedInspection, historyRecords, isLoadingHistory, userClearance, 
-  onClose, onReloadRequested, onOpenAssignModal, setGlobalError, setGlobalSuccess
+export default function InspectionPanel({ 
+  selectedInspection, 
+  historyRecords, 
+  isLoadingHistory, 
+  userClearance, 
+  onClose, 
+  onReloadRequested, 
+  onOpenAssignModal 
 }: InspectionPanelProps) {
   
+  const { showAlert } = useAlert();
   const [editingRecordId, setEditingRecordId] = useState<string | null>(null);
   const [isEditingFields, setIsEditingFields] = useState(false);
-  const [editForm, setEditForm] = useState({ daysOn: "", daysOff: "", startDate: "", endDate: "" });
+  const [editForm, setEditForm] = useState({ daysOn: "", daysOff: "", startDate: "", endDate: "", colorTheme: "#378DFF" });
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [editBlockedRanges, setEditBlockedRanges] = useState<{ startDate: string; endDate: string }[]>([]);
   const today = new Date();
@@ -112,18 +117,24 @@ export default function InspectionPanel({
                           daysOff: String(rec.daysOff ?? ""),
                           startDate: rec.startDate ?? "",
                           endDate: rec.endDate ?? "",
+                          colorTheme: rec.colorTheme || "#378DFF",
                         });
 
                         if (!isSelected) {
-                          const isTeamPanel = selectedInspection?.type === "team";
-                          const fetchTeamId = isTeamPanel ? selectedInspection!.id : rec._teamId;
-                          const fetchStaffId = isTeamPanel ? undefined : rec._staffId;
+                          const targetTeam = rec.teamId || rec._teamId || undefined;
+                          const targetStaff = rec.staffId || rec._staffId || undefined;
 
-                          fetchBlockedRanges(fetchTeamId, fetchStaffId)
+                          fetchBlockedRanges(targetTeam, targetStaff, rec.timelineId)
                           .then(ranges => {
-                            const filteredRanges = ranges.filter(r => r.startDate !== rec.startDate);
-                            setEditBlockedRanges(filteredRanges);
-                          }).catch(() => setEditBlockedRanges([]));
+                            setEditBlockedRanges(ranges);
+                          }).catch((err: any) => {
+                            setEditBlockedRanges([]);
+                            showAlert({ 
+                              type: 'error', 
+                              title: 'Gagal Sinkronisasi', 
+                              message: err.message || 'Gagal memeriksa tanggal yang sudah terpakai di server.' 
+                            });
+                          });
                         }
                       }}
                       className={`p-3 rounded-xl border transition ${cardBorder} ${canEditThis ? "cursor-pointer hover:shadow-md" : ""}`}
@@ -149,7 +160,6 @@ export default function InspectionPanel({
                         ) : null}
                       </div>
 
-                      {/* 2. DATE FORMATTER APPLIED HERE */}
                       {(!isSelected || !isEditingFields) && (
                         <>
                           <div className="flex items-center gap-1.5 text-xs text-black/80 mt-2">
@@ -170,7 +180,6 @@ export default function InspectionPanel({
                         </>
                       )}
 
-                      {/* 3. EDIT FORM & ACTIONS (Original Logic) */}
                       {canEditThis && isSelected && isEditingFields && (
                         <div className="flex flex-col gap-2 mt-2" onClick={(e) => e.stopPropagation()}>
                           <div className="flex gap-2">
@@ -199,6 +208,22 @@ export default function InspectionPanel({
                             minDate={editForm.startDate && editForm.startDate > todayStr ? editForm.startDate : todayStr}
                             onChange={(picked) => setEditForm({ ...editForm, endDate: picked })}
                           />
+                          <div className="flex gap-2 mt-2 justify-center">
+                            {["#378DFF", "#00D70E", "#EB8328", "#BE4EFF"].map((hex) => (
+                              <button
+                                key={hex}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditForm({ ...editForm, colorTheme: hex });
+                                }}
+                                className={`w-6 h-6 rounded-full shadow-sm cursor-pointer ${
+                                  editForm.colorTheme === hex ? "ring-2 ring-offset-2 ring-black/50" : ""
+                                }`}
+                                style={{ backgroundColor: hex }}
+                              />
+                            ))}
+                          </div>
                         </div>
                       )}
 
@@ -213,16 +238,32 @@ export default function InspectionPanel({
                                 Edit
                               </button>
                               <button
-                                onClick={async () => {
-                                  if (!window.confirm("Hapus jadwal ini secara permanen?")) return;
-                                  try {
-                                    await deleteTimelineSchedule(rec.timelineId);
-                                    setGlobalSuccess("Jadwal berhasil dihapus.");
-                                    setEditingRecordId(null);
-                                    onReloadRequested();
-                                  } catch (err: any) {
-                                    setGlobalError(err.message || "Gagal menghapus jadwal.");
-                                  }
+                                onClick={() => {
+                                  showAlert({
+                                    type: 'confirm',
+                                    title: 'Penghapusan Jadwal',
+                                    message: 'Apakah anda yakin untuk menghapus jadwal secara permanen?',
+                                    onConfirm: async () => {
+                                      try {
+                                        await deleteTimelineSchedule(rec.timelineId);
+                                        
+                                        showAlert({ 
+                                          type: 'success', 
+                                          title: 'Berhasil', 
+                                          message: 'Jadwal berhasil dihapus.' 
+                                        });
+                                        
+                                        setEditingRecordId(null);
+                                        onReloadRequested();
+                                      } catch (err: any) {
+                                        showAlert({ 
+                                          type: 'error', 
+                                          title: 'Gagal Menghapus', 
+                                          message: err.message || "Gagal menghapus jadwal." 
+                                        });
+                                      }
+                                    }
+                                  });
                                 }}
                                 className="flex-1 py-1.5 text-xs font-bold rounded-lg border border-red-300 text-red-600 hover:bg-red-50 transition cursor-pointer"
                               >
@@ -240,10 +281,16 @@ export default function InspectionPanel({
                               <button
                                 disabled={isSavingEdit}
                                 onClick={async () => {
+                                  // 1. Validation Warning
                                   if (!editForm.daysOn || !editForm.daysOff || !editForm.startDate || !editForm.endDate) {
-                                    setGlobalError("Semua kolom wajib diisi, termasuk tanggal berakhir.");
+                                    showAlert({ 
+                                      type: 'warning', 
+                                      title: 'Kolom Belum Diisi', 
+                                      message: 'Semua kolom wajib diisi, termasuk tanggal berakhir.' 
+                                    });
                                     return;
                                   }
+                                  
                                   setIsSavingEdit(true);
                                   try {
                                     await updateTimeline(rec.timelineId, {
@@ -251,13 +298,26 @@ export default function InspectionPanel({
                                       daysOff: parseInt(editForm.daysOff, 10),
                                       startDate: editForm.startDate,
                                       endDate: editForm.endDate,
+                                      colorTheme: editForm.colorTheme,
                                     });
-                                    setGlobalSuccess("Jadwal berhasil diperbarui.");
+                                    
+                                    // 2. Success Modal
+                                    showAlert({ 
+                                      type: 'success', 
+                                      title: 'Berhasil', 
+                                      message: 'Jadwal berhasil diperbarui.' 
+                                    });
+                                    
                                     setEditingRecordId(null);
                                     setIsEditingFields(false);
                                     onReloadRequested();
                                   } catch (err: any) {
-                                    setGlobalError(err.message || "Gagal memperbarui jadwal.");
+                                    // 3. Error Modal
+                                    showAlert({ 
+                                      type: 'error', 
+                                      title: 'Gagal Memperbarui', 
+                                      message: err.message || "Gagal memperbarui jadwal." 
+                                    });
                                   } finally {
                                     setIsSavingEdit(false);
                                   }

@@ -10,11 +10,13 @@ import type { TimelineTeam } from "../../../types";
 import BarDetailModal from "./components/BarDetailModal";
 import type { BarDetail } from "./components/BarDetailModal";
 import BlockedDatePicker from "./components/CustomDatePicker";
+import { useAlert } from "../../messagebox/AlertProvider";
 
 export default function Timeline() {
   const userClearance = getUserClearance();
   const [teams, setTeams] = useState<TimelineTeam[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { showAlert } = useAlert();
   
   const currentYear = new Date().getFullYear();
   const startDate = new Date(currentYear, 0, 1);
@@ -26,8 +28,8 @@ export default function Timeline() {
   const [selectedTeamFilter, setSelectedTeamFilter] = useState("All");
   const [selectedInspection, setSelectedInspection] = useState<{ id: string; name: string; type: "team" | "staff"; subtitle?: string; } | null>(null);
   
-  const [globalError, setGlobalError] = useState<string | null>(null);
-  const [globalSuccess, setGlobalSuccess] = useState<string | null>(null);
+  // const [globalError, setGlobalError] = useState<string | null>(null);
+  // const [globalSuccess, setGlobalSuccess] = useState<string | null>(null);
 
   const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState("All");
   const [jumpDate, setJumpDate] = useState<Date | null>(null);
@@ -39,7 +41,7 @@ export default function Timeline() {
   const [selectedBarDetail, setSelectedBarDetail] = useState<BarDetail | null>(null);
 
   // CUSTOM HOOK (The Brains)
-  const { historyRecords, isLoadingHistory, errorMessage: historyError, loadHistory } = useTimelineHistory(teams);
+  const { historyRecords, isLoadingHistory, loadHistory } = useTimelineHistory(teams);
 
   const availableEmployees = useMemo(() => {
     if (selectedTeamFilter === "All") return teams.flatMap(t => t.members);
@@ -83,7 +85,7 @@ export default function Timeline() {
       const data = await fetchTimeline(startStr, endStr);
       setTeams(Array.isArray(data) ? data : []);
     } catch (err) {
-      setGlobalError("Gagal memuat jadwal lapangan dari server.");
+      showAlert({ type: 'error', title: 'Kesalahan Server', message: "Gagal memuat jadwal lapangan dari server." });
     } finally {
       setIsLoading(false);
     }
@@ -98,9 +100,8 @@ export default function Timeline() {
     await loadHistory(id, name, type);
   };
 
-  return (
+return (
     <div className="flex-1 w-full h-full flex flex-col bg-brand-bg font-sans overflow-hidden min-w-0">
-      {/* TOP NAVBAR */}
       <div className="bg-brand-dark text-white p-2.5 flex items-center justify-between shrink-0 shadow-sm z-30 relative w-full">
         <div className="flex items-center gap-4">
           <span className="font-bold tracking-wide text-sm uppercase pl-12">Timeline Jadwal</span>
@@ -159,12 +160,9 @@ export default function Timeline() {
         </div>
       </div>
       
-      {/* ALERTS */}
-      {globalError && <div className="bg-red-50 text-red-700 px-4 py-2">{globalError}</div>}
-      {globalSuccess && <div className="bg-green-50 text-green-700 px-4 py-2">{globalSuccess}</div>}
+      {/* 🟢 REMOVED: Inline globalError and globalSuccess bars */}
 
       <div className="flex flex-1 overflow-hidden relative w-full">
-        {/* CENTER CALENDAR WRAPPER DELEGATING TO COMPONENT */}
         <div className="flex-1 overflow-auto bg-brand-bg relative flex">
           <TimelineComponent 
             teams={filteredTeams}
@@ -191,8 +189,6 @@ export default function Timeline() {
           onClose={() => setSelectedInspection(null)}
           onReloadRequested={handleScheduleCreated}
           onOpenAssignModal={() => setIsAssignModalOpen(true)}
-          setGlobalError={setGlobalError}
-          setGlobalSuccess={setGlobalSuccess}
         />
       </div>
 
@@ -203,8 +199,6 @@ export default function Timeline() {
             teams={teams}
             initialTargetId={selectedInspection ? `${selectedInspection.type}:${selectedInspection.id}` : ""}
             onSuccess={handleScheduleCreated}
-            setGlobalError={setGlobalError}
-            setGlobalSuccess={setGlobalSuccess}
          />
       )}
 
@@ -213,8 +207,6 @@ export default function Timeline() {
             isOpen={isNewTeamModalOpen}
             onClose={() => setIsNewTeamModalOpen(false)}
             onSuccess={handleScheduleCreated}
-            setGlobalError={setGlobalError}
-            setGlobalSuccess={setGlobalSuccess}
          />
       )} */}
 

@@ -26,6 +26,7 @@ namespace SchedulingMeruap.Api.DTO.Responses
         public string? SchedulePattern { get; set; }
         public string? ScheduleStart { get; set; }
         public string? ScheduleEnd { get; set; }
+        public string? ColorTheme { get; set; }
     }
 
     public class TimelineHistoryResponse
@@ -38,6 +39,7 @@ namespace SchedulingMeruap.Api.DTO.Responses
         public int DaysOn { get; set; }
         public int DaysOff { get; set; }
         public string Status { get; set; } = string.Empty;
+        public string? ColorTheme { get; set; }
     }
     public class BlockedRangeResponse
     {
