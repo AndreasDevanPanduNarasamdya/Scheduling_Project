@@ -3,11 +3,10 @@ import { registerLocale } from "react-datepicker";
 import { id } from "date-fns/locale/id";
 import { Calendar, Upload, Send } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { fetchWithToken, fetchStaffById, fetchTeams } from "../../api";
+import { fetchStaffById, fetchTeams, submitLeaveTicket } from "../../api";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { useAlert } from '../../view/messagebox/AlertProvider';
-
 
 export default function Form() {
   const { showAlert } = useAlert();
@@ -65,7 +64,7 @@ export default function Form() {
   const displayLastName = liveStaff?.lastName ?? (user as any)?.lastName ?? user?.staff?.lastName ?? "";
   const displayPosition = liveStaff?.position ?? (user as any)?.position ?? user?.staff?.position ?? "";
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const staffId = user?.staffId || user?.staff?.staffId;
@@ -100,37 +99,26 @@ const handleSubmit = async (e: React.FormEvent) => {
     };
 
     try {
-      const response = await fetchWithToken(`http://localhost:5096/api/ticket/${staffId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+      await submitLeaveTicket(staffId, payload);
 
-      if (response.ok) {
-        showAlert({ 
-          type: 'success', 
-          title: 'Berhasil', 
-          message: 'Tiket berhasil dikirim!' 
-        });
+      showAlert({ 
+        type: 'success', 
+        title: 'Berhasil', 
+        message: 'Tiket berhasil dikirim!' 
+      });
         
-        // Clear the form
-        setTitle("");
-        setDescription("");
-        setDateRange([null, null]);
-        setIsTicketOn(true);
-      } else {
-        showAlert({ 
-          type: 'error', 
-          title: 'Gagal Mengirim', 
-          message: 'Gagal mengirim tiket. Silakan coba lagi.' 
-        });
-      }
-    } catch (error) {
+      // Clear the form
+      setTitle("");
+      setDescription("");
+      setDateRange([null, null]);
+      setIsTicketOn(true);
+      
+    } catch (error: any) {
       console.error("Error submitting form:", error);
       showAlert({ 
         type: 'error', 
-        title: 'Kesalahan Jaringan', 
-        message: 'Tidak dapat terhubung ke server.' 
+        title: 'Gagal Mengirim', 
+        message: error.message || 'Tidak dapat terhubung ke server.' 
       });
     }
   };

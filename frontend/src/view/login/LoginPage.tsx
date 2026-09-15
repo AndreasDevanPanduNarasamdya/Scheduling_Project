@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import BgImage from "../../assets/background.png";
 import LogoImage from "../../assets/MeruapLogo.png";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { Eye, EyeOff } from "lucide-react";
-
+import { loginUser } from "../../api"; // 🟢 Import added here!
 
 const BG_IMAGE_URL = BgImage;
 const LOGO_URL = LogoImage; 
@@ -25,22 +24,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(
-        "http://localhost:5096/api/auth/login",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email, password }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Email atau password salah");
-      }
-
-      const data = await response.json();
+      const data = await loginUser({ email, password });
 
       login(
         {
@@ -70,17 +54,6 @@ export default function LoginPage() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden flex items-center justify-center bg-gray-900">
-      {/* <style>{`
-        @keyframes seamlessSlide {
-          0% { transform: translate3d(0, 0, 0); }
-          100% { transform: translate3d(-50%, 0, 0); }
-        }
-        .animate-seamless {
-          animation: seamlessSlide 40s linear infinite;
-          width: max-content;
-        }
-      `}</style> */}
-
       <div className="absolute inset-0 z-0 overflow-hidden">
         <img
           src={BG_IMAGE_URL}

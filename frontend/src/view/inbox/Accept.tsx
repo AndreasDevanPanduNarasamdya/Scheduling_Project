@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Check, X, ArrowLeft, Loader2 } from "lucide-react";
-import { fetchWithToken } from "../../api";
+import { approveTicket } from "../../api";
 import type { Ticket } from "../../types";
 import { useAlert } from '../../view/messagebox/AlertProvider';
 
@@ -26,31 +26,18 @@ export default function Accept({ ticket, onBack, onSuccess }: AcceptProps) {
         
         setIsSubmitting(true);
         try {
-          const response = await fetchWithToken(`http://localhost:5096/api/ticket/${ticket.ticketID}/approve`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reason })
+          await approveTicket(ticket.ticketID, reason);
+          
+          onSuccess();
+          showAlert({ 
+            type: 'success', 
+            title: 'Berhasil', 
+            message: 'Tiket berhasil disetujui!'
           });
-
-          if (response.ok) {
-            onSuccess();
-            
-            showAlert({ 
-              type: 'success', 
-              title: 'Berhasil', 
-              message: 'Tiket berhasil disetujui!'
-            });
-          } else {
-            showAlert({ 
-              type: 'error', 
-              title: 'Gagal Menyetujui', 
-              message: 'Gagal memperbarui status tiket di server.' 
-            });
-          }
         } catch (error: any) {
           showAlert({ 
             type: 'error', 
-            title: 'Kesalahan Jaringan', 
+            title: 'Gagal Menyetujui', 
             message: error.message || 'Terjadi kesalahan saat menghubungi server.' 
           });
         } finally {
@@ -71,7 +58,6 @@ export default function Accept({ ticket, onBack, onSuccess }: AcceptProps) {
         </button>
       </div>
 
-      {/* Center Modal Box */}
       <div className="flex-1 flex items-center justify-center">
         <form 
           onSubmit={handleSubmit}

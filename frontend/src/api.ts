@@ -206,7 +206,6 @@ export async function editStaff(staffId: string, payload: UpdateStaffPayload) {
   });
 
   if (!response.ok) {
-    // Try to catch the JSON error message from the backend, fallback to text if it fails
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || "Gagal memperbarui staff");
   }
@@ -283,7 +282,7 @@ export function getUserClearance(): Clearance {
     console.error("Failed to parse token for clearance", error);
   }
 
-  return Clearance.Staff; // Default fallback
+  return Clearance.Staff;
 }
 
 export async function fetchBlockedRanges(
@@ -315,4 +314,54 @@ async function extractErrorMessage(response: Response, defaultMessage: string) {
     const errorText = await response.text().catch(() => "");
     return errorText || defaultMessage;
   }
+}
+
+export async function fetchAllTickets() {
+  const response = await fetchWithToken(`${API_BASE_URL}/ticket`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  if (!response.ok) throw new Error("Tidak dapat mengambil daftar tiket dari server.");
+  return response.json();
+}
+
+export async function approveTicket(ticketId: string, reason: string) {
+  const response = await fetchWithToken(`${API_BASE_URL}/ticket/${ticketId}/approve`, {
+    method: 'PUT',
+    body: JSON.stringify({ reason })
+  });
+  if (!response.ok) throw new Error("Gagal memperbarui status tiket di server.");
+}
+
+export async function rejectTicket(ticketId: string, reason: string) {
+  const response = await fetchWithToken(`${API_BASE_URL}/ticket/${ticketId}/reject`, {
+    method: 'PUT',
+    body: JSON.stringify({ reason })
+  });
+  if (!response.ok) throw new Error("Gagal memperbarui status tiket di server.");
+}
+
+export async function submitLeaveTicket(staffId: string, payload: any) {
+  const response = await fetchWithToken(`${API_BASE_URL}/ticket/${staffId}`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  
+  if (!response.ok) {
+    throw new Error("Gagal mengirim tiket. Silakan coba lagi.");
+  }
+}
+
+export async function loginUser(payload: any) {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  
+  if (!response.ok) {
+    throw new Error("Email atau password salah");
+  }
+  
+  return response.json();
 }

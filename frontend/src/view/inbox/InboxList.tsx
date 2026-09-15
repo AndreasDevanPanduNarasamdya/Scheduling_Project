@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Mail, AlertCircle, Loader2, Calendar, X, Check } from "lucide-react";
 import InboxSelected from "./InboxSelected";
 import type { Ticket, TicketStatus } from "../../types";
-import { fetchWithToken } from "../../api";
+import { fetchAllTickets } from "../../api";
 import { useAlert } from '../../view/messagebox/AlertProvider';
 
 interface TicketCardProps {
@@ -29,16 +29,12 @@ function TicketCard({ ticket, onClick }: TicketCardProps) {
   return (
     <div 
       onClick={() => onClick(ticket)}
-      // Increased width slightly to 340px to give the larger text room to breathe
       className="card !shadow-none hover:!shadow-md w-[340px] h-fit overflow-hidden cursor-pointer hover:-translate-y-1 transition-all border border-brand-outline flex flex-col shrink-0"
     >
       <div className={`w-full h-[8px] shrink-0 ${statusStyle.bar}`}></div>
       
-      {/* Restored padding to a comfortable p-4 */}
       <div className="p-4 flex-1 flex flex-col justify-between">
-        
         <div>
-          {/* THE STATUS HEADER */}
           <div className="flex justify-between items-center mb-3">
             <div className={`flex items-center gap-1.5 font-bold text-sm ${statusStyle.text}`}>
               {statusStyle.icon}
@@ -71,7 +67,6 @@ function TicketCard({ ticket, onClick }: TicketCardProps) {
           
           <div className="mb-3">
             <h4 className="font-bold text-black/90 text-sm text-left mb-1 truncate">{ticket.title}</h4>
-            {/* Increased Description and Catatan to 13px with relaxed line height for readability */}
             <p className="text-black/60 text-[13px] text-left line-clamp-2 leading-relaxed">{ticket.description}</p>
             
             {ticket.status !== "Pending" && ticket.reason && (
@@ -85,7 +80,6 @@ function TicketCard({ ticket, onClick }: TicketCardProps) {
           </div>
         </div>
 
-        {/* Increased Footer text and icon size */}
         <div className="flex items-center gap-1.5 text-black/50 text-[12px] font-medium pt-3 mt-auto border-t border-brand-outline/30">
           <Calendar size={14} />
           {ticket.dateRange}
@@ -96,45 +90,32 @@ function TicketCard({ ticket, onClick }: TicketCardProps) {
 }
 
 export default function InboxList() {
-  const { showAlert } = useAlert(); // 🟢 Summon the hook
+  const { showAlert } = useAlert(); 
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchTickets = async () => {
     try {
-      const response = await fetchWithToken("http://localhost:5096/api/ticket", {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+      const rawData = await fetchAllTickets();
+      
+      const formattedTickets = rawData.map((t: any) => {
+        return {
+          ...t,
+          ticketID: t.ticketID || t.TicketID,
+          status: t.status || t.Status,  
+          type: t.type || t.Type,          
+          reason: t.reason || t.Reason,
+          dateRange: `${new Date(t.startDate || t.StartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} - ${new Date(t.endDate || t.EndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
+        };
       });
 
-      if (response.ok) {
-        const rawData = await response.json();
-        
-        const formattedTickets = rawData.map((t: any) => {
-          return {
-            ...t,
-            ticketID: t.ticketID || t.TicketID,
-            status: t.status || t.Status,  
-            type: t.type || t.Type,          
-            reason: t.reason || t.Reason,
-            dateRange: `${new Date(t.startDate || t.StartDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })} - ${new Date(t.endDate || t.EndDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`
-          };
-        });
-
-        setTickets(formattedTickets);
-      } else {
-        showAlert({ 
-          type: 'error', 
-          title: 'Gagal Memuat Inbox', 
-          message: 'Tidak dapat mengambil daftar tiket dari server.' 
-        });
-      }
-    } catch (error) {
+      setTickets(formattedTickets);
+    } catch (error: any) {
       showAlert({ 
         type: 'error', 
-        title: 'Kesalahan Jaringan', 
-        message: 'Terjadi kesalahan saat menghubungi server.' 
+        title: 'Gagal Memuat Inbox', 
+        message: error.message || 'Terjadi kesalahan saat menghubungi server.' 
       });
     } finally {
       setIsLoading(false);
