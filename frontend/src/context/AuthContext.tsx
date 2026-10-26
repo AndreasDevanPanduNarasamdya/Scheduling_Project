@@ -38,9 +38,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
     const savedUser = localStorage.getItem("user_info");
 
-    // console.log("AUTH INIT");
-    // console.log("user_info:", savedUser);
-
     return savedUser ? JSON.parse(savedUser) : null;
 });
   const navigate = useNavigate();

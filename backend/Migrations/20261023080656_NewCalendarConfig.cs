@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace SchedulingMeruap.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class NewColorPicker : Migration
+    public partial class NewCalendarConfig : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

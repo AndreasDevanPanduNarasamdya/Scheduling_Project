@@ -273,7 +273,6 @@ public partial class ApplicationDbContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("STAFF_ID");
 
-            // 🔥 FIXED: Status
             entity.Property(e => e.Status)
                 .HasColumnType("tinyint")
                 .HasColumnName("STATUS");
@@ -283,7 +282,6 @@ public partial class ApplicationDbContext : DbContext
                 .IsUnicode(false)
                 .HasColumnName("TITLE");
 
-            // 🔥 FIXED: Type
             entity.Property(e => e.Type)
                 .HasColumnType("tinyint")
                 .HasColumnName("TYPE");

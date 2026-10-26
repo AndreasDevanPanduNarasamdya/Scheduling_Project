@@ -10,7 +10,7 @@ import { useAlert } from '../../view/messagebox/AlertProvider';
 
 export default function Form() {
   const { showAlert } = useAlert();
-  const [isTicketOn, setIsTicketOn] = useState(true);
+  // const [isTicketOn, setIsTicketOn] = useState(true);
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [startDate, endDate] = dateRange;
   const [title, setTitle] = useState("");
@@ -87,13 +87,13 @@ export default function Form() {
       return;
     }
 
-    const ticketTypeValue = isTicketOn ? 0 : 1;
+    // const ticketTypeValue = isTicketOn ? 0 : 1;
 
     const payload = {
       staffId: staffId,
       startDate: formatLocal(startDate), 
       endDate: formatLocal(endDate),
-      type: ticketTypeValue, 
+      type: 1, 
       title: title,
       description: description,
     };
@@ -111,7 +111,7 @@ export default function Form() {
       setTitle("");
       setDescription("");
       setDateRange([null, null]);
-      setIsTicketOn(true);
+      // setIsTicketOn(true);
       
     } catch (error: any) {
       console.error("Error submitting form:", error);
@@ -173,7 +173,7 @@ export default function Form() {
             />
           </div>
 
-          <div>
+          {/* <div>
             <label className="form-label">Tipe Tiket</label>
             <div className="flex items-center gap-2">
               <button
@@ -192,7 +192,7 @@ export default function Form() {
                 ON
               </button>
             </div>
-          </div>
+          </div> */}
 
           <div>
             <label className="form-label">Tanggal Pengajuan</label>

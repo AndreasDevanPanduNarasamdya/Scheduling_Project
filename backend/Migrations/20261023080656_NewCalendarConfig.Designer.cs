@@ -12,8 +12,8 @@ using SchedulingMeruap.Api.Data;
 namespace SchedulingMeruap.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260908115612_NewColorPicker")]
-    partial class NewColorPicker
+    [Migration("20261023080656_NewCalendarConfig")]
+    partial class NewCalendarConfig
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
